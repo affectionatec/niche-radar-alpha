@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  radar:
+    build: .
+    container_name: niche-radar
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+      - ./reports:/app/reports
+    restart: unless-stopped
+    command: ["python", "-m", "niche_radar", "serve"]
+
+  db:
+    image: postgres:16-alpine
+    container_name: niche-radar-db
+    environment:
+      POSTGRES_DB: niche_radar
+      POSTGRES_USER: radar
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    profiles: ["postgres"]
+
+volumes:
+  pgdata:
