@@ -30,8 +30,7 @@ python -m niche_radar status              # Check system health
 ## Docker Compose
 
 ```bash
-cp .env.example .env   # Edit credentials
-docker compose up -d radar                    # SQLite (default)
+docker compose up -d --build                  # SQLite (default)
 docker compose --profile postgres up -d       # With PostgreSQL
 ```
 
