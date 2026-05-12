@@ -17,7 +17,7 @@ Automated trend-intelligence pipeline that monitors 5 public platforms, extracts
 ```bash
 python -m venv .venv && .venv\Scripts\activate  # Windows
 # source .venv/bin/activate                     # Linux/macOS
-pip install -r requirements.txt
+pip install -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com -r requirements.txt
 cp .env.example .env   # Edit with your Reddit credentials
 python -m niche_radar collect --dry-run   # Verify setup
 python -m niche_radar collect             # Collect from all sources
@@ -32,6 +32,13 @@ python -m niche_radar status              # Check system health
 ```bash
 docker compose up -d --build                  # SQLite (default)
 docker compose --profile postgres up -d       # With PostgreSQL
+```
+
+Images are configured to use `docker.1panel.live` mirrors for China-mainland connectivity.
+
+For npm/npx in China mainland, set:
+```bash
+npm config set registry https://registry.npmmirror.com
 ```
 
 ## CLI Commands
