@@ -1,11 +1,16 @@
-"""FastAPI HTTP server exposing Niche Radar data."""
+"""FastAPI HTTP server exposing Niche Radar data and pipeline controls."""
 from __future__ import annotations
 
+import subprocess
+import sys
+import threading
 from pathlib import Path
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from niche_radar.api.jobs import job_manager
 from niche_radar.config import get_settings
 from niche_radar.storage.database import get_db
 from niche_radar.storage import repository
@@ -15,7 +20,7 @@ app = FastAPI(title="Niche Radar API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
@@ -98,7 +103,7 @@ def get_niche(niche_id: str):
 @app.get("/api/reports")
 def list_reports():
     settings = get_settings()
-    report_dir = Path(settings.report_output_dir)
+    report_dir = Path(settings.report_output_dir).resolve()
     if not report_dir.exists():
         return []
     files = sorted(
@@ -110,3 +115,141 @@ def list_reports():
         {"filename": f.name, "size": f.stat().st_size, "modified": f.stat().st_mtime}
         for f in files
     ]
+
+
+@app.get("/api/reports/{filename}")
+def get_report_content(filename: str):
+    settings = get_settings()
+    report_dir = Path(settings.report_output_dir).resolve()
+    try:
+        file_path = (report_dir / filename).resolve()
+        file_path.relative_to(report_dir)
+    except ValueError:
+        raise HTTPException(status_code=403, detail="Access denied")
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Report not found")
+    return {"content": file_path.read_text(encoding="utf-8")}
+
+
+def _run_job(job_id: str, cmd: list[str]) -> None:
+    """Run a single subprocess command, stream stdout to job logs."""
+    job_manager.set_status(job_id, "running")
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
+        if proc.stdout is None:
+            raise RuntimeError("subprocess stdout unavailable")
+        for line in proc.stdout:
+            job_manager.append_log(job_id, line.rstrip())
+        proc.wait()
+        job_manager.set_status(job_id, "done" if proc.returncode == 0 else "failed")
+    except Exception as exc:
+        job_manager.append_log(job_id, f"ERROR: {exc}")
+        job_manager.set_status(job_id, "failed")
+
+
+def _run_all_steps(job_id: str) -> None:
+    """Run collect → extract → score → report sequentially."""
+    steps = ["collect", "extract", "score", "report"]
+    job_manager.set_status(job_id, "running")
+    for step in steps:
+        cmd = [sys.executable, "-m", "niche_radar", step]
+        job_manager.append_log(job_id, f"=== {step.upper()} ===")
+        try:
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+            )
+            if proc.stdout is None:
+                raise RuntimeError("subprocess stdout unavailable")
+            for line in proc.stdout:
+                job_manager.append_log(job_id, line.rstrip())
+            proc.wait()
+            if proc.returncode != 0:
+                job_manager.append_log(job_id, f"FAILED (exit {proc.returncode})")
+                job_manager.set_status(job_id, "failed")
+                return
+        except Exception as exc:
+            job_manager.append_log(job_id, f"ERROR: {exc}")
+            job_manager.set_status(job_id, "failed")
+            return
+    job_manager.set_status(job_id, "done")
+
+
+@app.post("/api/pipeline/collect")
+def trigger_collect(source: Optional[str] = None):
+    job = job_manager.create("collect")
+    cmd = [sys.executable, "-m", "niche_radar", "collect"]
+    if source:
+        cmd += ["--source", source]
+    threading.Thread(target=_run_job, args=(job.id, cmd), daemon=True).start()
+    return {"job_id": job.id, "status": job.status}
+
+
+@app.post("/api/pipeline/extract")
+def trigger_extract():
+    job = job_manager.create("extract")
+    cmd = [sys.executable, "-m", "niche_radar", "extract"]
+    threading.Thread(target=_run_job, args=(job.id, cmd), daemon=True).start()
+    return {"job_id": job.id, "status": job.status}
+
+
+@app.post("/api/pipeline/score")
+def trigger_score():
+    job = job_manager.create("score")
+    cmd = [sys.executable, "-m", "niche_radar", "score"]
+    threading.Thread(target=_run_job, args=(job.id, cmd), daemon=True).start()
+    return {"job_id": job.id, "status": job.status}
+
+
+@app.post("/api/pipeline/report")
+def trigger_report():
+    job = job_manager.create("report")
+    cmd = [sys.executable, "-m", "niche_radar", "report"]
+    threading.Thread(target=_run_job, args=(job.id, cmd), daemon=True).start()
+    return {"job_id": job.id, "status": job.status}
+
+
+@app.post("/api/pipeline/run-all")
+def trigger_run_all():
+    job = job_manager.create("run-all")
+    threading.Thread(target=_run_all_steps, args=(job.id,), daemon=True).start()
+    return {"job_id": job.id, "status": job.status}
+
+
+@app.get("/api/pipeline/jobs")
+def list_jobs():
+    jobs = job_manager.list_recent(20)
+    return [
+        {
+            "id": j.id,
+            "step": j.step,
+            "status": j.status,
+            "created_at": j.created_at,
+            "completed_at": j.completed_at,
+        }
+        for j in jobs
+    ]
+
+
+@app.get("/api/pipeline/jobs/{job_id}/logs")
+def get_job_logs(job_id: str):
+    job = job_manager.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return {
+        "id": job.id,
+        "step": job.step,
+        "status": job.status,
+        "logs": job.logs,
+        "created_at": job.created_at,
+        "completed_at": job.completed_at,
+    }
