@@ -6,9 +6,27 @@ export async function fetcher<T>(url: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export async function postPipeline(
+  step: string,
+  params?: Record<string, string>,
+): Promise<{ job_id: string; status: string }> {
+  const url = new URL(`${API_URL}/api/pipeline/${step}`);
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      url.searchParams.set(k, v);
+    }
+  }
+  const res = await fetch(url.toString(), { method: 'POST' });
+  if (!res.ok) throw new Error(`Pipeline ${step} failed: ${res.status}`);
+  return res.json() as Promise<{ job_id: string; status: string }>;
+}
+
 export const endpoints = {
   status: `${API_URL}/api/status`,
   niches: `${API_URL}/api/niches`,
   niche: (id: string) => `${API_URL}/api/niches/${id}`,
   reports: `${API_URL}/api/reports`,
+  reportContent: (filename: string) => `${API_URL}/api/reports/${encodeURIComponent(filename)}`,
+  jobs: `${API_URL}/api/pipeline/jobs`,
+  jobLogs: (id: string) => `${API_URL}/api/pipeline/jobs/${id}/logs`,
 };

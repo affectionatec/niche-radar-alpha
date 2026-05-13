@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import useSWR from 'swr';
 import { endpoints, fetcher } from '@/lib/api';
 import { NicheScore, SystemStatus } from '@/lib/types';
@@ -18,13 +19,16 @@ export default function Dashboard() {
   if (nichesError) {
     return (
       <div style={{ padding: '96px 0', textAlign: 'center' }}>
-        <p style={{
-          fontFamily: 'var(--font-geist-mono)',
-          fontSize: '13px',
-          color: 'rgba(255,255,255,0.35)',
-          letterSpacing: '1px',
-          textTransform: 'uppercase',
-        }}>
+        <p
+          style={{
+            fontFamily: 'var(--font-geist-mono)',
+            fontSize: '13px',
+            color: 'rgba(255,255,255,0.35)',
+            letterSpacing: '1px',
+            textTransform: 'uppercase',
+            marginBottom: '24px',
+          }}
+        >
           CANNOT CONNECT TO API — IS THE BACKEND RUNNING ON PORT 8000?
         </p>
       </div>
@@ -33,31 +37,57 @@ export default function Dashboard() {
 
   return (
     <div>
-      {/* Stats strip */}
-      {status && (
-        <div
+      {/* Stats strip + pipeline CTA */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          paddingBottom: '48px',
+          marginBottom: '48px',
+          borderBottom: '1px solid rgba(255,255,255,0.1)',
+          flexWrap: 'wrap',
+          gap: '32px',
+        }}
+      >
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '48px' }}>
+          {status ? (
+            <>
+              <Stat label="ACTIVE NICHES" value={status.active_niches} />
+              <Stat label="RAW ITEMS" value={status.raw_items.toLocaleString()} />
+              <Stat label="CYCLES" value={status.collection_cycle} />
+              <Stat
+                label="LAST COLLECTION"
+                value={
+                  status.last_collection
+                    ? new Date(status.last_collection).toLocaleString()
+                    : 'NEVER'
+                }
+              />
+            </>
+          ) : null}
+        </div>
+        <Link
+          href="/pipeline"
           style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '48px',
-            paddingBottom: '48px',
-            marginBottom: '48px',
-            borderBottom: '1px solid rgba(255,255,255,0.1)',
+            fontFamily: 'var(--font-geist-mono)',
+            fontSize: '11px',
+            fontWeight: 600,
+            color: '#1f2228',
+            backgroundColor: '#ffffff',
+            textDecoration: 'none',
+            letterSpacing: '1px',
+            textTransform: 'uppercase',
+            padding: '0 20px',
+            height: '40px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            flexShrink: 0,
           }}
         >
-          <Stat label="ACTIVE NICHES" value={status.active_niches} />
-          <Stat label="RAW ITEMS" value={status.raw_items.toLocaleString()} />
-          <Stat label="CYCLES" value={status.collection_cycle} />
-          <Stat
-            label="LAST COLLECTION"
-            value={
-              status.last_collection
-                ? new Date(status.last_collection).toLocaleString()
-                : 'NEVER'
-            }
-          />
-        </div>
-      )}
+          OPEN PIPELINE →
+        </Link>
+      </div>
 
       {/* High priority */}
       <section style={{ marginBottom: '64px' }}>
@@ -65,7 +95,7 @@ export default function Dashboard() {
         {nichesLoading ? (
           <LoadingGrid />
         ) : highPriority.length === 0 ? (
-          <EmptyState message="No high-priority niches yet. Run: python -m niche_radar collect && extract && score" />
+          <EmptySection href="/pipeline" cta="RUN PIPELINE" />
         ) : (
           <NicheGrid niches={highPriority} />
         )}
@@ -77,7 +107,7 @@ export default function Dashboard() {
         {nichesLoading ? (
           <LoadingGrid />
         ) : watchlist.length === 0 ? (
-          <EmptyState message="No watchlist niches yet." />
+          <EmptySection href="/pipeline" cta="RUN PIPELINE" />
         ) : (
           <NicheGrid niches={watchlist} />
         )}
@@ -198,20 +228,42 @@ function NicheGrid({ niches }: { niches: NicheScore[] }) {
   );
 }
 
-function EmptyState({ message }: { message: string }) {
+function EmptySection({ href, cta }: { href: string; cta: string }) {
   return (
     <div
       style={{
-        border: '1px solid rgba(255,255,255,0.1)',
+        border: '1px solid rgba(255,255,255,0.08)',
         padding: '48px',
-        textAlign: 'center',
-        fontFamily: 'var(--font-inter)',
-        fontSize: '13px',
-        color: 'rgba(255,255,255,0.35)',
-        fontStyle: 'italic',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '24px',
       }}
     >
-      {message}
+      <span
+        style={{
+          fontFamily: 'var(--font-inter)',
+          fontSize: '13px',
+          color: 'rgba(255,255,255,0.25)',
+        }}
+      >
+        No data yet.
+      </span>
+      <Link
+        href={href}
+        style={{
+          fontFamily: 'var(--font-geist-mono)',
+          fontSize: '11px',
+          color: 'rgba(255,255,255,0.7)',
+          textDecoration: 'none',
+          border: '1px solid rgba(255,255,255,0.2)',
+          padding: '8px 16px',
+          letterSpacing: '0.8px',
+          textTransform: 'uppercase',
+        }}
+      >
+        {cta} →
+      </Link>
     </div>
   );
 }

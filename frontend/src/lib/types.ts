@@ -49,3 +49,23 @@ export interface NicheDetail {
   niche: NicheScore;
   items: RawItem[];
 }
+
+export type JobStatus = 'pending' | 'running' | 'done' | 'failed';
+
+export interface Job {
+  id: string;
+  step: string;
+  status: JobStatus;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface JobDetail extends Job {
+  logs: string[];
+}
+
+export interface ReportFile {
+  filename: string;
+  size: number;
+  modified: number;
+}
