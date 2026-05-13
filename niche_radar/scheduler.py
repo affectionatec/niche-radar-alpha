@@ -1,18 +1,12 @@
 """Scheduler for continuous operation using APScheduler."""
-
 from __future__ import annotations
 
-import signal
-import sys
-
 import structlog
-from apscheduler.schedulers.blocking import BlockingScheduler
 
 logger = structlog.get_logger()
 
 
 def _collect_job(settings) -> None:
-    """Scheduled collection job."""
     from niche_radar.collectors import run_collectors
     from niche_radar.storage.database import get_db
 
@@ -23,7 +17,6 @@ def _collect_job(settings) -> None:
 
 
 def _score_job(settings) -> None:
-    """Scheduled scoring job."""
     from niche_radar.nlp import run_extraction
     from niche_radar.scoring import run_scoring
     from niche_radar.reports.generator import generate_report
@@ -37,7 +30,6 @@ def _score_job(settings) -> None:
 
 
 def _cleanup_job(settings) -> None:
-    """Scheduled cleanup job."""
     from niche_radar.storage.cleanup import run_cleanup
     from niche_radar.storage.database import get_db
 
@@ -46,8 +38,12 @@ def _cleanup_job(settings) -> None:
 
 
 def start_scheduler(settings) -> None:
-    """Start the blocking scheduler with all jobs configured."""
-    scheduler = BlockingScheduler()
+    """Start BackgroundScheduler + uvicorn API server."""
+    import uvicorn
+    from apscheduler.schedulers.background import BackgroundScheduler
+    from niche_radar.api.server import app
+
+    scheduler = BackgroundScheduler()
 
     scheduler.add_job(
         _collect_job,
@@ -57,7 +53,6 @@ def start_scheduler(settings) -> None:
         id="collect",
         name="Data Collection",
     )
-
     scheduler.add_job(
         _score_job,
         "interval",
@@ -66,7 +61,6 @@ def start_scheduler(settings) -> None:
         id="score",
         name="NLP + Scoring + Report",
     )
-
     scheduler.add_job(
         _cleanup_job,
         "cron",
@@ -76,18 +70,16 @@ def start_scheduler(settings) -> None:
         name="Data Retention Cleanup",
     )
 
-    def shutdown(signum, frame):
-        logger.info("scheduler_shutting_down")
-        scheduler.shutdown(wait=False)
-        sys.exit(0)
-
-    signal.signal(signal.SIGINT, shutdown)
-    signal.signal(signal.SIGTERM, shutdown)
-
+    scheduler.start()
     logger.info(
         "scheduler_started",
         collect_interval_h=settings.collection_interval_hours,
         score_interval_h=settings.scoring_interval_hours,
         cleanup_hour_utc=settings.cleanup_hour_utc,
     )
-    scheduler.start()
+
+    logger.info("api_starting", host="0.0.0.0", port=8000)
+    try:
+        uvicorn.run(app, host="0.0.0.0", port=8000, log_level="warning")
+    finally:
+        scheduler.shutdown(wait=False)
