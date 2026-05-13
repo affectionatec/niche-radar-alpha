@@ -5,8 +5,22 @@ services:
     volumes:
       - ./data:/app/data
       - ./reports:/app/reports
+    ports:
+      - "8000:8000"
     restart: unless-stopped
-    command: ["python", "-m", "niche_radar", "serve"]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:8000
+    container_name: niche-radar-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - radar
+    restart: unless-stopped
 
   db:
     image: docker.1panel.live/library/postgres:16-alpine
