@@ -147,7 +147,11 @@ def _run_job(job_id: str, cmd: list[str]) -> None:
         for line in proc.stdout:
             job_manager.append_log(job_id, line.rstrip())
         proc.wait()
-        job_manager.set_status(job_id, "done" if proc.returncode == 0 else "failed")
+        if proc.returncode == 1:
+            job_manager.append_log(job_id, "WARNING: completed with partial failures (some sources failed)")
+            job_manager.set_status(job_id, "done")
+        else:
+            job_manager.set_status(job_id, "done" if proc.returncode == 0 else "failed")
     except Exception as exc:
         job_manager.append_log(job_id, f"ERROR: {exc}")
         job_manager.set_status(job_id, "failed")
@@ -173,7 +177,9 @@ def _run_all_steps(job_id: str) -> None:
             for line in proc.stdout:
                 job_manager.append_log(job_id, line.rstrip())
             proc.wait()
-            if proc.returncode != 0:
+            if proc.returncode == 1:
+                job_manager.append_log(job_id, f"WARNING: {step} completed with partial failures (some sources failed), continuing")
+            elif proc.returncode >= 2:
                 job_manager.append_log(job_id, f"FAILED (exit {proc.returncode})")
                 job_manager.set_status(job_id, "failed")
                 return
