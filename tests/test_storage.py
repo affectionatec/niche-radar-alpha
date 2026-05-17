@@ -7,9 +7,10 @@ from niche_radar.storage.repository import (
     get_unprocessed_items,
     upsert_niche_candidate,
     link_niche_item,
-    get_active_niches,
-    insert_niche_score,
-    get_latest_scores,
+    get_active_niches_with_scores,
+    get_niche_by_id,
+    get_app_setting,
+    set_app_setting,
 )
 
 
@@ -33,7 +34,7 @@ def test_upsert_raw_item_insert_and_dedup(db):
     assert item_id
 
     # Same source+source_id should update, not duplicate
-    item_id2 = upsert_raw_item(
+    upsert_raw_item(
         db, run_id, "reddit", "post_1", "Updated Title", "New body", "https://example.com", 200, 20, None
     )
     count = db.execute("SELECT COUNT(*) FROM raw_items WHERE source='reddit' AND source_id='post_1'").fetchone()[0]
@@ -54,17 +55,28 @@ def test_get_unprocessed_items(db, sample_raw_items):
 
 
 def test_niche_candidate_lifecycle(db):
-    upsert_niche_candidate(db, "niche-1", "self-hosted analytics", ["analytics", "selfhosted"], None)
-    niches = get_active_niches(db)
+    niche_id = upsert_niche_candidate(db, "self-hosted analytics", ["analytics", "selfhosted"], 75.0, "Strong demand signal.")
+    niches = get_active_niches_with_scores(db)
     assert len(niches) == 1
     assert niches[0]["keyword"] == "self-hosted analytics"
+    assert niches[0]["llm_score"] == 75.0
+
+    niche = get_niche_by_id(db, niche_id)
+    assert niche is not None
+    assert niche["keyword"] == "self-hosted analytics"
 
 
-def test_niche_score(db):
-    upsert_niche_candidate(db, "niche-1", "self-hosted analytics", [], None)
-    score_id = insert_niche_score(db, "niche-1", 75.0, 82.0, 68.0, 55.0, 72.5)
-    assert score_id
+def test_niche_dedup_by_keyword(db):
+    id1 = upsert_niche_candidate(db, "ai code review", [], 70.0, "First analysis.")
+    id2 = upsert_niche_candidate(db, "ai code review", [], 85.0, "Second analysis.")
+    assert id1 == id2  # same niche, updated
+    niches = get_active_niches_with_scores(db)
+    assert len(niches) == 1
+    assert niches[0]["llm_score"] == 85.0
+    assert niches[0]["occurrence_count"] == 2
 
-    scores = get_latest_scores(db)
-    assert len(scores) == 1
-    assert scores[0]["composite_score"] == 72.5
+
+def test_app_settings(db):
+    assert get_app_setting(db, "llm_api_key") is None
+    set_app_setting(db, "llm_api_key", "sk-test")
+    assert get_app_setting(db, "llm_api_key") == "sk-test"

@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
 import useSWR from 'swr';
 import { endpoints, fetcher, postPipeline } from '@/lib/api';
 import { Job, JobDetail, JobStatus } from '@/lib/types';
@@ -9,8 +8,7 @@ const SOURCES = ['', 'reddit', 'hn', 'google_trends', 'github', 'youtube'] as co
 
 const STEP_BUTTONS: { label: string; step: string; primary?: boolean }[] = [
   { label: 'COLLECT', step: 'collect' },
-  { label: 'EXTRACT', step: 'extract' },
-  { label: 'SCORE', step: 'score' },
+  { label: 'ANALYZE', step: 'analyze' },
   { label: 'REPORT', step: 'report' },
   { label: 'RUN ALL', step: 'run-all', primary: true },
 ];

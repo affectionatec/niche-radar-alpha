@@ -1,0 +1,21 @@
+{
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true,
+    "ralph-skills@ralph-marketplace": true,
+    "andrej-karpathy-skills@karpathy-skills": true
+  },
+  "extraKnownMarketplaces": {
+    "ralph-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "snarktank/ralph"
+      }
+    },
+    "karpathy-skills": {
+      "source": {
+        "source": "github",
+        "repo": "forrestchang/andrej-karpathy-skills"
+      }
+    }
+  }
+}

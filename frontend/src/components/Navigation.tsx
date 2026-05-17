@@ -4,6 +4,7 @@ const NAV_LINKS = [
   { href: '/pipeline', label: 'PIPELINE' },
   { href: '/niches', label: 'NICHES' },
   { href: '/reports', label: 'REPORTS' },
+  { href: '/settings', label: 'SETTINGS' },
 ];
 
 export default function Navigation() {

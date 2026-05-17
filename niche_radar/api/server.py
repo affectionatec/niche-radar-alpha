@@ -9,13 +9,14 @@ from typing import Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from niche_radar.api.jobs import job_manager
 from niche_radar.config import get_settings
 from niche_radar.storage.database import get_db
 from niche_radar.storage import repository
 
-app = FastAPI(title="Niche Radar API", version="0.1.0")
+app = FastAPI(title="Niche Radar API", version="0.2.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -38,7 +39,6 @@ def get_status():
             "SELECT "
             "(SELECT COUNT(*) FROM raw_items) as raw_count, "
             "(SELECT COUNT(*) FROM niche_candidates WHERE status='active') as niche_count, "
-            "(SELECT COUNT(*) FROM niche_scores) as score_count, "
             "(SELECT MAX(started_at) FROM collection_runs) as last_run, "
             "(SELECT COUNT(*) FROM collection_runs) as cycle_count"
         ).fetchone()
@@ -46,9 +46,8 @@ def get_status():
         return {
             "raw_items": stats[0] or 0,
             "active_niches": stats[1] or 0,
-            "scores_recorded": stats[2] or 0,
-            "last_collection": stats[3],
-            "collection_cycle": stats[4] or 0,
+            "last_collection": stats[2],
+            "collection_cycle": stats[3] or 0,
             "sources": sources,
         }
     finally:
@@ -67,15 +66,10 @@ def _tier(score: float) -> str:
 def list_niches():
     db = _db()
     try:
-        scores = repository.get_latest_scores(db)
-        for s in scores:
-            s["tier"] = _tier(s["composite_score"])
-            row = db.execute(
-                "SELECT occurrence_count FROM niche_candidates WHERE id=?",
-                (s["niche_id"],),
-            ).fetchone()
-            s["occurrence_count"] = row[0] if row else 1
-        return scores
+        niches = repository.get_active_niches_with_scores(db)
+        for n in niches:
+            n["tier"] = _tier(n["llm_score"])
+        return niches
     finally:
         db.close()
 
@@ -84,16 +78,10 @@ def list_niches():
 def get_niche(niche_id: str):
     db = _db()
     try:
-        scores = repository.get_latest_scores(db)
-        niche = next((s for s in scores if s["niche_id"] == niche_id), None)
+        niche = repository.get_niche_by_id(db, niche_id)
         if not niche:
             raise HTTPException(status_code=404, detail="Niche not found")
-        niche["tier"] = _tier(niche["composite_score"])
-        row = db.execute(
-            "SELECT occurrence_count FROM niche_candidates WHERE id=?",
-            (niche_id,),
-        ).fetchone()
-        niche["occurrence_count"] = row[0] if row else 1
+        niche["tier"] = _tier(niche["llm_score"])
         items = repository.get_niche_items(db, niche_id)
         return {"niche": niche, "items": items}
     finally:
@@ -131,8 +119,55 @@ def get_report_content(filename: str):
     return {"content": file_path.read_text(encoding="utf-8")}
 
 
+# ── Settings endpoints ────────────────────────────────────────────────────────
+
+class LLMSettingsUpdate(BaseModel):
+    llm_provider: Optional[str] = None
+    llm_api_key: Optional[str] = None
+    llm_model: Optional[str] = None
+    llm_base_url: Optional[str] = None
+
+
+@app.get("/api/settings")
+def get_llm_settings():
+    db = _db()
+    settings = get_settings()
+    try:
+        provider = repository.get_app_setting(db, "llm_provider") or settings.llm_provider
+        model = repository.get_app_setting(db, "llm_model") or settings.llm_model
+        base_url = repository.get_app_setting(db, "llm_base_url") or settings.llm_base_url
+        stored_key = repository.get_app_setting(db, "llm_api_key")
+        has_key = bool(stored_key or settings.llm_api_key)
+        return {
+            "llm_provider": provider,
+            "llm_model": model,
+            "llm_base_url": base_url,
+            "llm_api_key_set": has_key,
+        }
+    finally:
+        db.close()
+
+
+@app.post("/api/settings")
+def update_llm_settings(body: LLMSettingsUpdate):
+    db = _db()
+    try:
+        if body.llm_provider is not None:
+            repository.set_app_setting(db, "llm_provider", body.llm_provider)
+        if body.llm_api_key is not None:
+            repository.set_app_setting(db, "llm_api_key", body.llm_api_key)
+        if body.llm_model is not None:
+            repository.set_app_setting(db, "llm_model", body.llm_model)
+        if body.llm_base_url is not None:
+            repository.set_app_setting(db, "llm_base_url", body.llm_base_url)
+        return {"ok": True}
+    finally:
+        db.close()
+
+
+# ── Pipeline job runner ───────────────────────────────────────────────────────
+
 def _run_job(job_id: str, cmd: list[str]) -> None:
-    """Run a single subprocess command, stream stdout to job logs."""
     job_manager.set_status(job_id, "running")
     try:
         proc = subprocess.Popen(
@@ -148,7 +183,7 @@ def _run_job(job_id: str, cmd: list[str]) -> None:
             job_manager.append_log(job_id, line.rstrip())
         proc.wait()
         if proc.returncode == 1:
-            job_manager.append_log(job_id, "WARNING: completed with partial failures (some sources failed)")
+            job_manager.append_log(job_id, "WARNING: completed with partial failures")
             job_manager.set_status(job_id, "done")
         else:
             job_manager.set_status(job_id, "done" if proc.returncode == 0 else "failed")
@@ -158,8 +193,8 @@ def _run_job(job_id: str, cmd: list[str]) -> None:
 
 
 def _run_all_steps(job_id: str) -> None:
-    """Run collect → extract → score → report sequentially."""
-    steps = ["collect", "extract", "score", "report"]
+    """Run collect → analyze → report sequentially."""
+    steps = ["collect", "analyze", "report"]
     job_manager.set_status(job_id, "running")
     for step in steps:
         cmd = [sys.executable, "-m", "niche_radar", step]
@@ -178,7 +213,7 @@ def _run_all_steps(job_id: str) -> None:
                 job_manager.append_log(job_id, line.rstrip())
             proc.wait()
             if proc.returncode == 1:
-                job_manager.append_log(job_id, f"WARNING: {step} completed with partial failures (some sources failed), continuing")
+                job_manager.append_log(job_id, f"WARNING: {step} had partial failures, continuing")
             elif proc.returncode >= 2:
                 job_manager.append_log(job_id, f"FAILED (exit {proc.returncode})")
                 job_manager.set_status(job_id, "failed")
@@ -200,18 +235,10 @@ def trigger_collect(source: Optional[str] = None):
     return {"job_id": job.id, "status": job.status}
 
 
-@app.post("/api/pipeline/extract")
-def trigger_extract():
-    job = job_manager.create("extract")
-    cmd = [sys.executable, "-m", "niche_radar", "extract"]
-    threading.Thread(target=_run_job, args=(job.id, cmd), daemon=True).start()
-    return {"job_id": job.id, "status": job.status}
-
-
-@app.post("/api/pipeline/score")
-def trigger_score():
-    job = job_manager.create("score")
-    cmd = [sys.executable, "-m", "niche_radar", "score"]
+@app.post("/api/pipeline/analyze")
+def trigger_analyze():
+    job = job_manager.create("analyze")
+    cmd = [sys.executable, "-m", "niche_radar", "analyze"]
     threading.Thread(target=_run_job, args=(job.id, cmd), daemon=True).start()
     return {"job_id": job.id, "status": job.status}
 

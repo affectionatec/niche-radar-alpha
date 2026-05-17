@@ -16,17 +16,15 @@ def _collect_job(settings) -> None:
     logger.info("scheduled_collection_complete", total_items=total)
 
 
-def _score_job(settings) -> None:
-    from niche_radar.nlp import run_extraction
-    from niche_radar.scoring import run_scoring
+def _analyze_job(settings) -> None:
+    from niche_radar.analysis import run_analysis
     from niche_radar.reports.generator import generate_report
     from niche_radar.storage.database import get_db
 
     db = get_db(settings.database_url)
-    run_extraction(db=db, settings=settings, dry_run=False)
-    run_scoring(db=db, settings=settings, dry_run=False)
+    count = run_analysis(db=db, settings=settings, dry_run=False)
     generate_report(db=db, settings=settings, fmt=settings.report_format)
-    logger.info("scheduled_scoring_complete")
+    logger.info("scheduled_analysis_complete", niches=count)
 
 
 def _cleanup_job(settings) -> None:
@@ -54,12 +52,12 @@ def start_scheduler(settings) -> None:
         name="Data Collection",
     )
     scheduler.add_job(
-        _score_job,
+        _analyze_job,
         "interval",
-        hours=settings.scoring_interval_hours,
+        hours=settings.analysis_interval_hours,
         args=[settings],
-        id="score",
-        name="NLP + Scoring + Report",
+        id="analyze",
+        name="LLM Analysis + Report",
     )
     scheduler.add_job(
         _cleanup_job,
@@ -74,7 +72,7 @@ def start_scheduler(settings) -> None:
     logger.info(
         "scheduler_started",
         collect_interval_h=settings.collection_interval_hours,
-        score_interval_h=settings.scoring_interval_hours,
+        analysis_interval_h=settings.analysis_interval_hours,
         cleanup_hour_utc=settings.cleanup_hour_utc,
     )
 

@@ -21,6 +21,15 @@ export async function postPipeline(
   return res.json() as Promise<{ job_id: string; status: string }>;
 }
 
+export async function postSettings(body: Record<string, string>): Promise<void> {
+  const res = await fetch(`${API_URL}/api/settings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`Settings update failed: ${res.status}`);
+}
+
 export const endpoints = {
   status: `${API_URL}/api/status`,
   niches: `${API_URL}/api/niches`,
@@ -29,4 +38,5 @@ export const endpoints = {
   reportContent: (filename: string) => `${API_URL}/api/reports/${encodeURIComponent(filename)}`,
   jobs: `${API_URL}/api/pipeline/jobs`,
   jobLogs: (id: string) => `${API_URL}/api/pipeline/jobs/${id}/logs`,
+  settings: `${API_URL}/api/settings`,
 };

@@ -3,7 +3,6 @@ import useSWR from 'swr';
 import Link from 'next/link';
 import { endpoints, fetcher } from '@/lib/api';
 import { NicheDetail } from '@/lib/types';
-import ScoreBar from '@/components/ScoreBar';
 
 export default function NichePage({ params }: { params: { id: string } }) {
   const { id } = params;
@@ -73,7 +72,7 @@ export default function NichePage({ params }: { params: { id: string } }) {
               lineHeight: 1,
             }}
           >
-            {niche.composite_score.toFixed(0)}
+            {niche.llm_score.toFixed(0)}
           </div>
           <div
             style={{
@@ -85,12 +84,12 @@ export default function NichePage({ params }: { params: { id: string } }) {
               marginTop: '4px',
             }}
           >
-            COMPOSITE SCORE
+            AI SCORE
           </div>
         </div>
       </div>
 
-      {/* Score breakdown + meta */}
+      {/* AI analysis + meta */}
       <div
         style={{
           display: 'grid',
@@ -100,11 +99,17 @@ export default function NichePage({ params }: { params: { id: string } }) {
         }}
       >
         <div>
-          <SectionLabel>SCORE BREAKDOWN</SectionLabel>
-          <ScoreBar label="ENGAGEMENT (25%)" value={niche.engagement} />
-          <ScoreBar label="SEARCH TREND (30%)" value={niche.search_trend} />
-          <ScoreBar label="CONTENT GAP (25%)" value={niche.content_gap} />
-          <ScoreBar label="MARKET TRACTION (20%)" value={niche.market_traction} />
+          <SectionLabel>AI ANALYSIS</SectionLabel>
+          <p
+            style={{
+              fontFamily: 'var(--font-inter)',
+              fontSize: '14px',
+              color: 'rgba(255,255,255,0.75)',
+              lineHeight: 1.7,
+            }}
+          >
+            {niche.llm_reasoning || 'No analysis available yet.'}
+          </p>
         </div>
         <div>
           <SectionLabel>METADATA</SectionLabel>
@@ -117,10 +122,6 @@ export default function NichePage({ params }: { params: { id: string } }) {
           <MetaRow
             label="LAST SEEN"
             value={new Date(niche.last_seen).toLocaleDateString()}
-          />
-          <MetaRow
-            label="SCORED AT"
-            value={new Date(niche.scored_at).toLocaleString()}
           />
         </div>
       </div>
@@ -231,17 +232,6 @@ export default function NichePage({ params }: { params: { id: string } }) {
                       {item.title ?? item.source_id}
                     </span>
                   )}
-                  <span
-                    style={{
-                      fontFamily: 'var(--font-geist-mono)',
-                      fontSize: '11px',
-                      color: 'rgba(255,255,255,0.3)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.3px',
-                    }}
-                  >
-                    {item.keyphrase}
-                  </span>
                 </div>
                 <span
                   style={{

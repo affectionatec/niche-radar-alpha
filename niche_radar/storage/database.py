@@ -44,7 +44,8 @@ CREATE TABLE IF NOT EXISTS niche_candidates (
     id              TEXT PRIMARY KEY,
     keyword         TEXT NOT NULL,
     aliases         JSON,
-    embedding       BLOB,
+    llm_score       REAL,
+    llm_reasoning   TEXT,
     status          TEXT DEFAULT 'active',
     first_seen      TIMESTAMP,
     last_seen       TIMESTAMP,
@@ -61,29 +62,21 @@ CREATE TABLE IF NOT EXISTS niche_item_links (
     PRIMARY KEY (niche_id, raw_item_id)
 );
 
-CREATE TABLE IF NOT EXISTS niche_scores (
-    id              TEXT PRIMARY KEY,
-    niche_id        TEXT REFERENCES niche_candidates(id),
-    engagement      REAL,
-    search_trend    REAL,
-    content_gap     REAL,
-    market_traction REAL,
-    composite_score REAL,
-    scored_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS app_settings (
+    key     TEXT PRIMARY KEY,
+    value   TEXT
 );
-CREATE INDEX IF NOT EXISTS idx_niche_scores_niche ON niche_scores(niche_id);
-CREATE INDEX IF NOT EXISTS idx_niche_scores_composite ON niche_scores(composite_score);
-CREATE INDEX IF NOT EXISTS idx_niche_scores_scored ON niche_scores(scored_at);
-
-CREATE TABLE IF NOT EXISTS trend_snapshots (
-    id              TEXT PRIMARY KEY,
-    niche_id        TEXT REFERENCES niche_candidates(id),
-    source          TEXT,
-    data            JSON,
-    snapshot_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_trend_snapshots_niche ON trend_snapshots(niche_id);
 """
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Add new columns to existing tables without breaking old databases."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(niche_candidates)").fetchall()}
+    if "llm_score" not in cols:
+        conn.execute("ALTER TABLE niche_candidates ADD COLUMN llm_score REAL")
+    if "llm_reasoning" not in cols:
+        conn.execute("ALTER TABLE niche_candidates ADD COLUMN llm_reasoning TEXT")
+    conn.commit()
 
 
 def get_db(database_url: str) -> sqlite3.Connection:
@@ -100,6 +93,7 @@ def get_db(database_url: str) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
     conn.executescript(_SCHEMA)
+    _migrate(conn)
     conn.commit()
 
     logger.debug("database_ready", path=str(path))

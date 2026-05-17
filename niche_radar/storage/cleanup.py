@@ -29,10 +29,6 @@ def run_cleanup(
             f"status = 'archived' AND last_seen < '{(now - timedelta(days=settings.retention_archived_niches)).isoformat()}'",
         ),
         (
-            "niche_scores",
-            f"scored_at < '{(now - timedelta(days=settings.retention_scores)).isoformat()}'",
-        ),
-        (
             "collection_runs",
             f"started_at < '{(now - timedelta(days=settings.retention_collection_runs)).isoformat()}'",
         ),

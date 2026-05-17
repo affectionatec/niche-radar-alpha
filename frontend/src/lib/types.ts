@@ -8,23 +8,17 @@ export interface SourceHealth {
 export interface SystemStatus {
   raw_items: number;
   active_niches: number;
-  scores_recorded: number;
   last_collection: string | null;
   collection_cycle: number;
   sources: SourceHealth[];
 }
 
 export interface NicheScore {
-  score_id: string;
   niche_id: string;
   keyword: string;
   aliases: string[];
-  engagement: number;
-  search_trend: number;
-  content_gap: number;
-  market_traction: number;
-  composite_score: number;
-  scored_at: string;
+  llm_score: number;
+  llm_reasoning: string;
   first_seen: string;
   last_seen: string;
   occurrence_count: number;
@@ -68,4 +62,11 @@ export interface ReportFile {
   filename: string;
   size: number;
   modified: number;
+}
+
+export interface LLMSettings {
+  llm_provider: string;
+  llm_model: string;
+  llm_base_url: string;
+  llm_api_key_set: boolean;
 }

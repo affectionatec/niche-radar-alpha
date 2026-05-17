@@ -11,7 +11,6 @@ from datetime import datetime, timezone
 def insert_collection_run(
     db: sqlite3.Connection, source: str, status: str = "running"
 ) -> str:
-    """Insert a new collection run and return its ID."""
     run_id = str(uuid.uuid4())
     db.execute(
         "INSERT INTO collection_runs (id, source, status) VALUES (?, ?, ?)",
@@ -28,7 +27,6 @@ def complete_collection_run(
     items_collected: int,
     error_message: str | None = None,
 ) -> None:
-    """Mark a collection run as completed/failed."""
     db.execute(
         "UPDATE collection_runs SET status=?, items_collected=?, error_message=?, "
         "completed_at=CURRENT_TIMESTAMP WHERE id=?",
@@ -49,7 +47,6 @@ def upsert_raw_item(
     comment_count: int | None,
     metadata: dict | None,
 ) -> str:
-    """Insert or update a raw item (dedup by source+source_id). Returns item ID."""
     item_id = str(uuid.uuid4())
     meta_json = json.dumps(metadata) if metadata else None
     try:
@@ -60,7 +57,6 @@ def upsert_raw_item(
             (item_id, collection_run, source, source_id, title, body, url, score, comment_count, meta_json),
         )
     except sqlite3.IntegrityError:
-        # Duplicate — update existing
         db.execute(
             "UPDATE raw_items SET title=?, body=?, score=?, comment_count=?, metadata=?, "
             "collected_at=CURRENT_TIMESTAMP WHERE source=? AND source_id=?",
@@ -76,7 +72,7 @@ def upsert_raw_item(
 
 
 def get_unprocessed_items(db: sqlite3.Connection, limit: int = 500) -> list[dict]:
-    """Get raw items that haven't been linked to any niche yet."""
+    """Get raw items not yet linked to any niche."""
     rows = db.execute(
         "SELECT ri.id, ri.source, ri.source_id, ri.title, ri.body, ri.url, ri.score, "
         "ri.comment_count, ri.metadata, ri.collected_at "
@@ -100,27 +96,37 @@ def get_unprocessed_items(db: sqlite3.Connection, limit: int = 500) -> list[dict
 
 def upsert_niche_candidate(
     db: sqlite3.Connection,
-    niche_id: str,
     keyword: str,
     aliases: list[str] | None,
-    embedding: bytes | None,
-) -> None:
-    """Insert or update a niche candidate."""
+    llm_score: float,
+    llm_reasoning: str,
+) -> str:
+    """Insert or update niche by keyword (dedup). Returns niche_id."""
     now = datetime.now(timezone.utc).isoformat()
+    keyword_norm = keyword.lower().strip()
     aliases_json = json.dumps(aliases) if aliases else None
-    try:
+
+    row = db.execute(
+        "SELECT id FROM niche_candidates WHERE keyword=?", (keyword_norm,)
+    ).fetchone()
+
+    if row:
+        niche_id = row[0]
         db.execute(
-            "INSERT INTO niche_candidates (id, keyword, aliases, embedding, first_seen, last_seen) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (niche_id, keyword, aliases_json, embedding, now, now),
+            "UPDATE niche_candidates SET aliases=?, llm_score=?, llm_reasoning=?, "
+            "last_seen=?, occurrence_count=occurrence_count+1 WHERE id=?",
+            (aliases_json, llm_score, llm_reasoning, now, niche_id),
         )
-    except sqlite3.IntegrityError:
+    else:
+        niche_id = str(uuid.uuid4())
         db.execute(
-            "UPDATE niche_candidates SET aliases=?, embedding=?, last_seen=?, "
-            "occurrence_count=occurrence_count+1 WHERE id=?",
-            (aliases_json, embedding, now, niche_id),
+            "INSERT INTO niche_candidates "
+            "(id, keyword, aliases, llm_score, llm_reasoning, first_seen, last_seen) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (niche_id, keyword_norm, aliases_json, llm_score, llm_reasoning, now, now),
         )
     db.commit()
+    return niche_id
 
 
 def link_niche_item(
@@ -130,7 +136,6 @@ def link_niche_item(
     keyphrase: str,
     relevance_score: float,
 ) -> None:
-    """Link a raw item to a niche candidate."""
     try:
         db.execute(
             "INSERT INTO niche_item_links (niche_id, raw_item_id, keyphrase, relevance_score) "
@@ -139,85 +144,23 @@ def link_niche_item(
         )
         db.commit()
     except sqlite3.IntegrityError:
-        pass  # Already linked
+        pass
 
 
-def insert_niche_score(
-    db: sqlite3.Connection,
-    niche_id: str,
-    engagement: float,
-    search_trend: float,
-    content_gap: float,
-    market_traction: float,
-    composite_score: float,
-) -> str:
-    """Insert a scored result for a niche."""
-    score_id = str(uuid.uuid4())
-    db.execute(
-        "INSERT INTO niche_scores "
-        "(id, niche_id, engagement, search_trend, content_gap, market_traction, composite_score) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (score_id, niche_id, engagement, search_trend, content_gap, market_traction, composite_score),
-    )
-    db.commit()
-    return score_id
-
-
-def get_active_niches(db: sqlite3.Connection) -> list[dict]:
-    """Get all active niche candidates."""
+def get_active_niches_with_scores(db: sqlite3.Connection) -> list[dict]:
+    """Return all active niches ordered by LLM score descending."""
     rows = db.execute(
-        "SELECT id, keyword, aliases, status, first_seen, last_seen, occurrence_count "
-        "FROM niche_candidates WHERE status='active' ORDER BY last_seen DESC"
+        "SELECT id, keyword, aliases, llm_score, llm_reasoning, "
+        "first_seen, last_seen, occurrence_count "
+        "FROM niche_candidates WHERE status='active' "
+        "ORDER BY llm_score DESC"
     ).fetchall()
     return [
         {
-            "id": r[0], "keyword": r[1],
+            "niche_id": r[0], "keyword": r[1],
             "aliases": json.loads(r[2]) if r[2] else [],
-            "status": r[3], "first_seen": r[4],
-            "last_seen": r[5], "occurrence_count": r[6],
-        }
-        for r in rows
-    ]
-
-
-def get_latest_scores(db: sqlite3.Connection) -> list[dict]:
-    """Get the most recent score for each active niche."""
-    rows = db.execute(
-        "SELECT ns.id, ns.niche_id, nc.keyword, nc.aliases, "
-        "ns.engagement, ns.search_trend, ns.content_gap, ns.market_traction, "
-        "ns.composite_score, ns.scored_at, nc.first_seen, nc.last_seen "
-        "FROM niche_scores ns "
-        "JOIN niche_candidates nc ON ns.niche_id = nc.id "
-        "WHERE nc.status = 'active' "
-        "AND ns.scored_at = ("
-        "  SELECT MAX(ns2.scored_at) FROM niche_scores ns2 WHERE ns2.niche_id = ns.niche_id"
-        ") "
-        "ORDER BY ns.composite_score DESC"
-    ).fetchall()
-    return [
-        {
-            "score_id": r[0], "niche_id": r[1], "keyword": r[2],
-            "aliases": json.loads(r[3]) if r[3] else [],
-            "engagement": r[4], "search_trend": r[5],
-            "content_gap": r[6], "market_traction": r[7],
-            "composite_score": r[8], "scored_at": r[9],
-            "first_seen": r[10], "last_seen": r[11],
-        }
-        for r in rows
-    ]
-
-
-def get_niche_candidates_with_embeddings(db: sqlite3.Connection) -> list[dict]:
-    """Return active niche candidates, including serialized embeddings."""
-    rows = db.execute(
-        "SELECT id, keyword, aliases, embedding, status, first_seen, last_seen, occurrence_count "
-        "FROM niche_candidates WHERE status='active' ORDER BY last_seen DESC"
-    ).fetchall()
-    return [
-        {
-            "id": r[0], "keyword": r[1],
-            "aliases": json.loads(r[2]) if r[2] else [],
-            "embedding": r[3], "status": r[4],
+            "llm_score": r[3] or 0.0,
+            "llm_reasoning": r[4] or "",
             "first_seen": r[5], "last_seen": r[6],
             "occurrence_count": r[7],
         }
@@ -225,8 +168,26 @@ def get_niche_candidates_with_embeddings(db: sqlite3.Connection) -> list[dict]:
     ]
 
 
+def get_niche_by_id(db: sqlite3.Connection, niche_id: str) -> dict | None:
+    row = db.execute(
+        "SELECT id, keyword, aliases, llm_score, llm_reasoning, "
+        "first_seen, last_seen, occurrence_count "
+        "FROM niche_candidates WHERE id=?",
+        (niche_id,),
+    ).fetchone()
+    if not row:
+        return None
+    return {
+        "niche_id": row[0], "keyword": row[1],
+        "aliases": json.loads(row[2]) if row[2] else [],
+        "llm_score": row[3] or 0.0,
+        "llm_reasoning": row[4] or "",
+        "first_seen": row[5], "last_seen": row[6],
+        "occurrence_count": row[7],
+    }
+
+
 def get_niche_items(db: sqlite3.Connection, niche_id: str) -> list[dict]:
-    """Get raw items linked to a niche candidate."""
     rows = db.execute(
         "SELECT ri.id, ri.source, ri.source_id, ri.title, ri.body, ri.url, ri.score, "
         "ri.comment_count, ri.metadata, ri.collected_at, nil.keyphrase, nil.relevance_score "
@@ -248,31 +209,7 @@ def get_niche_items(db: sqlite3.Connection, niche_id: str) -> list[dict]:
     ]
 
 
-def get_item_scores(db: sqlite3.Connection, source: str | None = None) -> list[float]:
-    """Return numeric raw-item scores, optionally filtered by source."""
-    query = "SELECT score FROM raw_items WHERE score IS NOT NULL"
-    params: tuple = ()
-    if source:
-        query += " AND source=?"
-        params = (source,)
-    rows = db.execute(query, params).fetchall()
-    return [float(r[0]) for r in rows]
-
-
-def get_trend_snapshots(db: sqlite3.Connection, niche_id: str) -> list[dict]:
-    """Get stored trend snapshots for a niche candidate."""
-    rows = db.execute(
-        "SELECT source, data, snapshot_at FROM trend_snapshots WHERE niche_id=? ORDER BY snapshot_at ASC",
-        (niche_id,),
-    ).fetchall()
-    return [
-        {"source": r[0], "data": json.loads(r[1]) if r[1] else None, "snapshot_at": r[2]}
-        for r in rows
-    ]
-
-
 def get_system_health(db: sqlite3.Connection) -> list[dict]:
-    """Return the latest collection status for each configured source."""
     sources = ["reddit", "google_trends", "hn", "github", "youtube"]
     latest_rows = db.execute(
         "SELECT cr.source, cr.status, cr.started_at, cr.items_collected "
@@ -293,7 +230,13 @@ def get_system_health(db: sqlite3.Connection) -> list[dict]:
     return health
 
 
-def get_collection_run_count(db: sqlite3.Connection) -> int:
-    """Return the total number of collection runs."""
-    row = db.execute("SELECT COUNT(*) FROM collection_runs").fetchone()
-    return int(row[0]) if row else 0
+def get_app_setting(db: sqlite3.Connection, key: str) -> str | None:
+    row = db.execute("SELECT value FROM app_settings WHERE key=?", (key,)).fetchone()
+    return row[0] if row else None
+
+
+def set_app_setting(db: sqlite3.Connection, key: str, value: str) -> None:
+    db.execute(
+        "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)", (key, value)
+    )
+    db.commit()

@@ -5,11 +5,11 @@ import useSWR from 'swr';
 import { endpoints, fetcher } from '@/lib/api';
 import { NicheScore } from '@/lib/types';
 
-type SortKey = 'composite_score' | 'keyword' | 'occurrence_count' | 'last_seen';
+type SortKey = 'llm_score' | 'keyword' | 'occurrence_count' | 'last_seen';
 
 const COLUMNS: { key: SortKey; label: string; width: string }[] = [
   { key: 'keyword', label: 'KEYWORD', width: '1fr' },
-  { key: 'composite_score', label: 'SCORE', width: '80px' },
+  { key: 'llm_score', label: 'SCORE', width: '80px' },
   { key: 'occurrence_count', label: 'MENTIONS', width: '90px' },
   { key: 'last_seen', label: 'LAST SEEN', width: '180px' },
 ];
@@ -21,7 +21,7 @@ const TIER_LABELS: Record<NicheScore['tier'], string> = {
 };
 
 export default function NichesPage() {
-  const [sortKey, setSortKey] = useState<SortKey>('composite_score');
+  const [sortKey, setSortKey] = useState<SortKey>('llm_score');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [filter, setFilter] = useState('');
 
@@ -246,7 +246,7 @@ export default function NichesPage() {
                   color: '#ffffff',
                 }}
               >
-                {n.composite_score.toFixed(1)}
+                {n.llm_score.toFixed(1)}
               </span>
               <span
                 style={{

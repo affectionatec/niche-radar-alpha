@@ -1,7 +1,6 @@
 """Tests for pipeline API endpoints."""
 from __future__ import annotations
 
-import pytest
 from fastapi.testclient import TestClient
 
 from niche_radar.api.server import app
@@ -23,14 +22,8 @@ def test_post_collect_with_source():
     assert "job_id" in resp.json()
 
 
-def test_post_extract_returns_job():
-    resp = client.post("/api/pipeline/extract")
-    assert resp.status_code == 200
-    assert resp.json()["status"] in ("pending", "running")
-
-
-def test_post_score_returns_job():
-    resp = client.post("/api/pipeline/score")
+def test_post_analyze_returns_job():
+    resp = client.post("/api/pipeline/analyze")
     assert resp.status_code == 200
     assert resp.json()["status"] in ("pending", "running")
 
@@ -48,7 +41,7 @@ def test_post_run_all_returns_job():
 
 
 def test_get_jobs_returns_list():
-    client.post("/api/pipeline/score")
+    client.post("/api/pipeline/analyze")
     resp = client.get("/api/pipeline/jobs")
     assert resp.status_code == 200
     assert isinstance(resp.json(), list)
@@ -101,3 +94,17 @@ def test_get_report_path_traversal_rejected(tmp_path, monkeypatch):
     )
     resp = client.get("/api/reports/../../etc/passwd")
     assert resp.status_code in (403, 404, 422)
+
+
+def test_get_settings_returns_config():
+    resp = client.get("/api/settings")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "llm_provider" in data
+    assert "llm_api_key_set" in data
+
+
+def test_post_settings_saves_model():
+    resp = client.post("/api/settings", json={"llm_model": "gpt-4o"})
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True

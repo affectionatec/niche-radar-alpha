@@ -2,7 +2,6 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { NicheScore } from '@/lib/types';
-import ScoreBar from './ScoreBar';
 
 export default function NicheCard({ niche }: { niche: NicheScore }) {
   const [hovered, setHovered] = useState(false);
@@ -27,7 +26,7 @@ export default function NicheCard({ niche }: { niche: NicheScore }) {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'flex-start',
-            marginBottom: '20px',
+            marginBottom: '16px',
             gap: '16px',
           }}
         >
@@ -54,17 +53,28 @@ export default function NicheCard({ niche }: { niche: NicheScore }) {
               flexShrink: 0,
             }}
           >
-            {niche.composite_score.toFixed(0)}
+            {niche.llm_score.toFixed(0)}
           </span>
         </div>
 
-        {/* Score bars */}
-        <div style={{ marginBottom: '20px' }}>
-          <ScoreBar label="ENGAGEMENT" value={niche.engagement} />
-          <ScoreBar label="SEARCH TREND" value={niche.search_trend} />
-          <ScoreBar label="CONTENT GAP" value={niche.content_gap} />
-          <ScoreBar label="MARKET TRACTION" value={niche.market_traction} />
-        </div>
+        {/* LLM reasoning */}
+        {niche.llm_reasoning && (
+          <p
+            style={{
+              fontFamily: 'var(--font-inter)',
+              fontSize: '12px',
+              color: 'rgba(255,255,255,0.55)',
+              lineHeight: 1.6,
+              marginBottom: '16px',
+              display: '-webkit-box',
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {niche.llm_reasoning}
+          </p>
+        )}
 
         {/* Aliases */}
         {niche.aliases.length > 0 && (

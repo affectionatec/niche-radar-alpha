@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
     # Scheduler
     collection_interval_hours: int = 4
-    scoring_interval_hours: int = 6
+    analysis_interval_hours: int = 6
     cleanup_hour_utc: int = 3
 
     # Retry
@@ -33,7 +33,6 @@ class Settings(BaseSettings):
     # Retention (days)
     retention_raw_items: int = 90
     retention_archived_niches: int = 180
-    retention_scores: int = 365
     retention_collection_runs: int = 30
 
     # Reports
@@ -48,10 +47,12 @@ class Settings(BaseSettings):
     slack_webhook_url: str = ""
     discord_webhook_url: str = ""
 
-    # NLP
-    keybert_model: str = "all-MiniLM-L6-v2"
-    min_occurrence_threshold: int = 2
-    cluster_distance_threshold: float = 0.35
+    # LLM — defaults, overridable at runtime via frontend settings page
+    llm_provider: str = "openai_compat"  # 'openai_compat' | 'anthropic'
+    llm_api_key: str = ""
+    llm_base_url: str = ""  # e.g. https://api.deepseek.com for DeepSeek
+    llm_model: str = "deepseek-chat"
+    llm_batch_size: int = 50  # raw items per LLM call
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

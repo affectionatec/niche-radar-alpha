@@ -1,6 +1,5 @@
 """Tests for the config module."""
 
-import os
 from niche_radar.config import Settings
 
 
@@ -14,5 +13,5 @@ def test_default_settings():
     assert s.log_level == "INFO"
     assert s.collection_interval_hours == 4
     assert s.max_retries == 3
-    assert s.keybert_model == "all-MiniLM-L6-v2"
-    assert s.cluster_distance_threshold == 0.35
+    assert s.llm_provider == "openai_compat"
+    assert s.llm_batch_size == 50
