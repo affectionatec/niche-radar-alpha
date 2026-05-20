@@ -83,6 +83,22 @@ CREATE TABLE IF NOT EXISTS trend_snapshots (
     snapshot_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_trend_snapshots_niche ON trend_snapshots(niche_id);
+
+CREATE TABLE IF NOT EXISTS pipeline_results (
+    id                TEXT PRIMARY KEY,
+    raw_item_id       TEXT REFERENCES raw_items(id),
+    source            TEXT,
+    scraped_at        TIMESTAMP,
+    verdict           TEXT,
+    opportunity_score REAL,
+    tier              TEXT,
+    full_result       JSON,
+    analyzed_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_pipeline_verdict ON pipeline_results(verdict);
+CREATE INDEX IF NOT EXISTS idx_pipeline_tier    ON pipeline_results(tier);
+CREATE INDEX IF NOT EXISTS idx_pipeline_source  ON pipeline_results(source);
+CREATE INDEX IF NOT EXISTS idx_pipeline_scraped ON pipeline_results(scraped_at);
 """
 
 

@@ -72,6 +72,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Report format",
     )
 
+    # analyze
+    p_analyze = sub.add_parser("analyze", help="Run LLM pipeline on a raw item")
+    group = p_analyze.add_mutually_exclusive_group(required=True)
+    group.add_argument("--signal-id", metavar="UUID", help="Raw item UUID to analyze")
+    group.add_argument("--test", action="store_true", help="Run on built-in test signal")
+    p_analyze.add_argument(
+        "--no-save", action="store_true", help="Skip persisting result to DB"
+    )
+
     # serve
     sub.add_parser("serve", help="Start scheduler for continuous operation")
 
@@ -133,6 +142,63 @@ def cmd_score(args: argparse.Namespace, settings) -> int:
     db = get_db(settings.database_url)
     count = run_scoring(db=db, settings=settings, dry_run=args.dry_run)
     logger.info("scoring_complete", niches_scored=count)
+    return 0
+
+
+def cmd_analyze(args: argparse.Namespace, settings) -> int:
+    """Run the 8-agent LLM pipeline on a raw item."""
+    import dataclasses
+
+    from agents.pipeline import PipelineOrchestrator, TEST_SIGNAL
+    from niche_radar.storage.database import get_db
+    from niche_radar.storage.repository import (
+        get_raw_item_by_id,
+        insert_pipeline_result,
+    )
+
+    logger = structlog.get_logger()
+
+    raw_item_id: str | None = None
+
+    if args.test:
+        raw_signal = TEST_SIGNAL
+    else:
+        db = get_db(settings.database_url)
+        item = get_raw_item_by_id(db, args.signal_id)
+        if item is None:
+            logger.error("signal_not_found", signal_id=args.signal_id)
+            return 1
+        raw_item_id = item["id"]
+        raw_signal = {
+            "text": f"{item['title'] or ''}\n\n{item['body'] or ''}".strip(),
+            "source": item["source"],
+            "url": item["url"] or "",
+            "scraped_at": item["collected_at"],
+        }
+
+    result = PipelineOrchestrator(settings).run(raw_signal)
+
+    logger.info(
+        "analysis_complete",
+        verdict=result.verdict,
+        tier=result.tier,
+        opportunity_score=result.opportunity_score,
+    )
+
+    if not args.no_save and not args.dry_run:
+        db = get_db(settings.database_url)
+        result_id = insert_pipeline_result(
+            db=db,
+            raw_item_id=raw_item_id,
+            source=raw_signal.get("source", ""),
+            scraped_at=raw_signal.get("scraped_at"),
+            verdict=result.verdict,
+            opportunity_score=result.opportunity_score,
+            tier=result.tier,
+            full_result=dataclasses.asdict(result),
+        )
+        logger.info("result_saved", result_id=result_id)
+
     return 0
 
 
@@ -218,6 +284,7 @@ COMMANDS = {
     "collect": cmd_collect,
     "extract": cmd_extract,
     "score": cmd_score,
+    "analyze": cmd_analyze,
     "report": cmd_report,
     "serve": cmd_serve,
     "cleanup": cmd_cleanup,

@@ -297,3 +297,100 @@ def get_collection_run_count(db: sqlite3.Connection) -> int:
     """Return the total number of collection runs."""
     row = db.execute("SELECT COUNT(*) FROM collection_runs").fetchone()
     return int(row[0]) if row else 0
+
+
+def get_raw_item_by_id(db: sqlite3.Connection, item_id: str) -> dict | None:
+    """Return a single raw item by its UUID."""
+    row = db.execute(
+        "SELECT id, source, source_id, title, body, url, score, comment_count, metadata, collected_at "
+        "FROM raw_items WHERE id=?",
+        (item_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return {
+        "id": row[0], "source": row[1], "source_id": row[2],
+        "title": row[3], "body": row[4], "url": row[5],
+        "score": row[6], "comment_count": row[7],
+        "metadata": json.loads(row[8]) if row[8] else None,
+        "collected_at": row[9],
+    }
+
+
+def insert_pipeline_result(
+    db: sqlite3.Connection,
+    raw_item_id: str | None,
+    source: str,
+    scraped_at: str | None,
+    verdict: str,
+    opportunity_score: float | None,
+    tier: str | None,
+    full_result: dict,
+) -> str:
+    """Persist a full pipeline result to the database."""
+    result_id = str(uuid.uuid4())
+    db.execute(
+        "INSERT INTO pipeline_results "
+        "(id, raw_item_id, source, scraped_at, verdict, opportunity_score, tier, full_result) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (result_id, raw_item_id, source, scraped_at, verdict, opportunity_score, tier,
+         json.dumps(full_result)),
+    )
+    db.commit()
+    return result_id
+
+
+def get_pipeline_results(
+    db: sqlite3.Connection,
+    verdict: str | None = None,
+    tier: str | None = None,
+    source: str | None = None,
+    limit: int = 100,
+) -> list[dict]:
+    """Query pipeline results with optional filters."""
+    clauses: list[str] = []
+    params: list = []
+    if verdict:
+        clauses.append("verdict=?")
+        params.append(verdict)
+    if tier:
+        clauses.append("tier=?")
+        params.append(tier)
+    if source:
+        clauses.append("source=?")
+        params.append(source)
+    where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+    params.append(limit)
+    rows = db.execute(
+        f"SELECT id, raw_item_id, source, scraped_at, verdict, opportunity_score, tier, "
+        f"full_result, analyzed_at FROM pipeline_results {where} "
+        f"ORDER BY analyzed_at DESC LIMIT ?",
+        params,
+    ).fetchall()
+    return [
+        {
+            "id": r[0], "raw_item_id": r[1], "source": r[2], "scraped_at": r[3],
+            "verdict": r[4], "opportunity_score": r[5], "tier": r[6],
+            "full_result": json.loads(r[7]) if r[7] else None,
+            "analyzed_at": r[8],
+        }
+        for r in rows
+    ]
+
+
+def get_pipeline_result_by_item(db: sqlite3.Connection, raw_item_id: str) -> dict | None:
+    """Return the most recent pipeline result for a given raw_item_id."""
+    row = db.execute(
+        "SELECT id, raw_item_id, source, scraped_at, verdict, opportunity_score, tier, "
+        "full_result, analyzed_at FROM pipeline_results WHERE raw_item_id=? "
+        "ORDER BY analyzed_at DESC LIMIT 1",
+        (raw_item_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return {
+        "id": row[0], "raw_item_id": row[1], "source": row[2], "scraped_at": row[3],
+        "verdict": row[4], "opportunity_score": row[5], "tier": row[6],
+        "full_result": json.loads(row[7]) if row[7] else None,
+        "analyzed_at": row[8],
+    }

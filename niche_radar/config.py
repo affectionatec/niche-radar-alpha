@@ -53,6 +53,11 @@ class Settings(BaseSettings):
     min_occurrence_threshold: int = 2
     cluster_distance_threshold: float = 0.35
 
+    # LLM Pipeline
+    anthropic_api_key: str = ""
+    pipeline_model: str = "claude-sonnet-4-6"
+    pipeline_max_tokens: int = 1000
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 
