@@ -37,3 +37,138 @@ body {
 a {
   color: inherit;
 }
+
+/* ── Markdown report rendering ─────────────────────────────────────────── */
+.report-markdown {
+  font-family: var(--font-inter);
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.85);
+}
+.report-markdown > *:first-child {
+  margin-top: 0;
+}
+.report-markdown h1 {
+  font-family: var(--font-inter);
+  font-size: 26px;
+  font-weight: 400;
+  color: #ffffff;
+  letter-spacing: -0.3px;
+  margin: 0 0 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.report-markdown h2 {
+  font-family: var(--font-inter);
+  font-size: 18px;
+  font-weight: 400;
+  color: #ffffff;
+  margin: 36px 0 16px;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+}
+.report-markdown h3 {
+  font-family: var(--font-inter);
+  font-size: 15px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.95);
+  margin: 28px 0 10px;
+}
+.report-markdown h4,
+.report-markdown h5,
+.report-markdown h6 {
+  font-family: var(--font-inter);
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 20px 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.report-markdown p {
+  margin: 0 0 14px;
+  color: rgba(255, 255, 255, 0.75);
+}
+.report-markdown strong {
+  color: #ffffff;
+  font-weight: 500;
+}
+.report-markdown em {
+  color: rgba(255, 255, 255, 0.9);
+}
+.report-markdown ul,
+.report-markdown ol {
+  margin: 0 0 16px;
+  padding-left: 22px;
+  color: rgba(255, 255, 255, 0.75);
+}
+.report-markdown li {
+  margin: 6px 0;
+}
+.report-markdown li > p {
+  margin-bottom: 6px;
+}
+.report-markdown a {
+  color: rgba(125, 211, 252, 0.9);
+  text-decoration: underline;
+  text-decoration-color: rgba(125, 211, 252, 0.35);
+  text-underline-offset: 2px;
+}
+.report-markdown a:hover {
+  text-decoration-color: rgba(125, 211, 252, 0.85);
+}
+.report-markdown blockquote {
+  border-left: 2px solid rgba(255, 255, 255, 0.25);
+  padding: 4px 16px;
+  margin: 16px 0;
+  color: rgba(255, 255, 255, 0.65);
+  font-style: italic;
+}
+.report-markdown code {
+  font-family: var(--font-geist-mono);
+  font-size: 12.5px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: rgba(251, 191, 36, 0.95);
+}
+.report-markdown pre {
+  background: rgba(0, 0, 0, 0.25);
+  padding: 14px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 16px 0;
+}
+.report-markdown pre code {
+  background: none;
+  padding: 0;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.report-markdown hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 28px 0;
+}
+.report-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-family: var(--font-geist-mono);
+  font-size: 12px;
+}
+.report-markdown th,
+.report-markdown td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.report-markdown th {
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  font-size: 11px;
+}

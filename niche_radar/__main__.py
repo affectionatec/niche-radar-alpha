@@ -60,13 +60,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("analyze", help="Run LLM analysis on raw items")
 
     # report
-    p_report = sub.add_parser("report", help="Generate niche report")
-    p_report.add_argument(
-        "--format",
-        choices=["markdown", "json", "both"],
-        default=None,
-        help="Report format",
-    )
+    sub.add_parser("report", help="Generate niche report")
 
     # serve
     sub.add_parser("serve", help="Start scheduler for continuous operation")
@@ -121,9 +115,8 @@ def cmd_report(args: argparse.Namespace, settings) -> int:
 
     logger = structlog.get_logger()
     db = get_db(settings.database_url)
-    fmt = args.format or settings.report_format
-    paths = generate_report(db=db, settings=settings, fmt=fmt)
-    logger.info("report_generated", files=[str(p) for p in paths])
+    path = generate_report(db=db, settings=settings)
+    logger.info("report_generated", file=str(path))
     return 0
 
 

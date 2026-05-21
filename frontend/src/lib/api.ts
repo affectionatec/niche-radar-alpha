@@ -1,5 +1,3 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
-
 export async function fetcher<T>(url: string): Promise<T> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`API ${res.status}: ${url}`);
@@ -10,7 +8,7 @@ export async function postPipeline(
   step: string,
   params?: Record<string, string>,
 ): Promise<{ job_id: string; status: string }> {
-  const url = new URL(`${API_URL}/api/pipeline/${step}`);
+  const url = new URL(`/api/pipeline/${step}`, window.location.origin);
   if (params) {
     for (const [k, v] of Object.entries(params)) {
       url.searchParams.set(k, v);
@@ -22,7 +20,7 @@ export async function postPipeline(
 }
 
 export async function postSettings(body: Record<string, string>): Promise<void> {
-  const res = await fetch(`${API_URL}/api/settings`, {
+  const res = await fetch('/api/settings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -30,13 +28,19 @@ export async function postSettings(body: Record<string, string>): Promise<void> 
   if (!res.ok) throw new Error(`Settings update failed: ${res.status}`);
 }
 
+export async function postSettingsTest(): Promise<{ ok: boolean; message: string }> {
+  const res = await fetch('/api/settings/test', { method: 'POST' });
+  if (!res.ok) throw new Error(`Test request failed: ${res.status}`);
+  return res.json() as Promise<{ ok: boolean; message: string }>;
+}
+
 export const endpoints = {
-  status: `${API_URL}/api/status`,
-  niches: `${API_URL}/api/niches`,
-  niche: (id: string) => `${API_URL}/api/niches/${id}`,
-  reports: `${API_URL}/api/reports`,
-  reportContent: (filename: string) => `${API_URL}/api/reports/${encodeURIComponent(filename)}`,
-  jobs: `${API_URL}/api/pipeline/jobs`,
-  jobLogs: (id: string) => `${API_URL}/api/pipeline/jobs/${id}/logs`,
-  settings: `${API_URL}/api/settings`,
+  status: '/api/status',
+  niches: '/api/niches',
+  niche: (id: string) => `/api/niches/${id}`,
+  reports: '/api/reports',
+  reportContent: (filename: string) => `/api/reports/${encodeURIComponent(filename)}`,
+  jobs: '/api/pipeline/jobs',
+  jobLogs: (id: string) => `/api/pipeline/jobs/${id}/logs`,
+  settings: '/api/settings',
 };

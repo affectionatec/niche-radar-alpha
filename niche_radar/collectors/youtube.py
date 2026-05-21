@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import time
+from datetime import datetime, timedelta, timezone
 
 import structlog
 from tenacity import Retrying, stop_after_attempt, wait_exponential
@@ -75,6 +76,10 @@ class YouTubeCollector(BaseCollector):
             )
             items: dict[str, dict] = {}
             errors: list[str] = []
+            window_hours = settings.freshness_youtube_hours
+            cutoff = datetime.now(timezone.utc) - timedelta(hours=window_hours)
+            published_after_iso = cutoff.strftime("%Y-%m-%dT%H:%M:%SZ")
+            dropped_stale = 0
 
             for query in SEED_KEYWORDS:
                 try:
@@ -92,12 +97,18 @@ class YouTubeCollector(BaseCollector):
                     logger.warning("youtube_scrapetube_failed", query=query, error=str(exc))
                     for attempt in retryer:
                         with attempt:
-                            videos = self._search_api(requests, settings.youtube_api_key, query)
+                            videos = self._search_api(
+                                requests, settings.youtube_api_key, query, published_after_iso,
+                            )
                     used_api = True
 
                 for video in videos[:10]:
                     item = self._normalize_video(video, query, used_api)
                     if not item:
+                        continue
+                    # Freshness gate — drop videos older than the window
+                    if not self._is_fresh(item, used_api, cutoff):
+                        dropped_stale += 1
                         continue
                     existing = items.get(item["source_id"])
                     if existing:
@@ -109,6 +120,8 @@ class YouTubeCollector(BaseCollector):
                 time.sleep(1)
 
             collected = list(items.values())
+            if dropped_stale:
+                logger.info("youtube_stale_dropped", count=dropped_stale, window_hours=window_hours)
             status = "completed" if not errors else "partial" if collected else "failed"
             return CollectorResult(
                 source=self.source_name,
@@ -131,16 +144,22 @@ class YouTubeCollector(BaseCollector):
                 duration_seconds=time.perf_counter() - start,
             )
 
-    def _search_api(self, requests_module, api_key: str, query: str) -> list[dict]:
+    def _search_api(
+        self, requests_module, api_key: str, query: str, published_after: str | None = None,
+    ) -> list[dict]:
+        params = {
+            "part": "snippet",
+            "type": "video",
+            "maxResults": 10,
+            "q": query,
+            "order": "date",  # newest first
+            "key": api_key,
+        }
+        if published_after:
+            params["publishedAfter"] = published_after
         response = requests_module.get(
             "https://www.googleapis.com/youtube/v3/search",
-            params={
-                "part": "snippet",
-                "type": "video",
-                "maxResults": 10,
-                "q": query,
-                "key": api_key,
-            },
+            params=params,
             timeout=20,
         )
         if response.status_code == 403 and "quota" in response.text.lower():
@@ -157,6 +176,17 @@ class YouTubeCollector(BaseCollector):
         title = _text(video.get("title")) if not used_api else snippet.get("title")
         body = _text(video.get("descriptionSnippet")) if not used_api else snippet.get("description")
         view_text = _text(video.get("viewCountText")) if not used_api else None
+        published = _text(video.get("publishedTimeText")) if not used_api else snippet.get("publishedAt")
+
+        # API returns ISO timestamps; scrapetube returns "2 days ago" — parse both.
+        posted_at = None
+        if used_api and published:
+            posted_at = published
+        elif published:
+            relative_dt = _relative_to_datetime(published)
+            if relative_dt is not None:
+                posted_at = relative_dt.isoformat()
+
         return {
             "source_id": source_id,
             "title": title or source_id,
@@ -164,11 +194,59 @@ class YouTubeCollector(BaseCollector):
             "url": f"https://www.youtube.com/watch?v={source_id}",
             "score": _to_int(view_text),
             "comment_count": None,
+            "posted_at": posted_at,
             "metadata": {
                 "queries": [query],
                 "channel": _text(video.get("longBylineText")) if not used_api else snippet.get("channelTitle"),
-                "published": _text(video.get("publishedTimeText")) if not used_api else snippet.get("publishedAt"),
+                "published": published,
                 "view_count_text": view_text,
                 "source": "youtube_api" if used_api else "scrapetube",
             },
         }
+
+    def _is_fresh(self, item: dict, used_api: bool, cutoff: datetime) -> bool:
+        """API path: parse ISO. Scrape path: parse relative phrase like '2 days ago'."""
+        if used_api:
+            posted = item.get("posted_at")
+            if not posted:
+                return False
+            try:
+                dt = datetime.fromisoformat(posted.replace("Z", "+00:00"))
+                return dt >= cutoff
+            except (ValueError, TypeError):
+                return False
+        # Scrapetube returns relative phrases — parse them
+        published = (item.get("metadata") or {}).get("published") or ""
+        return _relative_age_within(published, cutoff)
+
+
+_RELATIVE_PATTERN = re.compile(
+    r"(\d+)\s*(second|minute|hour|day|week|month|year)s?\s*ago", re.IGNORECASE
+)
+
+
+def _relative_to_datetime(phrase: str) -> datetime | None:
+    """Parse 'N days ago' / 'N weeks ago' → absolute UTC datetime. Returns None if unparseable."""
+    m = _RELATIVE_PATTERN.search(phrase or "")
+    if not m:
+        return None
+    n = int(m.group(1))
+    unit = m.group(2).lower()
+    delta_hours = {
+        "second": n / 3600,
+        "minute": n / 60,
+        "hour": n,
+        "day": n * 24,
+        "week": n * 24 * 7,
+        "month": n * 24 * 30,
+        "year": n * 24 * 365,
+    }[unit]
+    return datetime.now(timezone.utc) - timedelta(hours=delta_hours)
+
+
+def _relative_age_within(phrase: str, cutoff: datetime) -> bool:
+    """Returns True if the relative phrase resolves to a time after `cutoff`."""
+    posted = _relative_to_datetime(phrase)
+    if posted is None:
+        return False  # conservative: drop unparseable
+    return posted >= cutoff

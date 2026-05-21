@@ -1,0 +1,57 @@
+{
+  "project": "Niche Radar Alpha",
+  "branchName": "ralph/docker-runtime-config",
+  "description": "Make the system fully deployable via docker compose — fix build-time API URL baking, add first-run onboarding, and add LLM connection test.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Fix Next.js API URL to be runtime-configurable in Docker",
+      "description": "As a user deploying with Docker, I want the frontend to reach the backend at runtime so I don't need to rebuild the image for each deployment environment.",
+      "acceptanceCriteria": [
+        "Add `async rewrites()` to `frontend/next.config.mjs` that proxies `/api/:path*` to `process.env.BACKEND_URL + '/:path*'` (falls back to `http://localhost:8000`)",
+        "Change `frontend/src/lib/api.ts`: remove `const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ...` and replace all absolute URLs with relative paths (e.g. `/api/status` instead of `${API_URL}/api/status`)",
+        "Change `docker-compose.yml` frontend service: remove `args: [NEXT_PUBLIC_API_URL=...]` from the `build` block, add `environment: [BACKEND_URL=http://radar:8000]` as a runtime env var",
+        "Change `frontend/Dockerfile`: remove `ARG NEXT_PUBLIC_API_URL` and the `ENV NEXT_PUBLIC_API_URL` line",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed. rewrites added to next.config.mjs; api.ts uses relative paths; docker-compose.yml uses runtime env; Dockerfile cleaned up. 39/39 tests pass, tsc clean."
+    },
+    {
+      "id": "US-002",
+      "title": "Redirect to settings on first run when no API key is configured",
+      "description": "As a first-time user, I want to be guided to configure my LLM API key before running the pipeline so I don't get confusing errors.",
+      "acceptanceCriteria": [
+        "In `frontend/src/app/page.tsx` (dashboard), fetch `GET /api/settings` on mount; if `llm_api_key_set === false`, call `router.replace('/settings?onboarding=1')` before rendering",
+        "In `frontend/src/app/settings/page.tsx`, if the URL has `?onboarding=1`, show a banner at the top: 'No LLM API key configured. Enter your key below to start using Niche Radar.' — styled in amber/yellow consistent with the dark theme",
+        "Banner must NOT appear on subsequent visits to /settings (only when `?onboarding=1` is present in the URL)",
+        "After saving settings successfully, call `router.push('/')` to return to the dashboard",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed. Dashboard redirects via useEffect when llm_api_key_set=false. Settings shows amber banner on ?onboarding=1 and redirects home after save."
+    },
+    {
+      "id": "US-003",
+      "title": "Add LLM connection test endpoint and UI button",
+      "description": "As a user configuring the LLM API key, I want to verify the connection works before running the pipeline so I get immediate feedback if the key or URL is wrong.",
+      "acceptanceCriteria": [
+        "Add `POST /api/settings/test` to `niche_radar/api/server.py`: reads current LLM settings from DB (via `_get_llm_client` from `niche_radar.analysis.analyzer`), calls `client.complete('Reply with the word OK.')`, returns `{ok: true, message: 'Connection successful'}` or `{ok: false, message: '<error>'}` — never raises HTTP 5xx",
+        "Add `postSettingsTest()` function to `frontend/src/lib/api.ts` that POST to `/api/settings/test` and returns `{ok: boolean, message: string}`",
+        "Add a 'TEST CONNECTION' button to `frontend/src/app/settings/page.tsx` next to the 'SAVE SETTINGS' button — only enabled when `current?.llm_api_key_set === true` or a new `apiKey` has been typed",
+        "Button shows 'TESTING...' while pending; on success shows green 'OK' text; on failure shows red error message — both auto-clear after 5 seconds",
+        "Test button tests the CURRENTLY SAVED settings (not the form's unsaved draft); note this in a UI hint below the button",
+        "Add a test in `tests/test_api/test_server.py`: `test_post_settings_test_returns_result` — POSTs to `/api/settings/test` and asserts `resp.status_code == 200` and `'ok' in resp.json()`",
+        "Typecheck passes",
+        "Tests pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed. POST /api/settings/test added to server.py (never raises 5xx). postSettingsTest() in api.ts. TEST CONNECTION button with TESTING.../green/red states in settings page. test_post_settings_test_returns_result added. 39/39 tests pass, tsc clean."
+    }
+  ]
+}

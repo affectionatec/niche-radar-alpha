@@ -35,9 +35,21 @@ class Settings(BaseSettings):
     retention_archived_niches: int = 180
     retention_collection_runs: int = 30
 
+    # ── Freshness rules ─────────────────────────────────────────────────────
+    # max_item_age_hours per source — items posted before this window are DROPPED
+    # at collection time and never enter the DB. Tunable from .env if needed.
+    freshness_reddit_hours: int = 72       # 3 days — pain threads cool fast
+    freshness_hn_hours: int = 72           # 3 days — story relevance drops
+    freshness_github_hours: int = 168      # 7 days — repo trends are weekly
+    freshness_google_trends_hours: int = 24  # 1 day — trending = today
+    freshness_youtube_hours: int = 336     # 14 days — video discovery is slow
+
+    # Analysis-time freshness — only feed the LLM items posted within this window.
+    # Niches whose last_seen falls outside this window are auto-archived.
+    analysis_window_days: int = 7
+
     # Reports
     report_output_dir: Path = Path("./reports")
-    report_format: str = "both"  # 'markdown' | 'json' | 'both'
 
     # Logging
     log_level: str = "INFO"
@@ -51,7 +63,7 @@ class Settings(BaseSettings):
     llm_provider: str = "openai_compat"  # 'openai_compat' | 'anthropic'
     llm_api_key: str = ""
     llm_base_url: str = ""  # e.g. https://api.deepseek.com for DeepSeek
-    llm_model: str = "deepseek-chat"
+    llm_model: str = "deepseek-v4-flash"
     llm_batch_size: int = 50  # raw items per LLM call
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}

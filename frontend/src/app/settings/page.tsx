@@ -1,7 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import useSWR from 'swr';
-import { endpoints, fetcher, postSettings } from '@/lib/api';
+import { endpoints, fetcher, postSettings, postSettingsTest } from '@/lib/api';
 import { LLMSettings } from '@/lib/types';
 
 const PROVIDERS = [
@@ -10,7 +11,7 @@ const PROVIDERS = [
 ];
 
 const PRESET_MODELS: Record<string, string[]> = {
-  openai_compat: ['deepseek-chat', 'deepseek-reasoner', 'gpt-4o', 'gpt-4o-mini', 'llama-3.3-70b-versatile'],
+  openai_compat: ['deepseek-v4-flash', 'deepseek-v4-pro', 'gpt-4o', 'gpt-4o-mini', 'llama-3.3-70b-versatile'],
   anthropic: ['claude-haiku-4-5-20251001', 'claude-sonnet-4-6', 'claude-opus-4-7'],
 };
 
@@ -22,20 +23,34 @@ const PRESET_BASE_URLS: { label: string; value: string }[] = [
 ];
 
 export default function SettingsPage() {
+  return (
+    <Suspense>
+      <SettingsContent />
+    </Suspense>
+  );
+}
+
+function SettingsContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const isOnboarding = searchParams.get('onboarding') === '1';
+
   const { data: current, mutate } = useSWR<LLMSettings>(endpoints.settings, fetcher);
 
   const [provider, setProvider] = useState('openai_compat');
   const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState('deepseek-chat');
+  const [model, setModel] = useState('deepseek-v4-flash');
   const [baseUrl, setBaseUrl] = useState('https://api.deepseek.com');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     if (current) {
       setProvider(current.llm_provider || 'openai_compat');
-      setModel(current.llm_model || 'deepseek-chat');
+      setModel(current.llm_model || 'deepseek-v4-flash');
       setBaseUrl(current.llm_base_url || '');
     }
   }, [current]);
@@ -50,6 +65,10 @@ export default function SettingsPage() {
       setSaved(true);
       setApiKey('');
       mutate();
+      if (isOnboarding) {
+        router.push('/');
+        return;
+      }
       setTimeout(() => setSaved(false), 3000);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed');
@@ -58,8 +77,40 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleTest() {
+    setTestResult(null);
+    setTesting(true);
+    try {
+      const result = await postSettingsTest();
+      setTestResult(result);
+    } catch (e) {
+      setTestResult({ ok: false, message: e instanceof Error ? e.message : 'Request failed' });
+    } finally {
+      setTesting(false);
+      setTimeout(() => setTestResult(null), 5000);
+    }
+  }
+
+  const canTest = current?.llm_api_key_set === true || apiKey.length > 0;
+
   return (
     <div style={{ maxWidth: '600px' }}>
+      {isOnboarding && (
+        <div
+          style={{
+            background: 'rgba(251,191,36,0.12)',
+            border: '1px solid rgba(251,191,36,0.35)',
+            padding: '14px 18px',
+            marginBottom: '32px',
+            fontFamily: 'var(--font-geist-mono)',
+            fontSize: '12px',
+            color: 'rgba(251,191,36,0.9)',
+            letterSpacing: '0.3px',
+          }}
+        >
+          No LLM API key configured. Enter your key below to start using Niche Radar.
+        </div>
+      )}
       <h1
         style={{
           fontFamily: 'var(--font-inter)',
@@ -181,49 +232,92 @@ export default function SettingsPage() {
           />
         </Field>
 
-        {/* Save */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            style={{
-              background: '#ffffff',
-              border: 'none',
-              color: '#1f2228',
-              fontFamily: 'var(--font-geist-mono)',
-              fontSize: '11px',
-              fontWeight: 600,
-              letterSpacing: '1px',
-              textTransform: 'uppercase',
-              padding: '0 24px',
-              height: '40px',
-              cursor: saving ? 'not-allowed' : 'pointer',
-              opacity: saving ? 0.5 : 1,
-            }}
-          >
-            {saving ? 'SAVING...' : 'SAVE SETTINGS'}
-          </button>
-          {saved && (
+        {/* Save + Test */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                background: '#ffffff',
+                border: 'none',
+                color: '#1f2228',
+                fontFamily: 'var(--font-geist-mono)',
+                fontSize: '11px',
+                fontWeight: 600,
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
+                padding: '0 24px',
+                height: '40px',
+                cursor: saving ? 'not-allowed' : 'pointer',
+                opacity: saving ? 0.5 : 1,
+              }}
+            >
+              {saving ? 'SAVING...' : 'SAVE SETTINGS'}
+            </button>
+            <button
+              onClick={handleTest}
+              disabled={testing || !canTest}
+              style={{
+                background: 'transparent',
+                border: '1px solid rgba(255,255,255,0.25)',
+                color: canTest ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.25)',
+                fontFamily: 'var(--font-geist-mono)',
+                fontSize: '11px',
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
+                padding: '0 20px',
+                height: '40px',
+                cursor: testing || !canTest ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {testing ? 'TESTING...' : 'TEST CONNECTION'}
+            </button>
+            {saved && (
+              <span
+                style={{
+                  fontFamily: 'var(--font-geist-mono)',
+                  fontSize: '11px',
+                  color: 'rgba(255,255,255,0.5)',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                SAVED
+              </span>
+            )}
+            {error && (
+              <span
+                style={{
+                  fontFamily: 'var(--font-geist-mono)',
+                  fontSize: '11px',
+                  color: 'rgba(255,80,80,0.85)',
+                }}
+              >
+                {error}
+              </span>
+            )}
+          </div>
+          {testResult !== null && (
             <span
               style={{
                 fontFamily: 'var(--font-geist-mono)',
                 fontSize: '11px',
-                color: 'rgba(255,255,255,0.5)',
-                letterSpacing: '0.5px',
+                color: testResult.ok ? 'rgba(74,222,128,0.9)' : 'rgba(255,80,80,0.85)',
+                letterSpacing: '0.3px',
               }}
             >
-              SAVED
+              {testResult.ok ? `✓ ${testResult.message}` : `✗ ${testResult.message}`}
             </span>
           )}
-          {error && (
+          {canTest && (
             <span
               style={{
-                fontFamily: 'var(--font-geist-mono)',
+                fontFamily: 'var(--font-inter)',
                 fontSize: '11px',
-                color: 'rgba(255,80,80,0.85)',
+                color: 'rgba(255,255,255,0.2)',
               }}
             >
-              {error}
+              Connection test uses currently saved settings, not unsaved form values.
             </span>
           )}
         </div>

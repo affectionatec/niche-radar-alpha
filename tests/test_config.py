@@ -3,7 +3,11 @@
 from niche_radar.config import Settings
 
 
-def test_default_settings():
+def test_default_settings(monkeypatch):
+    # Other tests (test_server.py) set DATABASE_URL/REPORT_OUTPUT_DIR globally to isolate
+    # themselves from the production DB. Unset them here so this test sees real defaults.
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("REPORT_OUTPUT_DIR", raising=False)
     s = Settings(
         _env_file=None,
         reddit_client_id="test",

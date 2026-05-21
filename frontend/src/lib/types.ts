@@ -5,12 +5,39 @@ export interface SourceHealth {
   items: number;
 }
 
+export interface SourceFreshness {
+  source: string;
+  items: number;
+  oldest_posted: string | null;
+  newest_posted: string | null;
+  newest_age_hours: number | null;
+}
+
+export interface FreshnessSummary {
+  analysis_window_days: number;
+  rules: {
+    reddit_hours: number;
+    hn_hours: number;
+    github_hours: number;
+    google_trends_hours: number;
+    youtube_hours: number;
+  };
+  per_source: SourceFreshness[];
+}
+
 export interface SystemStatus {
   raw_items: number;
   active_niches: number;
   last_collection: string | null;
   collection_cycle: number;
   sources: SourceHealth[];
+  freshness?: FreshnessSummary;
+}
+
+export interface PainPoint {
+  pain: string;
+  quote: string;
+  item_id: string;
 }
 
 export interface NicheScore {
@@ -19,6 +46,11 @@ export interface NicheScore {
   aliases: string[];
   llm_score: number;
   llm_reasoning: string;
+  tool_concept: string;
+  target_audience: string;
+  build_complexity: number | null;
+  monetization: string;
+  pain_points: PainPoint[];
   first_seen: string;
   last_seen: string;
   occurrence_count: number;

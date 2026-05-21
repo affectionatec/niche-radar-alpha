@@ -1,12 +1,24 @@
 'use client';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import useSWR from 'swr';
 import { endpoints, fetcher } from '@/lib/api';
-import { NicheScore, SystemStatus } from '@/lib/types';
+import { LLMSettings, NicheScore, SystemStatus } from '@/lib/types';
 import NicheCard from '@/components/NicheCard';
 import SourceHealthTable from '@/components/SourceHealthTable';
 
 export default function Dashboard() {
+  const router = useRouter();
+
+  const { data: settings } = useSWR<LLMSettings>(endpoints.settings, fetcher);
+
+  useEffect(() => {
+    if (settings && !settings.llm_api_key_set) {
+      router.replace('/settings?onboarding=1');
+    }
+  }, [settings, router]);
+
   const { data: niches, error: nichesError, isLoading: nichesLoading } =
     useSWR<NicheScore[]>(endpoints.niches, fetcher, { refreshInterval: 30_000 });
 
@@ -38,6 +50,7 @@ export default function Dashboard() {
   return (
     <div>
       {/* Stats strip + pipeline CTA */}
+      {/* high_priority = quick-win + high-score (build≤2, score≥80). watchlist = score 65-79. */}
       <div
         style={{
           display: 'flex',
@@ -53,7 +66,7 @@ export default function Dashboard() {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '48px' }}>
           {status ? (
             <>
-              <Stat label="ACTIVE NICHES" value={status.active_niches} />
+              <Stat label="OPPORTUNITIES" value={status.active_niches} />
               <Stat label="RAW ITEMS" value={status.raw_items.toLocaleString()} />
               <Stat label="CYCLES" value={status.collection_cycle} />
               <Stat
@@ -91,7 +104,7 @@ export default function Dashboard() {
 
       {/* High priority */}
       <section style={{ marginBottom: '64px' }}>
-        <SectionHeading label="HIGH PRIORITY" count={highPriority.length} note="SCORE ≥ 80" />
+        <SectionHeading label="HIGH PRIORITY" count={highPriority.length} note="SCORE ≥ 80 · BUILD NOW" />
         {nichesLoading ? (
           <LoadingGrid />
         ) : highPriority.length === 0 ? (
@@ -103,7 +116,7 @@ export default function Dashboard() {
 
       {/* Watchlist */}
       <section style={{ marginBottom: '64px' }}>
-        <SectionHeading label="WATCHLIST" count={watchlist.length} note="SCORE 65–79" />
+        <SectionHeading label="WATCHLIST" count={watchlist.length} note="SCORE 65–79 · MONITOR" />
         {nichesLoading ? (
           <LoadingGrid />
         ) : watchlist.length === 0 ? (
@@ -112,6 +125,64 @@ export default function Dashboard() {
           <NicheGrid niches={watchlist} />
         )}
       </section>
+
+      {/* Freshness rules */}
+      {status?.freshness && (
+        <section style={{ marginBottom: '64px' }}>
+          <SectionHeading
+            label="DATA FRESHNESS"
+            count={null}
+            note={`ANALYSIS WINDOW · LAST ${status.freshness.analysis_window_days} DAYS`}
+          />
+          <div
+            style={{
+              border: '1px solid rgba(255,255,255,0.1)',
+              padding: '20px 24px',
+              fontFamily: 'var(--font-geist-mono)',
+              fontSize: '11px',
+              color: 'rgba(255,255,255,0.6)',
+              lineHeight: 1.8,
+            }}
+          >
+            <div style={{ marginBottom: '14px', color: 'rgba(255,255,255,0.45)', fontSize: '10px', letterSpacing: '1px', textTransform: 'uppercase' }}>
+              COLLECTION RULES — items older than these windows are dropped at collection time
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+              <span>REDDIT &nbsp;<span style={{ color: 'rgba(74,222,128,0.85)' }}>≤ {status.freshness.rules.reddit_hours}h</span></span>
+              <span>HN &nbsp;<span style={{ color: 'rgba(74,222,128,0.85)' }}>≤ {status.freshness.rules.hn_hours}h</span></span>
+              <span>GITHUB &nbsp;<span style={{ color: 'rgba(74,222,128,0.85)' }}>≤ {status.freshness.rules.github_hours}h</span></span>
+              <span>GOOGLE TRENDS &nbsp;<span style={{ color: 'rgba(74,222,128,0.85)' }}>≤ {status.freshness.rules.google_trends_hours}h</span></span>
+              <span>YOUTUBE &nbsp;<span style={{ color: 'rgba(74,222,128,0.85)' }}>≤ {status.freshness.rules.youtube_hours}h</span></span>
+            </div>
+            {status.freshness.per_source.length > 0 && (
+              <>
+                <div style={{ marginBottom: '8px', color: 'rgba(255,255,255,0.45)', fontSize: '10px', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                  CURRENT CORPUS — newest item age per source
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
+                  {status.freshness.per_source.map((s) => (
+                    <span key={s.source}>
+                      {s.source.toUpperCase()} &nbsp;
+                      <span
+                        style={{
+                          color: (s.newest_age_hours ?? 999) <= 24
+                            ? 'rgba(74,222,128,0.85)'
+                            : (s.newest_age_hours ?? 999) <= 72
+                              ? 'rgba(251,191,36,0.85)'
+                              : 'rgba(255,140,140,0.85)',
+                        }}
+                      >
+                        {s.newest_age_hours !== null ? `${s.newest_age_hours.toFixed(0)}h ago` : '—'}
+                      </span>
+                      <span style={{ color: 'rgba(255,255,255,0.3)' }}> · {s.items} items</span>
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* System health */}
       {status && (

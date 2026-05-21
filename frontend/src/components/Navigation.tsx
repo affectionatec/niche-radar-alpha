@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 const NAV_LINKS = [
   { href: '/pipeline', label: 'PIPELINE' },
-  { href: '/niches', label: 'NICHES' },
+  { href: '/niches', label: 'OPPORTUNITIES' },
   { href: '/reports', label: 'REPORTS' },
   { href: '/settings', label: 'SETTINGS' },
 ];

@@ -68,7 +68,7 @@ class RedditCollector(BaseCollector):
                 client_secret=settings.reddit_client_secret,
                 user_agent=settings.reddit_user_agent,
             )
-            cutoff = datetime.now(timezone.utc) - timedelta(days=1)
+            cutoff = datetime.now(timezone.utc) - timedelta(hours=settings.freshness_reddit_hours)
             items: list[dict] = []
             errors: list[str] = []
 
@@ -92,6 +92,7 @@ class RedditCollector(BaseCollector):
                                 "url": f"https://www.reddit.com{submission.permalink}",
                                 "score": int(submission.score or 0),
                                 "comment_count": int(submission.num_comments or 0),
+                                "posted_at": created_at.isoformat(),
                                 "metadata": {
                                     "subreddit": subreddit_name,
                                     "author": str(submission.author) if submission.author else None,

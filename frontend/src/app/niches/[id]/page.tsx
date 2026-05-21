@@ -4,6 +4,21 @@ import Link from 'next/link';
 import { endpoints, fetcher } from '@/lib/api';
 import { NicheDetail } from '@/lib/types';
 
+const COMPLEXITY_LABEL: Record<number, string> = {
+  1: 'WEEKEND BUILD',
+  2: '2-3 DAY BUILD',
+  3: '~1 WEEK BUILD',
+  4: '1-2 WEEK BUILD',
+  5: '2+ WEEK BUILD',
+};
+
+function complexityColor(c: number | null): string {
+  if (c === null) return 'rgba(255,255,255,0.3)';
+  if (c <= 2) return 'rgba(74,222,128,0.85)';
+  if (c === 3) return 'rgba(251,191,36,0.85)';
+  return 'rgba(255,140,140,0.85)';
+}
+
 export default function NichePage({ params }: { params: { id: string } }) {
   const { id } = params;
   const { data, error, isLoading } = useSWR<NicheDetail>(
@@ -12,15 +27,17 @@ export default function NichePage({ params }: { params: { id: string } }) {
     { refreshInterval: 60_000 }
   );
 
-  if (error) return <StatusMessage text="NICHE NOT FOUND" />;
+  if (error) return <StatusMessage text="OPPORTUNITY NOT FOUND" />;
   if (isLoading || !data) return <StatusMessage text="LOADING..." />;
 
   const { niche, items } = data;
+  const concept = niche.tool_concept || niche.keyword;
+  const complexityLabel = niche.build_complexity ? COMPLEXITY_LABEL[niche.build_complexity] : 'UNKNOWN COMPLEXITY';
 
   return (
     <div>
       {/* Breadcrumb */}
-      <div style={{ marginBottom: '48px' }}>
+      <div style={{ marginBottom: '32px' }}>
         <Link
           href="/"
           style={{
@@ -36,37 +53,51 @@ export default function NichePage({ params }: { params: { id: string } }) {
         </Link>
       </div>
 
+      {/* Slug */}
+      <div
+        style={{
+          fontFamily: 'var(--font-geist-mono)',
+          fontSize: '11px',
+          color: 'rgba(255,255,255,0.4)',
+          textTransform: 'uppercase',
+          letterSpacing: '1.5px',
+          marginBottom: '14px',
+        }}
+      >
+        {niche.keyword}
+      </div>
+
       {/* Header */}
       <div
         style={{
           borderBottom: '1px solid rgba(255,255,255,0.1)',
-          paddingBottom: '48px',
-          marginBottom: '48px',
+          paddingBottom: '40px',
+          marginBottom: '40px',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'flex-end',
+          alignItems: 'flex-start',
           flexWrap: 'wrap',
-          gap: '24px',
+          gap: '32px',
         }}
       >
         <h1
           style={{
-            fontFamily: 'var(--font-geist-mono)',
-            fontSize: 'clamp(24px, 4vw, 56px)',
-            fontWeight: 300,
+            fontFamily: 'var(--font-inter)',
+            fontSize: 'clamp(24px, 3.5vw, 40px)',
+            fontWeight: 400,
             color: '#ffffff',
-            textTransform: 'uppercase',
-            letterSpacing: '2px',
-            lineHeight: 1.1,
+            lineHeight: 1.2,
+            flex: '1 1 400px',
+            letterSpacing: '-0.3px',
           }}
         >
-          {niche.keyword}
+          {concept}
         </h1>
-        <div style={{ textAlign: 'right' }}>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
           <div
             style={{
               fontFamily: 'var(--font-geist-mono)',
-              fontSize: '72px',
+              fontSize: '64px',
               fontWeight: 300,
               color: '#ffffff',
               lineHeight: 1,
@@ -84,52 +115,90 @@ export default function NichePage({ params }: { params: { id: string } }) {
               marginTop: '4px',
             }}
           >
-            AI SCORE
+            OPPORTUNITY SCORE
           </div>
         </div>
       </div>
 
-      {/* AI analysis + meta */}
+      {/* Quick-glance badges */}
+      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '40px' }}>
+        <Badge label={`⏱ ${complexityLabel}`} color={complexityColor(niche.build_complexity)} bordered />
+        {niche.target_audience && <Badge label={`👥 ${niche.target_audience.toUpperCase()}`} />}
+        <Badge label={`📊 ${niche.occurrence_count} MENTIONS`} />
+      </div>
+
+      {/* Demand evidence + monetization grid */}
       <div
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '48px',
+          gap: '32px',
           marginBottom: '48px',
         }}
       >
-        <div>
-          <SectionLabel>AI ANALYSIS</SectionLabel>
-          <p
+        <Block label="WHY IT'S HOT">
+          {niche.llm_reasoning || 'No analysis available yet.'}
+        </Block>
+        <Block label="MONETIZATION ANGLE">
+          {niche.monetization || 'No specific angle identified.'}
+        </Block>
+      </div>
+
+      {/* Pain points */}
+      {niche.pain_points && niche.pain_points.length > 0 && (
+        <div style={{ marginBottom: '48px' }}>
+          <SectionLabel>PAIN SIGNALS · WHAT USERS ACTUALLY SAID</SectionLabel>
+          <div
             style={{
-              fontFamily: 'var(--font-inter)',
-              fontSize: '14px',
-              color: 'rgba(255,255,255,0.75)',
-              lineHeight: 1.7,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
             }}
           >
-            {niche.llm_reasoning || 'No analysis available yet.'}
-          </p>
+            {niche.pain_points.map((p, i) => (
+              <div
+                key={i}
+                style={{
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderLeft: '2px solid rgba(251,191,36,0.5)',
+                  padding: '14px 18px',
+                  backgroundColor: 'rgba(255,255,255,0.02)',
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: 'var(--font-inter)',
+                    fontSize: '13px',
+                    color: 'rgba(255,255,255,0.85)',
+                    marginBottom: p.quote ? '8px' : 0,
+                    fontWeight: 500,
+                  }}
+                >
+                  {p.pain}
+                </div>
+                {p.quote && (
+                  <div
+                    style={{
+                      fontFamily: 'var(--font-inter)',
+                      fontSize: '12.5px',
+                      color: 'rgba(255,255,255,0.55)',
+                      fontStyle: 'italic',
+                      lineHeight: 1.55,
+                    }}
+                  >
+                    &ldquo;{p.quote}&rdquo;
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-        <div>
-          <SectionLabel>METADATA</SectionLabel>
-          <MetaRow label="TIER" value={niche.tier.replace('_', ' ').toUpperCase()} />
-          <MetaRow label="OCCURRENCES" value={String(niche.occurrence_count)} />
-          <MetaRow
-            label="FIRST SEEN"
-            value={new Date(niche.first_seen).toLocaleDateString()}
-          />
-          <MetaRow
-            label="LAST SEEN"
-            value={new Date(niche.last_seen).toLocaleDateString()}
-          />
-        </div>
-      </div>
+      )}
 
       {/* Aliases */}
       {niche.aliases.length > 0 && (
         <div style={{ marginBottom: '48px' }}>
-          <SectionLabel>RELATED TERMS</SectionLabel>
+          <SectionLabel>RELATED SEARCHES</SectionLabel>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             {niche.aliases.map((alias) => (
               <span
@@ -137,10 +206,9 @@ export default function NichePage({ params }: { params: { id: string } }) {
                 style={{
                   fontFamily: 'var(--font-geist-mono)',
                   fontSize: '11px',
-                  color: '#ffffff',
+                  color: 'rgba(255,255,255,0.75)',
                   border: '1px solid rgba(255,255,255,0.2)',
                   padding: '4px 12px',
-                  textTransform: 'uppercase',
                   letterSpacing: '0.5px',
                 }}
               >
@@ -214,7 +282,6 @@ export default function NichePage({ params }: { params: { id: string } }) {
                         color: '#ffffff',
                         textDecoration: 'none',
                         display: 'block',
-                        marginBottom: '3px',
                       }}
                     >
                       {item.title ?? item.source_id}
@@ -226,7 +293,6 @@ export default function NichePage({ params }: { params: { id: string } }) {
                         fontSize: '13px',
                         color: '#ffffff',
                         display: 'block',
-                        marginBottom: '3px',
                       }}
                     >
                       {item.title ?? item.source_id}
@@ -252,6 +318,44 @@ export default function NichePage({ params }: { params: { id: string } }) {
   );
 }
 
+function Badge({ label, color, bordered }: { label: string; color?: string; bordered?: boolean }) {
+  const borderColor = bordered && color ? color : 'rgba(255,255,255,0.15)';
+  const textColor = color ?? 'rgba(255,255,255,0.7)';
+  return (
+    <span
+      style={{
+        fontFamily: 'var(--font-geist-mono)',
+        fontSize: '11px',
+        color: textColor,
+        border: `1px solid ${borderColor}`,
+        padding: '5px 12px',
+        letterSpacing: '0.6px',
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
+function Block({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <SectionLabel>{label}</SectionLabel>
+      <p
+        style={{
+          fontFamily: 'var(--font-inter)',
+          fontSize: '14px',
+          color: 'rgba(255,255,255,0.78)',
+          lineHeight: 1.7,
+          margin: 0,
+        }}
+      >
+        {children}
+      </p>
+    </div>
+  );
+}
+
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div
@@ -261,45 +365,11 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
         color: 'rgba(255,255,255,0.4)',
         textTransform: 'uppercase',
         letterSpacing: '1px',
-        marginBottom: '16px',
+        marginBottom: '14px',
         fontWeight: 400,
       }}
     >
       {children}
-    </div>
-  );
-}
-
-function MetaRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        padding: '10px 0',
-        borderBottom: '1px solid rgba(255,255,255,0.07)',
-      }}
-    >
-      <span
-        style={{
-          fontFamily: 'var(--font-inter)',
-          fontSize: '11px',
-          color: 'rgba(255,255,255,0.35)',
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px',
-        }}
-      >
-        {label}
-      </span>
-      <span
-        style={{
-          fontFamily: 'var(--font-geist-mono)',
-          fontSize: '12px',
-          color: '#ffffff',
-        }}
-      >
-        {value}
-      </span>
     </div>
   );
 }

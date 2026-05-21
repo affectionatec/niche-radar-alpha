@@ -72,6 +72,7 @@ def run_collectors(
                         score=item.get("score"),
                         comment_count=item.get("comment_count"),
                         metadata=item.get("metadata"),
+                        posted_at=item.get("posted_at"),
                     )
 
             result.duration_seconds = time.time() - start

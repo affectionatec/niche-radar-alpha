@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 
 def insert_collection_run(
@@ -46,21 +46,24 @@ def upsert_raw_item(
     score: int | None,
     comment_count: int | None,
     metadata: dict | None,
+    posted_at: str | None = None,
 ) -> str:
     item_id = str(uuid.uuid4())
     meta_json = json.dumps(metadata) if metadata else None
     try:
         db.execute(
             "INSERT INTO raw_items "
-            "(id, collection_run, source, source_id, title, body, url, score, comment_count, metadata) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (item_id, collection_run, source, source_id, title, body, url, score, comment_count, meta_json),
+            "(id, collection_run, source, source_id, title, body, url, score, comment_count, metadata, posted_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (item_id, collection_run, source, source_id, title, body, url, score, comment_count, meta_json, posted_at),
         )
     except sqlite3.IntegrityError:
+        # Update existing — preserve original posted_at if the new value is None
         db.execute(
             "UPDATE raw_items SET title=?, body=?, score=?, comment_count=?, metadata=?, "
-            "collected_at=CURRENT_TIMESTAMP WHERE source=? AND source_id=?",
-            (title, body, score, comment_count, meta_json, source, source_id),
+            "posted_at=COALESCE(?, posted_at), collected_at=CURRENT_TIMESTAMP "
+            "WHERE source=? AND source_id=?",
+            (title, body, score, comment_count, meta_json, posted_at, source, source_id),
         )
         row = db.execute(
             "SELECT id FROM raw_items WHERE source=? AND source_id=?",
@@ -71,27 +74,103 @@ def upsert_raw_item(
     return item_id
 
 
-def get_unprocessed_items(db: sqlite3.Connection, limit: int = 500) -> list[dict]:
-    """Get raw items not yet linked to any niche."""
-    rows = db.execute(
-        "SELECT ri.id, ri.source, ri.source_id, ri.title, ri.body, ri.url, ri.score, "
-        "ri.comment_count, ri.metadata, ri.collected_at "
-        "FROM raw_items ri "
-        "LEFT JOIN niche_item_links nil ON ri.id = nil.raw_item_id "
-        "WHERE nil.raw_item_id IS NULL "
-        "ORDER BY ri.collected_at DESC LIMIT ?",
-        (limit,),
-    ).fetchall()
+def get_unprocessed_items(
+    db: sqlite3.Connection,
+    limit: int = 500,
+    max_age_days: int | None = None,
+) -> list[dict]:
+    """Get unprocessed raw items posted within the freshness window.
+
+    Items without a posted_at are excluded if a window is specified (we have no way to
+    confirm they're fresh). Pass max_age_days=None to skip the freshness filter.
+    """
+    if max_age_days is not None:
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=max_age_days)).isoformat()
+        rows = db.execute(
+            "SELECT ri.id, ri.source, ri.source_id, ri.title, ri.body, ri.url, ri.score, "
+            "ri.comment_count, ri.metadata, ri.collected_at, ri.posted_at "
+            "FROM raw_items ri "
+            "LEFT JOIN niche_item_links nil ON ri.id = nil.raw_item_id "
+            "WHERE nil.raw_item_id IS NULL "
+            "AND ri.posted_at IS NOT NULL AND ri.posted_at >= ? "
+            "ORDER BY ri.posted_at DESC LIMIT ?",
+            (cutoff, limit),
+        ).fetchall()
+    else:
+        rows = db.execute(
+            "SELECT ri.id, ri.source, ri.source_id, ri.title, ri.body, ri.url, ri.score, "
+            "ri.comment_count, ri.metadata, ri.collected_at, ri.posted_at "
+            "FROM raw_items ri "
+            "LEFT JOIN niche_item_links nil ON ri.id = nil.raw_item_id "
+            "WHERE nil.raw_item_id IS NULL "
+            "ORDER BY COALESCE(ri.posted_at, ri.collected_at) DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
     return [
         {
             "id": r[0], "source": r[1], "source_id": r[2],
             "title": r[3], "body": r[4], "url": r[5],
             "score": r[6], "comment_count": r[7],
             "metadata": json.loads(r[8]) if r[8] else None,
-            "collected_at": r[9],
+            "collected_at": r[9], "posted_at": r[10],
         }
         for r in rows
     ]
+
+
+def archive_stale_niches(db: sqlite3.Connection, max_age_days: int) -> int:
+    """Mark niches whose last_seen is older than max_age_days as archived. Returns count."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=max_age_days)).isoformat()
+    cur = db.execute(
+        "UPDATE niche_candidates SET status='archived' "
+        "WHERE status='active' AND last_seen < ?",
+        (cutoff,),
+    )
+    db.commit()
+    return cur.rowcount or 0
+
+
+def _parse_timestamp(value: str | None) -> datetime | None:
+    """Parse either ISO-8601 ('2026-05-17T08:08:03+00:00') or SQLite naive ('2026-05-17 08:08:03')."""
+    if not value:
+        return None
+    s = str(value).replace("Z", "+00:00")
+    try:
+        dt = datetime.fromisoformat(s)
+    except ValueError:
+        # Older SQLite default format with space instead of T
+        try:
+            dt = datetime.fromisoformat(s.replace(" ", "T", 1))
+        except ValueError:
+            return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def get_freshness_summary(db: sqlite3.Connection) -> dict:
+    """Per-source freshness snapshot: count, oldest/newest posted_at, newest age in hours."""
+    rows = db.execute(
+        "SELECT source, COUNT(*), MIN(posted_at), MAX(posted_at) "
+        "FROM raw_items WHERE posted_at IS NOT NULL "
+        "GROUP BY source"
+    ).fetchall()
+    now = datetime.now(timezone.utc)
+    sources = []
+    for r in rows:
+        source, count, oldest, newest = r
+        newest_age_h = None
+        newest_dt = _parse_timestamp(newest)
+        if newest_dt is not None:
+            newest_age_h = (now - newest_dt).total_seconds() / 3600
+        sources.append({
+            "source": source,
+            "items": count,
+            "oldest_posted": oldest,
+            "newest_posted": newest,
+            "newest_age_hours": round(newest_age_h, 1) if newest_age_h is not None else None,
+        })
+    return {"sources": sources}
 
 
 def upsert_niche_candidate(
@@ -100,11 +179,18 @@ def upsert_niche_candidate(
     aliases: list[str] | None,
     llm_score: float,
     llm_reasoning: str,
+    *,
+    tool_concept: str = "",
+    target_audience: str = "",
+    build_complexity: int | None = None,
+    monetization: str = "",
+    pain_points: list[dict] | None = None,
 ) -> str:
-    """Insert or update niche by keyword (dedup). Returns niche_id."""
+    """Insert or update AI-tool opportunity by keyword (dedup). Returns niche_id."""
     now = datetime.now(timezone.utc).isoformat()
     keyword_norm = keyword.lower().strip()
     aliases_json = json.dumps(aliases) if aliases else None
+    pain_points_json = json.dumps(pain_points) if pain_points else None
 
     row = db.execute(
         "SELECT id FROM niche_candidates WHERE keyword=?", (keyword_norm,)
@@ -114,19 +200,48 @@ def upsert_niche_candidate(
         niche_id = row[0]
         db.execute(
             "UPDATE niche_candidates SET aliases=?, llm_score=?, llm_reasoning=?, "
+            "tool_concept=?, target_audience=?, build_complexity=?, monetization=?, pain_points=?, "
             "last_seen=?, occurrence_count=occurrence_count+1 WHERE id=?",
-            (aliases_json, llm_score, llm_reasoning, now, niche_id),
+            (
+                aliases_json, llm_score, llm_reasoning,
+                tool_concept, target_audience, build_complexity, monetization, pain_points_json,
+                now, niche_id,
+            ),
         )
     else:
         niche_id = str(uuid.uuid4())
         db.execute(
             "INSERT INTO niche_candidates "
-            "(id, keyword, aliases, llm_score, llm_reasoning, first_seen, last_seen) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (niche_id, keyword_norm, aliases_json, llm_score, llm_reasoning, now, now),
+            "(id, keyword, aliases, llm_score, llm_reasoning, "
+            "tool_concept, target_audience, build_complexity, monetization, pain_points, "
+            "first_seen, last_seen) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                niche_id, keyword_norm, aliases_json, llm_score, llm_reasoning,
+                tool_concept, target_audience, build_complexity, monetization, pain_points_json,
+                now, now,
+            ),
         )
     db.commit()
     return niche_id
+
+
+def _build_niche_dict(row: tuple) -> dict:
+    return {
+        "niche_id": row[0],
+        "keyword": row[1],
+        "aliases": json.loads(row[2]) if row[2] else [],
+        "llm_score": row[3] or 0.0,
+        "llm_reasoning": row[4] or "",
+        "tool_concept": row[5] or "",
+        "target_audience": row[6] or "",
+        "build_complexity": row[7],
+        "monetization": row[8] or "",
+        "pain_points": json.loads(row[9]) if row[9] else [],
+        "first_seen": row[10],
+        "last_seen": row[11],
+        "occurrence_count": row[12],
+    }
 
 
 def link_niche_item(
@@ -147,44 +262,30 @@ def link_niche_item(
         pass
 
 
+_NICHE_COLUMNS = (
+    "id, keyword, aliases, llm_score, llm_reasoning, "
+    "tool_concept, target_audience, build_complexity, monetization, pain_points, "
+    "first_seen, last_seen, occurrence_count"
+)
+
+
 def get_active_niches_with_scores(db: sqlite3.Connection) -> list[dict]:
-    """Return all active niches ordered by LLM score descending."""
+    """Return all active AI-tool opportunities ranked by build-priority (score x quick-build)."""
     rows = db.execute(
-        "SELECT id, keyword, aliases, llm_score, llm_reasoning, "
-        "first_seen, last_seen, occurrence_count "
-        "FROM niche_candidates WHERE status='active' "
-        "ORDER BY llm_score DESC"
+        f"SELECT {_NICHE_COLUMNS} FROM niche_candidates WHERE status='active' "
+        "ORDER BY (llm_score * (6 - COALESCE(build_complexity, 3))) DESC, llm_score DESC"
     ).fetchall()
-    return [
-        {
-            "niche_id": r[0], "keyword": r[1],
-            "aliases": json.loads(r[2]) if r[2] else [],
-            "llm_score": r[3] or 0.0,
-            "llm_reasoning": r[4] or "",
-            "first_seen": r[5], "last_seen": r[6],
-            "occurrence_count": r[7],
-        }
-        for r in rows
-    ]
+    return [_build_niche_dict(r) for r in rows]
 
 
 def get_niche_by_id(db: sqlite3.Connection, niche_id: str) -> dict | None:
     row = db.execute(
-        "SELECT id, keyword, aliases, llm_score, llm_reasoning, "
-        "first_seen, last_seen, occurrence_count "
-        "FROM niche_candidates WHERE id=?",
+        f"SELECT {_NICHE_COLUMNS} FROM niche_candidates WHERE id=?",
         (niche_id,),
     ).fetchone()
     if not row:
         return None
-    return {
-        "niche_id": row[0], "keyword": row[1],
-        "aliases": json.loads(row[2]) if row[2] else [],
-        "llm_score": row[3] or 0.0,
-        "llm_reasoning": row[4] or "",
-        "first_seen": row[5], "last_seen": row[6],
-        "occurrence_count": row[7],
-    }
+    return _build_niche_dict(row)
 
 
 def get_niche_items(db: sqlite3.Connection, niche_id: str) -> list[dict]:

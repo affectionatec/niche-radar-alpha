@@ -33,12 +33,13 @@ export default function PipelinePage() {
     { refreshInterval: 5_000 },
   );
 
-  const { data: activeJob } = useSWR<JobDetail>(
+  const { data: activeJob, error: activeJobError } = useSWR<JobDetail>(
     activeJobId ? endpoints.jobLogs(activeJobId) : null,
     fetcher,
     {
       refreshInterval: (data?: JobDetail) =>
         data?.status === 'done' || data?.status === 'failed' ? 0 : 2_000,
+      shouldRetryOnError: false,
       onSuccess: (data: JobDetail) => {
         if (data.status === 'done' || data.status === 'failed') {
           mutateJobs();
@@ -46,6 +47,10 @@ export default function PipelinePage() {
       },
     },
   );
+
+  // Detect a job_id that the backend has lost (404). Pipeline jobs live in memory,
+  // so a backend restart wipes them — the browser's polling would otherwise spin forever.
+  const jobLost = Boolean(activeJobId && activeJobError);
 
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -151,6 +156,48 @@ export default function PipelinePage() {
           </p>
         )}
       </section>
+
+      {/* Lost-job notice (backend restart wiped the in-memory job) */}
+      {jobLost && (
+        <section style={{ marginBottom: '32px' }}>
+          <div
+            style={{
+              background: 'rgba(251,191,36,0.08)',
+              border: '1px solid rgba(251,191,36,0.3)',
+              padding: '14px 18px',
+              fontFamily: 'var(--font-geist-mono)',
+              fontSize: '12px',
+              color: 'rgba(251,191,36,0.9)',
+              letterSpacing: '0.3px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '16px',
+            }}
+          >
+            <span>
+              Job {activeJobId?.slice(0, 8)} is no longer tracked by the backend
+              (likely killed by a restart). Pipeline jobs are kept in memory only.
+              Trigger a fresh run.
+            </span>
+            <button
+              onClick={() => setActiveJobId(null)}
+              style={{
+                background: 'transparent',
+                border: '1px solid rgba(251,191,36,0.5)',
+                color: 'rgba(251,191,36,0.9)',
+                fontFamily: 'var(--font-geist-mono)',
+                fontSize: '11px',
+                letterSpacing: '0.5px',
+                padding: '5px 12px',
+                cursor: 'pointer',
+              }}
+            >
+              DISMISS
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* Live log viewer */}
       {activeJobId && activeJob && (

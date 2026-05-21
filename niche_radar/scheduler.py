@@ -23,7 +23,7 @@ def _analyze_job(settings) -> None:
 
     db = get_db(settings.database_url)
     count = run_analysis(db=db, settings=settings, dry_run=False)
-    generate_report(db=db, settings=settings, fmt=settings.report_format)
+    generate_report(db=db, settings=settings)
     logger.info("scheduled_analysis_complete", niches=count)
 
 
@@ -78,6 +78,8 @@ def start_scheduler(settings) -> None:
 
     logger.info("api_starting", host="0.0.0.0", port=8000)
     try:
-        uvicorn.run(app, host="0.0.0.0", port=8000, log_level="warning")
+        # log_level="info" emits HTTP access logs to stdout so they show up in
+        # `docker logs` / Docker Dashboard — invaluable for debugging from the UI.
+        uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info", access_log=True)
     finally:
         scheduler.shutdown(wait=False)

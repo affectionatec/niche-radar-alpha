@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import time
+from datetime import datetime, timezone
 
 import structlog
 from tenacity import Retrying, stop_after_attempt, wait_exponential
@@ -94,6 +95,9 @@ class GoogleTrendsCollector(BaseCollector):
                             trending = fetch(pn="united_states")
                     else:
                         trending = rss_download(geo="US", include_images=False)
+            # Trending searches are TODAY's trends by definition — stamp posted_at=now
+            # so they pass the analysis-window freshness filter downstream.
+            now_iso = datetime.now(timezone.utc).isoformat()
             for trend in trending or []:
                 title = trend.get("trend") or trend.get("title") or str(trend)
                 news = trend.get("news_articles") or []
@@ -106,6 +110,7 @@ class GoogleTrendsCollector(BaseCollector):
                         "url": trend.get("explore_link") or trend.get("url"),
                         "score": int(re.sub(r"\D", "", str(traffic or 0)) or 0),
                         "comment_count": None,
+                        "posted_at": str(trend.get("published") or now_iso),
                         "metadata": {
                             "kind": "trending_search",
                             "traffic": traffic,
@@ -115,41 +120,8 @@ class GoogleTrendsCollector(BaseCollector):
                     }
                 )
 
-            if client:
-                for keyword in SEED_KEYWORDS:
-                    try:
-                        for attempt in retryer:
-                            with attempt:
-                                fetch = _pick_callable(client, "interest_over_time", "get_interest_over_time")
-                                if not fetch:
-                                    raise CollectorUnavailableError(
-                                        "TrendsPyG interest-over-time method not available"
-                                    )
-                                try:
-                                    payload = fetch(keywords=[keyword], geo="US", timeframe="today 12-m")
-                                except TypeError:
-                                    payload = fetch(keyword=keyword, geo="US", timeframe="today 12-m")
-                        items.append(
-                            {
-                                "source_id": f"interest:{keyword.lower()}",
-                                "title": keyword,
-                                "body": None,
-                                "url": None,
-                                "score": len(_extract_series(payload)),
-                                "comment_count": None,
-                                "metadata": {
-                                    "kind": "interest_over_time",
-                                    "keyword": keyword,
-                                    "timeframe": "today 12-m",
-                                    "series": _extract_series(payload),
-                                },
-                            }
-                        )
-                    except Exception as exc:
-                        logger.warning("google_trends_keyword_failed", keyword=keyword, error=str(exc))
-                        errors.append(f"{keyword}: {exc}")
-            else:
-                errors.append("Installed trendspyg version does not expose TrendsPyG interest-over-time support")
+            # NOTE: 12-month interest_over_time series intentionally REMOVED.
+            # Historical data is not "fresh signal" — see freshness_google_trends_hours.
 
             status = "completed" if not errors else "partial" if items else "failed"
             return CollectorResult(

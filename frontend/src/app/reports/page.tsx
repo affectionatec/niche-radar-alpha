@@ -2,6 +2,8 @@
 import { useState } from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { endpoints, fetcher } from '@/lib/api';
 import { ReportFile } from '@/lib/types';
 
@@ -9,6 +11,18 @@ function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function downloadMarkdown(filename: string, body: string) {
+  const blob = new Blob([body], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 export default function ReportsPage() {
@@ -192,10 +206,36 @@ export default function ReportsPage() {
             <div
               style={{
                 backgroundColor: '#1f2228',
-                padding: '24px',
+                padding: '32px 36px',
                 minHeight: '400px',
               }}
             >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  marginBottom: '16px',
+                }}
+              >
+                <button
+                  onClick={() => content && downloadMarkdown(selected, content.content)}
+                  disabled={!content}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    color: 'rgba(255,255,255,0.75)',
+                    fontFamily: 'var(--font-geist-mono)',
+                    fontSize: '11px',
+                    letterSpacing: '0.8px',
+                    textTransform: 'uppercase',
+                    padding: '6px 14px',
+                    cursor: content ? 'pointer' : 'not-allowed',
+                    opacity: content ? 1 : 0.4,
+                  }}
+                >
+                  ↓ DOWNLOAD .MD
+                </button>
+              </div>
               {contentLoading ? (
                 <span
                   style={{
@@ -207,19 +247,9 @@ export default function ReportsPage() {
                   Loading...
                 </span>
               ) : content ? (
-                <pre
-                  style={{
-                    fontFamily: 'var(--font-geist-mono)',
-                    fontSize: '12px',
-                    color: 'rgba(255,255,255,0.8)',
-                    lineHeight: 1.7,
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    margin: 0,
-                  }}
-                >
-                  {content.content}
-                </pre>
+                <article className="report-markdown">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{content.content}</ReactMarkdown>
+                </article>
               ) : null}
             </div>
           )}

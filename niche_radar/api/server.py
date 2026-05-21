@@ -34,6 +34,7 @@ def _db():
 @app.get("/api/status")
 def get_status():
     db = _db()
+    settings = get_settings()
     try:
         stats = db.execute(
             "SELECT "
@@ -43,13 +44,27 @@ def get_status():
             "(SELECT COUNT(*) FROM collection_runs) as cycle_count"
         ).fetchone()
         sources = repository.get_system_health(db)
+        freshness = repository.get_freshness_summary(db)
         return {
             "raw_items": stats[0] or 0,
             "active_niches": stats[1] or 0,
             "last_collection": stats[2],
             "collection_cycle": stats[3] or 0,
             "sources": sources,
+            "freshness": {
+                "analysis_window_days": settings.analysis_window_days,
+                "rules": {
+                    "reddit_hours": settings.freshness_reddit_hours,
+                    "hn_hours": settings.freshness_hn_hours,
+                    "github_hours": settings.freshness_github_hours,
+                    "google_trends_hours": settings.freshness_google_trends_hours,
+                    "youtube_hours": settings.freshness_youtube_hours,
+                },
+                "per_source": freshness["sources"],
+            },
         }
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"Database error: {exc}") from exc
     finally:
         db.close()
 
@@ -95,7 +110,7 @@ def list_reports():
     if not report_dir.exists():
         return []
     files = sorted(
-        (f for f in report_dir.iterdir() if f.is_file()),
+        (f for f in report_dir.iterdir() if f.is_file() and f.suffix == ".md"),
         key=lambda f: f.stat().st_mtime,
         reverse=True,
     )
@@ -165,10 +180,27 @@ def update_llm_settings(body: LLMSettingsUpdate):
         db.close()
 
 
+@app.post("/api/settings/test")
+def test_llm_connection():
+    from niche_radar.analysis.analyzer import _get_llm_client
+    db = _db()
+    settings = get_settings()
+    try:
+        client = _get_llm_client(db, settings)
+        client.complete("Reply with the word OK.")
+        return {"ok": True, "message": "Connection successful"}
+    except Exception as exc:
+        return {"ok": False, "message": str(exc)}
+    finally:
+        db.close()
+
+
 # ── Pipeline job runner ───────────────────────────────────────────────────────
 
 def _run_job(job_id: str, cmd: list[str]) -> None:
     job_manager.set_status(job_id, "running")
+    step_name = cmd[-1] if cmd else "?"
+    print(f"[job {job_id[:8]} {step_name}] started", flush=True)
     try:
         proc = subprocess.Popen(
             cmd,
@@ -180,15 +212,22 @@ def _run_job(job_id: str, cmd: list[str]) -> None:
         if proc.stdout is None:
             raise RuntimeError("subprocess stdout unavailable")
         for line in proc.stdout:
-            job_manager.append_log(job_id, line.rstrip())
+            line = line.rstrip()
+            job_manager.append_log(job_id, line)
+            # Mirror to container stdout so it appears in `docker logs` / Docker Dashboard
+            print(f"[job {job_id[:8]} {step_name}] {line}", flush=True)
         proc.wait()
         if proc.returncode == 1:
             job_manager.append_log(job_id, "WARNING: completed with partial failures")
+            print(f"[job {job_id[:8]} {step_name}] WARNING: partial failures", flush=True)
             job_manager.set_status(job_id, "done")
         else:
-            job_manager.set_status(job_id, "done" if proc.returncode == 0 else "failed")
+            status = "done" if proc.returncode == 0 else "failed"
+            job_manager.set_status(job_id, status)
+            print(f"[job {job_id[:8]} {step_name}] {status} (exit {proc.returncode})", flush=True)
     except Exception as exc:
         job_manager.append_log(job_id, f"ERROR: {exc}")
+        print(f"[job {job_id[:8]} {step_name}] ERROR: {exc}", flush=True)
         job_manager.set_status(job_id, "failed")
 
 
@@ -196,9 +235,12 @@ def _run_all_steps(job_id: str) -> None:
     """Run collect → analyze → report sequentially."""
     steps = ["collect", "analyze", "report"]
     job_manager.set_status(job_id, "running")
+    short = job_id[:8]
+    print(f"[job {short} run-all] started: {' → '.join(steps)}", flush=True)
     for step in steps:
         cmd = [sys.executable, "-m", "niche_radar", step]
         job_manager.append_log(job_id, f"=== {step.upper()} ===")
+        print(f"[job {short} run-all] === {step.upper()} ===", flush=True)
         try:
             proc = subprocess.Popen(
                 cmd,
@@ -210,19 +252,25 @@ def _run_all_steps(job_id: str) -> None:
             if proc.stdout is None:
                 raise RuntimeError("subprocess stdout unavailable")
             for line in proc.stdout:
-                job_manager.append_log(job_id, line.rstrip())
+                line = line.rstrip()
+                job_manager.append_log(job_id, line)
+                print(f"[job {short} {step}] {line}", flush=True)
             proc.wait()
             if proc.returncode == 1:
                 job_manager.append_log(job_id, f"WARNING: {step} had partial failures, continuing")
+                print(f"[job {short} {step}] WARNING: partial failures", flush=True)
             elif proc.returncode >= 2:
                 job_manager.append_log(job_id, f"FAILED (exit {proc.returncode})")
+                print(f"[job {short} {step}] FAILED exit {proc.returncode}", flush=True)
                 job_manager.set_status(job_id, "failed")
                 return
         except Exception as exc:
             job_manager.append_log(job_id, f"ERROR: {exc}")
+            print(f"[job {short} {step}] ERROR: {exc}", flush=True)
             job_manager.set_status(job_id, "failed")
             return
     job_manager.set_status(job_id, "done")
+    print(f"[job {short} run-all] done", flush=True)
 
 
 @app.post("/api/pipeline/collect")

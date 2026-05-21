@@ -1,9 +1,24 @@
 """Tests for pipeline API endpoints."""
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
+import os
+import tempfile
 
-from niche_radar.api.server import app
+# Point the app at an isolated temp database BEFORE importing the server, so the
+# module-level `app` and its dependencies never touch the production sqlite file
+# that Docker mounts via ./data:/app/data.
+_TEST_DB_DIR = tempfile.mkdtemp(prefix="niche-radar-test-")
+os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DB_DIR}/test.db"
+os.environ["REPORT_OUTPUT_DIR"] = _TEST_DB_DIR
+
+from fastapi.testclient import TestClient  # noqa: E402
+
+# Reset the cached singleton so the env vars above take effect for this test process.
+import niche_radar.config  # noqa: E402
+
+niche_radar.config._settings = None
+
+from niche_radar.api.server import app  # noqa: E402
 
 client = TestClient(app)
 
@@ -108,3 +123,12 @@ def test_post_settings_saves_model():
     resp = client.post("/api/settings", json={"llm_model": "gpt-4o"})
     assert resp.status_code == 200
     assert resp.json()["ok"] is True
+
+
+def test_post_settings_test_returns_result():
+    resp = client.post("/api/settings/test")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "ok" in data
+    assert "message" in data
+    assert isinstance(data["ok"], bool)

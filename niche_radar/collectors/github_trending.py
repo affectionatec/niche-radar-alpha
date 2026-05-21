@@ -50,6 +50,7 @@ class GitHubTrendingCollector(BaseCollector):
                 session.headers["Authorization"] = f"Bearer {settings.github_token}"
 
             errors: list[str] = []
+            now_iso = datetime.now(timezone.utc).isoformat()
             try:
                 for attempt in retryer:
                     with attempt:
@@ -81,6 +82,8 @@ class GitHubTrendingCollector(BaseCollector):
                             "url": f"https://github.com/{repo}",
                             "score": stars_today or total_stars,
                             "comment_count": None,
+                            # github.com/trending is daily-trending — stamp as fresh now
+                            "posted_at": now_iso,
                             "metadata": {
                                 "language": (article.select_one('[itemprop="programmingLanguage"]') or {}).get_text(strip=True) if article.select_one('[itemprop="programmingLanguage"]') else None,
                                 "stars_today": stars_today,
@@ -97,11 +100,12 @@ class GitHubTrendingCollector(BaseCollector):
                 errors.append(f"scrape: {exc}")
                 for attempt in retryer:
                     with attempt:
-                        since = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
+                        window_hours = settings.freshness_github_hours
+                        since = (datetime.now(timezone.utc) - timedelta(hours=window_hours)).strftime("%Y-%m-%d")
                         response = session.get(
                             "https://api.github.com/search/repositories",
                             params={
-                                "q": f"created:>{since}",
+                                "q": f"pushed:>{since}",  # active in window, not just newborn
                                 "sort": "stars",
                                 "order": "desc",
                                 "per_page": 50,
@@ -121,6 +125,7 @@ class GitHubTrendingCollector(BaseCollector):
                         "url": repo.get("html_url"),
                         "score": repo.get("stargazers_count", 0),
                         "comment_count": None,
+                        "posted_at": repo.get("pushed_at") or repo.get("created_at"),
                         "metadata": {
                             "language": repo.get("language"),
                             "stars_today": None,

@@ -16,11 +16,10 @@ def test_parser_collect_source():
     assert args.source == "reddit"
 
 
-def test_parser_report_format():
+def test_parser_report_command():
     parser = build_parser()
-    args = parser.parse_args(["report", "--format", "json"])
+    args = parser.parse_args(["report"])
     assert args.command == "report"
-    assert args.format == "json"
 
 
 def test_parser_dry_run():

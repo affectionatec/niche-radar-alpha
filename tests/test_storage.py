@@ -55,15 +55,28 @@ def test_get_unprocessed_items(db, sample_raw_items):
 
 
 def test_niche_candidate_lifecycle(db):
-    niche_id = upsert_niche_candidate(db, "self-hosted analytics", ["analytics", "selfhosted"], 75.0, "Strong demand signal.")
+    niche_id = upsert_niche_candidate(
+        db, "self-hosted analytics", ["analytics", "selfhosted"], 75.0, "Strong demand signal.",
+        tool_concept="An AI-assisted self-hosted analytics dashboard for indie SaaS.",
+        target_audience="indie SaaS founders",
+        build_complexity=2,
+        monetization="ProductHunt launch + AdSense on docs site",
+        pain_points=[{"pain": "GA4 is too complex", "quote": "I just want a count", "item_id": "x1"}],
+    )
     niches = get_active_niches_with_scores(db)
     assert len(niches) == 1
     assert niches[0]["keyword"] == "self-hosted analytics"
     assert niches[0]["llm_score"] == 75.0
+    assert niches[0]["tool_concept"].startswith("An AI-assisted")
+    assert niches[0]["build_complexity"] == 2
+    assert niches[0]["target_audience"] == "indie SaaS founders"
+    assert len(niches[0]["pain_points"]) == 1
+    assert niches[0]["pain_points"][0]["quote"] == "I just want a count"
 
     niche = get_niche_by_id(db, niche_id)
     assert niche is not None
     assert niche["keyword"] == "self-hosted analytics"
+    assert niche["monetization"].startswith("ProductHunt")
 
 
 def test_niche_dedup_by_keyword(db):

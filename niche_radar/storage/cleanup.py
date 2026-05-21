@@ -19,10 +19,16 @@ def run_cleanup(
     now = datetime.now(timezone.utc)
     total = 0
 
+    # Aggressive freshness cleanup: items posted before 2× the analysis window are
+    # always stale for our purposes. Hard retention cap is a secondary safety net.
+    freshness_cutoff = (now - timedelta(days=settings.analysis_window_days * 2)).isoformat()
+    hard_cutoff = (now - timedelta(days=settings.retention_raw_items)).isoformat()
+
     cutoffs = [
         (
             "raw_items",
-            f"collected_at < '{(now - timedelta(days=settings.retention_raw_items)).isoformat()}'",
+            f"(posted_at IS NOT NULL AND posted_at < '{freshness_cutoff}') "
+            f"OR collected_at < '{hard_cutoff}'",
         ),
         (
             "niche_candidates",

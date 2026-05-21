@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from datetime import datetime, timedelta, timezone
 
 import structlog
 import requests
@@ -39,8 +40,10 @@ class HackerNewsCollector(BaseCollector):
                 reraise=True,
             )
             hn = HackerNews()
+            cutoff = datetime.now(timezone.utc) - timedelta(hours=settings.freshness_hn_hours)
             items: dict[str, dict] = {}
             errors: list[str] = []
+            dropped_stale = 0
             sources = {
                 "top": lambda: hn.top_stories(limit=50),
                 "best": lambda: self._best_stories(hn, limit=50),
@@ -57,6 +60,31 @@ class HackerNewsCollector(BaseCollector):
                         source_id = str(getattr(story, "item_id", ""))
                         if not source_id:
                             continue
+
+                        # Freshness filter — drop stories outside the HN window
+                        submission_time = getattr(story, "submission_time", None)
+                        posted_iso: str | None = None
+                        if submission_time is not None:
+                            try:
+                                posted_dt = submission_time if isinstance(submission_time, datetime) else None
+                                if posted_dt is None:
+                                    iso = getattr(submission_time, "isoformat", lambda: None)()
+                                    if iso:
+                                        posted_dt = datetime.fromisoformat(iso)
+                                if posted_dt is not None:
+                                    if posted_dt.tzinfo is None:
+                                        posted_dt = posted_dt.replace(tzinfo=timezone.utc)
+                                    if posted_dt < cutoff:
+                                        dropped_stale += 1
+                                        continue
+                                    posted_iso = posted_dt.isoformat()
+                            except (ValueError, TypeError, AttributeError):
+                                pass
+                        if posted_iso is None:
+                            # No submission_time → can't verify freshness → drop
+                            dropped_stale += 1
+                            continue
+
                         item = items.setdefault(
                             source_id,
                             {
@@ -67,14 +95,11 @@ class HackerNewsCollector(BaseCollector):
                                 or f"https://news.ycombinator.com/item?id={source_id}",
                                 "score": getattr(story, "score", 0) or 0,
                                 "comment_count": getattr(story, "descendants", 0) or 0,
+                                "posted_at": posted_iso,
                                 "metadata": {
                                     "categories": [],
                                     "author": getattr(story, "by", None),
-                                    "submission_time": getattr(
-                                        getattr(story, "submission_time", None),
-                                        "isoformat",
-                                        lambda: None,
-                                    )(),
+                                    "submission_time": posted_iso,
                                     "hn_url": f"https://news.ycombinator.com/item?id={source_id}",
                                 },
                             },
@@ -86,6 +111,8 @@ class HackerNewsCollector(BaseCollector):
                     errors.append(f"{label}: {exc}")
 
             collected = list(items.values())
+            if dropped_stale:
+                logger.info("hn_stale_dropped", count=dropped_stale, window_hours=settings.freshness_hn_hours)
             status = "completed" if not errors else "partial" if collected else "failed"
             return CollectorResult(
                 source=self.source_name,
