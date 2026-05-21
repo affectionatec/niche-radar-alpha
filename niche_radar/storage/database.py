@@ -73,6 +73,52 @@ CREATE TABLE IF NOT EXISTS app_settings (
     key     TEXT PRIMARY KEY,
     value   TEXT
 );
+
+-- 8-agent pipeline state — added in analyzer v3.
+-- One row per raw_item processed in phase A (A1 filter + optional A2 extraction).
+-- Items where A1 rejected are persisted with a1_is_valid=0 so we don't re-feed them.
+CREATE TABLE IF NOT EXISTS item_pain_extractions (
+    raw_item_id    TEXT PRIMARY KEY REFERENCES raw_items(id),
+    pipeline_run   TEXT NOT NULL,
+    a1_is_valid    INTEGER NOT NULL,
+    a1_confidence  REAL,
+    a1_signal_type TEXT,
+    a1_result      TEXT,                    -- JSON
+    a2_result      TEXT,                    -- JSON, NULL if A1 rejected
+    cluster_id     TEXT,                    -- NULL until phase B assigns
+    processed_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    error          TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_extractions_run     ON item_pain_extractions(pipeline_run);
+CREATE INDEX IF NOT EXISTS idx_extractions_cluster ON item_pain_extractions(cluster_id);
+CREATE INDEX IF NOT EXISTS idx_extractions_valid   ON item_pain_extractions(a1_is_valid);
+
+-- One row per (cluster, pipeline_run) — full A3..A8 outputs and the verdict summary.
+CREATE TABLE IF NOT EXISTS niche_analyses (
+    id                  TEXT PRIMARY KEY,
+    niche_id            TEXT REFERENCES niche_candidates(id),
+    pipeline_run        TEXT NOT NULL,
+    cluster_id          TEXT NOT NULL,
+    analyzed_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    verdict             TEXT,
+    confidence          REAL,
+    opportunity_score   INTEGER,            -- A4 raw total 0-70
+    weighted_score      REAL,               -- normalized 0-100
+    tier                TEXT,               -- hot | warm | cold
+    feasibility_score   INTEGER,
+    a2_aggregate        TEXT,
+    a3_result           TEXT,
+    a4_result           TEXT,
+    a5_result           TEXT,
+    a6_result           TEXT,
+    a7_result           TEXT,               -- NULL when verdict != GO
+    a8_result           TEXT,
+    failed_agents       TEXT                -- JSON array of agent_ids
+);
+CREATE INDEX IF NOT EXISTS idx_analyses_niche   ON niche_analyses(niche_id);
+CREATE INDEX IF NOT EXISTS idx_analyses_verdict ON niche_analyses(verdict);
+CREATE INDEX IF NOT EXISTS idx_analyses_tier    ON niche_analyses(tier);
+CREATE INDEX IF NOT EXISTS idx_analyses_run     ON niche_analyses(pipeline_run);
 """
 
 
@@ -100,6 +146,13 @@ def _migrate(conn: sqlite3.Connection) -> None:
         # Backfill: use collected_at as best-guess posted_at for legacy rows
         conn.execute("UPDATE raw_items SET posted_at = collected_at WHERE posted_at IS NULL")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_raw_items_posted ON raw_items(posted_at)")
+
+    # v3 (8-agent pipeline): two new columns on niche_candidates surfacing the latest
+    # analysis verdict. Status stays freshness-driven; verdict is quality-driven.
+    if "verdict" not in cols:
+        conn.execute("ALTER TABLE niche_candidates ADD COLUMN verdict TEXT")
+    if "latest_analysis_id" not in cols:
+        conn.execute("ALTER TABLE niche_candidates ADD COLUMN latest_analysis_id TEXT")
     conn.commit()
 
     # One-shot: when upgrading from the old "niche" analyzer to the AI-tool-opportunity

@@ -24,6 +24,24 @@ class AnthropicClient:
         text = self.complete(full_prompt)
         return _extract_json(text)
 
+    def complete_structured(
+        self,
+        system: str,
+        user: str,
+        temperature: float | None = None,
+    ) -> dict:
+        kwargs: dict = {
+            "model": self._model,
+            "max_tokens": 4096,
+            "system": system,
+            "messages": [{"role": "user", "content": user}],
+        }
+        if temperature is not None:
+            kwargs["temperature"] = temperature
+        message = self._client.messages.create(**kwargs)
+        text = message.content[0].text  # type: ignore[union-attr]
+        return _extract_json(text)
+
 
 def _extract_json(text: str) -> dict:
     start = text.find("{")

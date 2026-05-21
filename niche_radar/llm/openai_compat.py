@@ -37,6 +37,28 @@ class OpenAICompatClient:
             )
             return _extract_json(response.choices[0].message.content or "")
 
+    def complete_structured(
+        self,
+        system: str,
+        user: str,
+        temperature: float | None = None,
+    ) -> dict:
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ]
+        kwargs: dict = {"model": self._model, "messages": messages, "max_tokens": 4096}
+        if temperature is not None:
+            kwargs["temperature"] = temperature
+        try:
+            response = self._client.chat.completions.create(
+                **kwargs, response_format={"type": "json_object"}
+            )
+            return json.loads(response.choices[0].message.content or "{}")
+        except Exception:
+            response = self._client.chat.completions.create(**kwargs)
+            return _extract_json(response.choices[0].message.content or "")
+
 
 def _extract_json(text: str) -> dict:
     start = text.find("{")

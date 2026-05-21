@@ -57,7 +57,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     # analyze
-    sub.add_parser("analyze", help="Run LLM analysis on raw items")
+    p_analyze = sub.add_parser("analyze", help="Run LLM analysis on raw items")
+    p_analyze.add_argument(
+        "--test", action="store_true",
+        help="Run the 8-agent pipeline on a hardcoded test signal (forces dry-run).",
+    )
+    p_analyze.add_argument(
+        "--signal-id", default=None,
+        help="Run the pipeline on a single raw_item by ID (forces dry-run unless combined with --commit).",
+    )
 
     # report
     sub.add_parser("report", help="Generate niche report")
@@ -99,12 +107,56 @@ def cmd_collect(args: argparse.Namespace, settings) -> int:
 
 
 def cmd_analyze(args: argparse.Namespace, settings) -> int:
-    from niche_radar.analysis import run_analysis
+    """Three modes:
+       --test          : run the 8-agent pipeline on a hardcoded signal, dry-run only.
+       --signal-id <id>: run the pipeline on one DB raw_item, dry-run only.
+       (default)       : run the full pipeline over all unprocessed items.
+    """
     from niche_radar.storage.database import get_db
 
     logger = structlog.get_logger()
     db = get_db(settings.database_url)
-    count = run_analysis(db=db, settings=settings, dry_run=args.dry_run)
+
+    if getattr(args, "test", False):
+        from niche_radar.agents.pipeline import run_pipeline_on_signal
+        from niche_radar.agents.test_signal import TEST_SIGNAL
+        logger.info("analyze_test_mode", signal=TEST_SIGNAL.get("text", "")[:80])
+        result = run_pipeline_on_signal(db, settings, TEST_SIGNAL, log_fn=print)
+        logger.info(
+            "analyze_test_done",
+            verdict=result.verdict,
+            score=result.opportunity_score,
+            failed_agents=result.failed_agents,
+            short_circuited_at=result.short_circuited_at,
+        )
+        return 0
+
+    signal_id = getattr(args, "signal_id", None)
+    if signal_id:
+        from niche_radar.agents.pipeline import run_pipeline_on_signal
+        row = db.execute(
+            "SELECT id, source, url, title, body, posted_at, collected_at "
+            "FROM raw_items WHERE id=?", (signal_id,)
+        ).fetchone()
+        if row is None:
+            logger.error("signal_not_found", signal_id=signal_id)
+            return 2
+        raw_signal = {
+            "text": ((row[3] or "") + "\n\n" + (row[4] or "")).strip(),
+            "source": row[1], "url": row[2],
+            "scraped_at": row[5] or row[6],
+        }
+        result = run_pipeline_on_signal(db, settings, raw_signal, log_fn=print)
+        logger.info(
+            "analyze_signal_done",
+            signal_id=signal_id,
+            verdict=result.verdict,
+            score=result.opportunity_score,
+        )
+        return 0
+
+    from niche_radar.analysis import run_analysis
+    count = run_analysis(db=db, settings=settings, dry_run=args.dry_run, log_fn=print)
     logger.info("analysis_complete", niches_produced=count)
     return 0
 

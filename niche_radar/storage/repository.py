@@ -341,3 +341,226 @@ def set_app_setting(db: sqlite3.Connection, key: str, value: str) -> None:
         "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)", (key, value)
     )
     db.commit()
+
+
+# ============================================================================
+# 8-agent pipeline storage (analyzer v3)
+# ============================================================================
+
+
+def get_items_needing_a1(
+    db: sqlite3.Connection,
+    limit: int = 500,
+    max_age_days: int | None = None,
+) -> list[dict]:
+    """Items that have never been through phase A (no row in item_pain_extractions).
+
+    Distinct from get_unprocessed_items, which joins on niche_item_links. With the new
+    pipeline, items get linked only after phase D — but we don't want to re-run A1/A2
+    on items that ALREADY went through phase A in a previous run, so we use a different
+    JOIN target.
+    """
+    base = (
+        "SELECT ri.id, ri.source, ri.source_id, ri.title, ri.body, ri.url, ri.score, "
+        "ri.comment_count, ri.metadata, ri.collected_at, ri.posted_at "
+        "FROM raw_items ri "
+        "LEFT JOIN item_pain_extractions ipe ON ri.id = ipe.raw_item_id "
+        "WHERE ipe.raw_item_id IS NULL "
+    )
+    if max_age_days is not None:
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=max_age_days)).isoformat()
+        rows = db.execute(
+            base + "AND ri.posted_at IS NOT NULL AND ri.posted_at >= ? "
+            "ORDER BY ri.posted_at DESC LIMIT ?",
+            (cutoff, limit),
+        ).fetchall()
+    else:
+        rows = db.execute(
+            base + "ORDER BY COALESCE(ri.posted_at, ri.collected_at) DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+    return [
+        {
+            "id": r[0], "source": r[1], "source_id": r[2],
+            "title": r[3], "body": r[4], "url": r[5],
+            "score": r[6], "comment_count": r[7],
+            "metadata": json.loads(r[8]) if r[8] else None,
+            "collected_at": r[9], "posted_at": r[10],
+        }
+        for r in rows
+    ]
+
+
+def upsert_item_extraction(
+    db: sqlite3.Connection,
+    raw_item_id: str,
+    pipeline_run: str,
+    a1_is_valid: bool,
+    a1_confidence: float | None,
+    a1_signal_type: str | None,
+    a1_result: dict | None,
+    a2_result: dict | None,
+    error: str | None = None,
+) -> None:
+    """Insert (or overwrite) one row in item_pain_extractions.
+
+    Even A1-rejected items get persisted (a1_is_valid=0) so get_items_needing_a1 skips
+    them on subsequent runs.
+    """
+    db.execute(
+        "INSERT OR REPLACE INTO item_pain_extractions "
+        "(raw_item_id, pipeline_run, a1_is_valid, a1_confidence, a1_signal_type, "
+        " a1_result, a2_result, cluster_id, error) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?)",
+        (
+            raw_item_id,
+            pipeline_run,
+            1 if a1_is_valid else 0,
+            a1_confidence,
+            a1_signal_type,
+            json.dumps(a1_result) if a1_result is not None else None,
+            json.dumps(a2_result) if a2_result is not None else None,
+            error,
+        ),
+    )
+    db.commit()
+
+
+def get_unclustered_passed_extractions(
+    db: sqlite3.Connection,
+    pipeline_run: str,
+) -> list[dict]:
+    """Extractions from THIS run that passed A1 but have not yet been assigned a cluster."""
+    rows = db.execute(
+        "SELECT raw_item_id, a1_result, a2_result, a1_confidence, a1_signal_type "
+        "FROM item_pain_extractions "
+        "WHERE pipeline_run=? AND a1_is_valid=1 AND cluster_id IS NULL",
+        (pipeline_run,),
+    ).fetchall()
+    return [
+        {
+            "raw_item_id": r[0],
+            "a1": json.loads(r[1]) if r[1] else None,
+            "a2": json.loads(r[2]) if r[2] else None,
+            "a1_confidence": r[3],
+            "a1_signal_type": r[4],
+        }
+        for r in rows
+    ]
+
+
+def update_extraction_cluster(
+    db: sqlite3.Connection,
+    raw_item_ids: list[str],
+    cluster_id: str,
+) -> None:
+    """Assign a cluster_id to a batch of extractions."""
+    if not raw_item_ids:
+        return
+    placeholders = ",".join("?" for _ in raw_item_ids)
+    db.execute(
+        f"UPDATE item_pain_extractions SET cluster_id=? "
+        f"WHERE raw_item_id IN ({placeholders})",
+        (cluster_id, *raw_item_ids),
+    )
+    db.commit()
+
+
+def insert_niche_analysis(
+    db: sqlite3.Connection,
+    *,
+    niche_id: str | None,
+    pipeline_run: str,
+    cluster_id: str,
+    verdict: str | None,
+    confidence: float | None,
+    opportunity_score: int | None,
+    weighted_score: float | None,
+    tier: str | None,
+    feasibility_score: int | None,
+    a2_aggregate: dict | None,
+    a3_result: dict | None,
+    a4_result: dict | None,
+    a5_result: dict | None,
+    a6_result: dict | None,
+    a7_result: dict | None,
+    a8_result: dict | None,
+    failed_agents: list[str] | None = None,
+) -> str:
+    """Insert one niche_analyses row. Returns the new analysis_id."""
+    analysis_id = str(uuid.uuid4())
+    db.execute(
+        "INSERT INTO niche_analyses "
+        "(id, niche_id, pipeline_run, cluster_id, verdict, confidence, "
+        " opportunity_score, weighted_score, tier, feasibility_score, "
+        " a2_aggregate, a3_result, a4_result, a5_result, a6_result, a7_result, a8_result, "
+        " failed_agents) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            analysis_id, niche_id, pipeline_run, cluster_id, verdict, confidence,
+            opportunity_score, weighted_score, tier, feasibility_score,
+            json.dumps(a2_aggregate) if a2_aggregate is not None else None,
+            json.dumps(a3_result) if a3_result is not None else None,
+            json.dumps(a4_result) if a4_result is not None else None,
+            json.dumps(a5_result) if a5_result is not None else None,
+            json.dumps(a6_result) if a6_result is not None else None,
+            json.dumps(a7_result) if a7_result is not None else None,
+            json.dumps(a8_result) if a8_result is not None else None,
+            json.dumps(failed_agents) if failed_agents else None,
+        ),
+    )
+    db.commit()
+    return analysis_id
+
+
+def attach_latest_analysis(
+    db: sqlite3.Connection,
+    niche_id: str,
+    analysis_id: str,
+    verdict: str | None,
+) -> None:
+    """Update niche_candidates.verdict and .latest_analysis_id."""
+    db.execute(
+        "UPDATE niche_candidates SET verdict=?, latest_analysis_id=? WHERE id=?",
+        (verdict, analysis_id, niche_id),
+    )
+    db.commit()
+
+
+def lookup_niche_by_alias_overlap(
+    db: sqlite3.Connection,
+    candidate_aliases: list[str],
+) -> str | None:
+    """Find an existing niche whose keyword (or any of its aliases) matches any of the
+    given candidate_aliases. Used by phase D to prevent niche fragmentation across runs
+    when two clusters about the same pain pick slightly different product_name slugs.
+
+    Matching is lowercase, exact-string. Returns the existing niche keyword (already
+    normalized), or None.
+    """
+    if not candidate_aliases:
+        return None
+    normed = [a.lower().strip() for a in candidate_aliases if a and a.strip()]
+    if not normed:
+        return None
+
+    # Direct keyword match — fast path
+    placeholders = ",".join("?" for _ in normed)
+    row = db.execute(
+        f"SELECT keyword FROM niche_candidates WHERE keyword IN ({placeholders}) LIMIT 1",
+        tuple(normed),
+    ).fetchone()
+    if row:
+        return row[0]
+
+    # Slower path: scan aliases JSON. SQLite has json_each but availability varies; use
+    # a simple LIKE for portability. The number of niches per project is small (low 100s).
+    for alias in normed:
+        like = f'%"{alias}"%'
+        row = db.execute(
+            "SELECT keyword FROM niche_candidates WHERE aliases LIKE ? LIMIT 1",
+            (like,),
+        ).fetchone()
+        if row:
+            return row[0]
+    return None
