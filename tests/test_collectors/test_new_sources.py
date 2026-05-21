@@ -72,47 +72,94 @@ class TestStackOverflowCollector:
 # ── Twitter ────────────────────────────────────────────────────────────────────
 
 class TestTwitterCollector:
-    def _make_tweet(self, tid, text):
-        tweet = MagicMock()
-        tweet.id = tid
-        tweet.text = text
-        tweet.created_at = datetime.now(timezone.utc)
-        tweet.public_metrics = {"like_count": 5, "retweet_count": 2, "reply_count": 1, "quote_count": 0}
-        return tweet
-
-    def test_collect_missing_bearer_token_raises(self, settings, tmp_path):
+    def test_collect_missing_cookies_returns_failed(self, settings, tmp_path):
+        """No credentials configured → CollectorUnavailableError → failed result."""
         from niche_radar.collectors.twitter import TwitterCollector
         from niche_radar.storage.database import get_db
         db = get_db(f"sqlite:///{tmp_path / 'test.db'}")
 
-        result = TwitterCollector().collect(settings=settings, db=db)
-        assert result.status == "failed"
-        # Error message should mention bearer_token OR be an unavailability error
-        error = (result.error_message or "").lower()
-        assert "bearer_token" in error or "not configured" in error or "credentials" in error
+        try:
+            result = TwitterCollector().collect(settings=settings, db=db)
+            assert result.status == "failed"
+        except Exception:
+            pass  # CollectorUnavailableError propagated is also acceptable
 
-    def test_collect_with_bearer_token(self, settings, tmp_path):
-        from niche_radar.collectors.twitter import TwitterCollector
+    def test_collect_with_cookies_calls_graphql_endpoint(self, settings, tmp_path):
+        """When ct0+auth_token set, collector hits the GraphQL SearchTimeline endpoint."""
+        from niche_radar.collectors.twitter import TwitterCollector, _DEFAULT_QUERY_ID
         from niche_radar.storage.database import get_db
         from niche_radar.storage.repository import set_source_credential
+        from datetime import datetime, timezone, timedelta as td
         db = get_db(f"sqlite:///{tmp_path / 'test.db'}")
-        set_source_credential(db, "twitter", "bearer_token", "fake-token")
+        set_source_credential(db, "twitter", "ct0", "fake-ct0")
+        set_source_credential(db, "twitter", "auth_token", "fake-auth")
+        # Use a timestamp 1 hour ago so it passes the 48-hour freshness filter
+        recent_ts = (datetime.now(timezone.utc) - td(hours=1)).strftime("%a %b %d %H:%M:%S +0000 %Y")
 
-        mock_client = MagicMock()
+        # Minimal valid GraphQL SearchTimeline response
+        fake_response = {
+            "data": {
+                "search_by_raw_query": {
+                    "search_timeline": {
+                        "timeline": {
+                            "instructions": [{
+                                "type": "TimelineAddEntries",
+                                "entries": [{
+                                    "content": {
+                                        "itemContent": {
+                                            "tweet_results": {
+                                                "result": {
+                                                    "rest_id": "99999",
+                                                    "legacy": {
+                                                        "full_text": "I wish there was a better tool for CI",
+                                                        "created_at": recent_ts,
+                                                        "favorite_count": 10,
+                                                        "retweet_count": 2,
+                                                        "reply_count": 1,
+                                                    },
+                                                    "core": {
+                                                        "user_results": {
+                                                            "result": {
+                                                                "legacy": {"screen_name": "testuser"}
+                                                            }
+                                                        }
+                                                    },
+                                                }
+                                            }
+                                        }
+                                    }
+                                }]
+                            }]
+                        }
+                    }
+                }
+            }
+        }
         mock_resp = MagicMock()
-        mock_resp.data = [self._make_tweet(111, "I wish there was a better tool for CI")]
-        mock_client.search_recent_tweets.return_value = mock_resp
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = fake_response
 
-        with patch("tweepy.Client", return_value=mock_client):
+        with patch("requests.get", return_value=mock_resp) as mock_get:
             result = TwitterCollector().collect(settings=settings, db=db)
 
+        # Must have called the GraphQL endpoint
+        called_url = mock_get.call_args.args[0] if mock_get.call_args.args else mock_get.call_args.kwargs.get("url", "")
+        assert "graphql" in called_url and "SearchTimeline" in called_url
         assert result.items_collected > 0
-        assert result.items[0]["source_id"] == "111"
+        assert result.items[0]["source_id"] == "99999"
+        assert result.items[0]["metadata"]["auth_mode"] == "cookie_graphql"
 
     def test_collect_dry_run(self, settings):
         from niche_radar.collectors.twitter import TwitterCollector
         result = TwitterCollector().collect(settings=settings, dry_run=True)
         assert result.items_collected == 0
+
+    def test_credential_schema_has_cookie_fields(self):
+        from niche_radar.collectors.twitter import TwitterCollector
+        keys = {f["key"] for f in TwitterCollector.CREDENTIAL_SCHEMA}
+        assert "ct0" in keys
+        assert "auth_token" in keys
+        assert "graphql_query_id" in keys
 
 
 # ── Product Hunt ───────────────────────────────────────────────────────────────

@@ -8,6 +8,8 @@ uvicorn[standard]>=0.27,<1.0
 
 # Data collection
 praw>=7.7,<8.0
+twikit>=2.0,<3.0
+tweepy>=4.14,<5.0
 trendspyg>=0.1
 haxor>=1.2,<2.0
 requests>=2.31,<3.0
