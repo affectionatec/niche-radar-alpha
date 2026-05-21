@@ -14,6 +14,7 @@ from niche_radar.collectors.base import (
     CollectorResult,
     CollectorUnavailableError,
 )
+from typing import ClassVar
 
 logger = structlog.get_logger()
 SEED_KEYWORDS = [
@@ -47,7 +48,10 @@ def _extract_series(payload):
 class GoogleTrendsCollector(BaseCollector):
     source_name = "google_trends"
 
-    def collect(self, settings, dry_run: bool = False) -> CollectorResult:
+    CREDENTIAL_SCHEMA: ClassVar[list[dict]] = []
+    # No credentials needed — uses public RSS/trendspyg.
+
+    def collect(self, settings, dry_run: bool = False, db=None) -> CollectorResult:
         start = time.perf_counter()
         if dry_run:
             return CollectorResult(self.source_name, [], "", "completed", 0)

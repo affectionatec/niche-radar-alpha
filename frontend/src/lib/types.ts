@@ -41,6 +41,7 @@ export interface PainPoint {
 }
 
 export interface NicheScore {
+  id: string;
   niche_id: string;
   keyword: string;
   aliases: string[];
@@ -55,6 +56,45 @@ export interface NicheScore {
   last_seen: string;
   occurrence_count: number;
   tier: 'high_priority' | 'watchlist' | 'archive';
+  // v4 enhancements
+  verdict?: string | null;
+  momentum_label?: 'growing' | 'stable' | 'declining' | null;
+  momentum_ratio?: number | null;
+  is_shortlisted?: boolean;
+}
+
+export interface WebValidation {
+  verdict: 'validated_gap' | 'crowded_market' | 'expensive_incumbents' | 'unclear';
+  evidence: { query: string; top_results: { title: string; url: string; snippet: string }[] }[];
+}
+
+export interface NicheAnalysis {
+  verdict: string | null;
+  opportunity_score: number | null;
+  weighted_score: number | null;
+  pipeline_tier: string | null;
+  feasibility_score: number | null;
+  web_validation: WebValidation | null;
+  go_no_go_rationale: string | null;
+  prd: Record<string, unknown> | null;
+  brief: Record<string, unknown> | null;
+}
+
+export interface SourceCredentialField {
+  key: string;
+  label: string;
+  secret: boolean;
+  optional: boolean;
+  help: string;
+}
+
+export interface SourceStatus {
+  slug: string;
+  schema: SourceCredentialField[];
+  credentials_set: Record<string, string>;
+  required_missing: string[];
+  configured: boolean;
+  last_success: string | null;
 }
 
 export interface RawItem {
@@ -72,7 +112,7 @@ export interface RawItem {
 }
 
 export interface NicheDetail {
-  niche: NicheScore;
+  niche: NicheScore & { is_shortlisted: boolean; analysis: NicheAnalysis | null };
   items: RawItem[];
 }
 

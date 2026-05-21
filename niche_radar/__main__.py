@@ -52,7 +52,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_collect = sub.add_parser("collect", help="Collect from data sources")
     p_collect.add_argument(
         "--source",
-        choices=["reddit", "hn", "google_trends", "github", "youtube"],
+        choices=["reddit", "hn", "google_trends", "github", "youtube",
+                 "product_hunt", "stack_overflow", "twitter", "g2_reviews",
+                 "indie_hackers", "app_store", "play_store"],
         help="Collect from a single source",
     )
 

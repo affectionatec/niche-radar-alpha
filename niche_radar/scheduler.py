@@ -35,6 +35,16 @@ def _cleanup_job(settings) -> None:
     run_cleanup(db=db, settings=settings)
 
 
+def _weekly_digest_job(settings) -> None:
+    from niche_radar.reports.weekly_digest import generate_weekly_digest
+    from niche_radar.storage.database import get_db
+    from pathlib import Path
+
+    db = get_db(settings.database_url)
+    path = generate_weekly_digest(db=db, output_dir=Path(settings.report_output_dir))
+    logger.info("weekly_digest_generated", path=str(path))
+
+
 def start_scheduler(settings) -> None:
     """Start BackgroundScheduler + uvicorn API server."""
     import uvicorn
@@ -66,6 +76,16 @@ def start_scheduler(settings) -> None:
         args=[settings],
         id="cleanup",
         name="Data Retention Cleanup",
+    )
+    scheduler.add_job(
+        _weekly_digest_job,
+        "cron",
+        day_of_week="mon",
+        hour=9,
+        minute=0,
+        args=[settings],
+        id="weekly_digest",
+        name="Weekly Opportunity Digest",
     )
 
     scheduler.start()

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import re
+import sqlite3
 import time
 from datetime import datetime, timedelta, timezone
+from typing import ClassVar
 
 import structlog
 from tenacity import Retrying, stop_after_attempt, wait_exponential
@@ -14,6 +16,7 @@ from niche_radar.collectors.base import (
     CollectorResult,
     CollectorUnavailableError,
 )
+from niche_radar.storage.repository import get_source_credential
 
 logger = structlog.get_logger()
 
@@ -25,7 +28,26 @@ def _to_int(text: str | None) -> int:
 class GitHubTrendingCollector(BaseCollector):
     source_name = "github"
 
-    def collect(self, settings, dry_run: bool = False) -> CollectorResult:
+    CREDENTIAL_SCHEMA: ClassVar[list[dict]] = [
+        {"key": "token", "label": "GitHub Token (optional)", "secret": True, "optional": True, "help": "Increases API rate limits. Create at github.com/settings/tokens"},
+    ]
+
+    @classmethod
+    def test_connection(cls, db: sqlite3.Connection, settings) -> tuple[bool, str]:
+        import requests
+        token = get_source_credential(db, "github", "token", settings.github_token)
+        headers = {"User-Agent": "NicheRadar/0.1"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        try:
+            resp = requests.get("https://github.com/trending", headers=headers, timeout=10)
+            if resp.status_code == 200:
+                return True, "GitHub Trending reachable"
+            return False, f"HTTP {resp.status_code}"
+        except Exception as exc:
+            return False, str(exc)
+
+    def collect(self, settings, dry_run: bool = False, db: sqlite3.Connection | None = None) -> CollectorResult:
         start = time.perf_counter()
         if dry_run:
             return CollectorResult(self.source_name, [], "", "completed", 0)
@@ -46,8 +68,9 @@ class GitHubTrendingCollector(BaseCollector):
             )
             session = requests.Session()
             session.headers.update({"User-Agent": "NicheRadar/0.1", "Accept": "text/html,application/json"})
-            if settings.github_token:
-                session.headers["Authorization"] = f"Bearer {settings.github_token}"
+            github_token = get_source_credential(db, "github", "token", settings.github_token) if db else settings.github_token
+            if github_token:
+                session.headers["Authorization"] = f"Bearer {github_token}"
 
             errors: list[str] = []
             now_iso = datetime.now(timezone.utc).isoformat()

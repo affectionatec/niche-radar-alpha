@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import sqlite3
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from typing import ClassVar
 
 
 @dataclass
@@ -24,11 +26,30 @@ class CollectorUnavailableError(Exception):
 
 
 class BaseCollector(ABC):
-    """Abstract base class for data source collectors."""
+    """Abstract base class for data source collectors.
+
+    Subclasses must define:
+    - `source_name: str`
+    - `CREDENTIAL_SCHEMA: list[dict]` — each entry: {key, label, secret, optional, help}
+    - `collect(settings, dry_run, db)` — main collection method
+    - `test_connection(db, settings)` — classmethod for testing auth (optional override)
+    """
 
     source_name: str = ""
 
+    CREDENTIAL_SCHEMA: ClassVar[list[dict]] = []
+    # Each entry: {"key": str, "label": str, "secret": bool, "optional": bool, "help": str}
+
     @abstractmethod
-    def collect(self, settings, dry_run: bool = False) -> CollectorResult:
+    def collect(
+        self, settings, dry_run: bool = False, db: sqlite3.Connection | None = None
+    ) -> CollectorResult:
         """Fetch data from the source and return a CollectorResult."""
         ...
+
+    @classmethod
+    def test_connection(
+        cls, db: sqlite3.Connection, settings
+    ) -> tuple[bool, str]:
+        """Test whether credentials are valid. Returns (ok, message)."""
+        return True, "no connection test implemented for this source"

@@ -228,7 +228,8 @@ def upsert_niche_candidate(
 
 def _build_niche_dict(row: tuple) -> dict:
     return {
-        "niche_id": row[0],
+        "id": row[0],
+        "niche_id": row[0],  # backward compat alias
         "keyword": row[1],
         "aliases": json.loads(row[2]) if row[2] else [],
         "llm_score": row[3] or 0.0,
@@ -241,6 +242,9 @@ def _build_niche_dict(row: tuple) -> dict:
         "first_seen": row[10],
         "last_seen": row[11],
         "occurrence_count": row[12],
+        "verdict": row[13],
+        "momentum_label": row[14],
+        "momentum_ratio": row[15],
     }
 
 
@@ -265,7 +269,8 @@ def link_niche_item(
 _NICHE_COLUMNS = (
     "id, keyword, aliases, llm_score, llm_reasoning, "
     "tool_concept, target_audience, build_complexity, monetization, pain_points, "
-    "first_seen, last_seen, occurrence_count"
+    "first_seen, last_seen, occurrence_count, "
+    "verdict, momentum_label, momentum_ratio"
 )
 
 
@@ -339,6 +344,45 @@ def get_app_setting(db: sqlite3.Connection, key: str) -> str | None:
 def set_app_setting(db: sqlite3.Connection, key: str, value: str) -> None:
     db.execute(
         "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)", (key, value)
+    )
+    db.commit()
+
+
+def get_source_credential(
+    db: sqlite3.Connection, source: str, key: str, default: str | None = None
+) -> str | None:
+    """Read `source.<source>.<key>` from app_settings, fall back to default.
+
+    Collectors call this at collection time so credentials set via /settings/sources
+    take effect without restarting the app.
+    """
+    return get_app_setting(db, f"source.{source}.{key}") or default
+
+
+def get_source_credentials(
+    db: sqlite3.Connection, source: str
+) -> dict[str, str]:
+    """Return all `source.<source>.*` settings as a plain dict (key without prefix)."""
+    prefix = f"source.{source}."
+    rows = db.execute(
+        "SELECT key, value FROM app_settings WHERE key LIKE ?",
+        (prefix + "%",),
+    ).fetchall()
+    return {r[0][len(prefix):]: r[1] for r in rows}
+
+
+def set_source_credential(
+    db: sqlite3.Connection, source: str, key: str, value: str
+) -> None:
+    """Persist a source credential to app_settings."""
+    set_app_setting(db, f"source.{source}.{key}", value)
+
+
+def delete_source_credential(
+    db: sqlite3.Connection, source: str, key: str
+) -> None:
+    db.execute(
+        "DELETE FROM app_settings WHERE key=?", (f"source.{source}.{key}",)
     )
     db.commit()
 
@@ -564,3 +608,63 @@ def lookup_niche_by_alias_overlap(
         if row:
             return row[0]
     return None
+
+
+# ============================================================================
+# Shortlist (starred niches)
+# ============================================================================
+
+
+def add_to_shortlist(db: sqlite3.Connection, niche_id: str, note: str = "") -> None:
+    db.execute(
+        "INSERT OR REPLACE INTO niche_shortlist (niche_id, note) VALUES (?, ?)",
+        (niche_id, note),
+    )
+    db.commit()
+
+
+def remove_from_shortlist(db: sqlite3.Connection, niche_id: str) -> None:
+    db.execute("DELETE FROM niche_shortlist WHERE niche_id=?", (niche_id,))
+    db.commit()
+
+
+def list_shortlist(db: sqlite3.Connection) -> list[dict]:
+    """Return shortlisted niches joined with their candidate data."""
+    rows = db.execute(
+        """
+        SELECT nc.id, nc.keyword, nc.tool_concept, nc.llm_score, nc.status,
+               nc.momentum_label, nc.verdict,
+               ns.added_at, ns.note
+        FROM niche_shortlist ns
+        JOIN niche_candidates nc ON ns.niche_id = nc.id
+        ORDER BY ns.added_at DESC
+        """
+    ).fetchall()
+    return [
+        {
+            "id": r[0], "keyword": r[1], "tool_concept": r[2],
+            "llm_score": r[3], "status": r[4],
+            "momentum_label": r[5], "verdict": r[6],
+            "added_at": r[7], "note": r[8],
+        }
+        for r in rows
+    ]
+
+
+def is_shortlisted(db: sqlite3.Connection, niche_id: str) -> bool:
+    row = db.execute("SELECT 1 FROM niche_shortlist WHERE niche_id=?", (niche_id,)).fetchone()
+    return row is not None
+
+
+# ============================================================================
+# Web validation
+# ============================================================================
+
+
+def set_web_validation(db: sqlite3.Connection, analysis_id: str, validation_json: str) -> None:
+    """Update niche_analyses.web_validation for the given analysis row."""
+    db.execute(
+        "UPDATE niche_analyses SET web_validation=? WHERE id=?",
+        (validation_json, analysis_id),
+    )
+    db.commit()

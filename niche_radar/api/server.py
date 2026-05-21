@@ -78,12 +78,71 @@ def _tier(score: float) -> str:
 
 
 @app.get("/api/niches")
-def list_niches():
+def list_niches(
+    source: Optional[str] = None,
+    min_score: Optional[float] = None,
+    max_score: Optional[float] = None,
+    monetization: Optional[str] = None,  # any | yes | no
+    trend: Optional[str] = None,         # any | growing | stable | declining
+    format: Optional[str] = None,        # csv
+):
+    """List active niches with optional filters. Pass format=csv for CSV download."""
+    import csv, io
     db = _db()
     try:
         niches = repository.get_active_niches_with_scores(db)
         for n in niches:
             n["tier"] = _tier(n["llm_score"])
+
+        # Apply filters
+        if source:
+            # Filter niches that have at least one linked item from this source
+            linked_sources = {}
+            for n in niches:
+                nid = n["id"]
+                row = db.execute(
+                    "SELECT COUNT(*) FROM niche_item_links nil JOIN raw_items ri ON nil.raw_item_id=ri.id WHERE nil.niche_id=? AND ri.source=?",
+                    (nid, source),
+                ).fetchone()
+                linked_sources[nid] = (row[0] or 0) > 0
+            niches = [n for n in niches if linked_sources.get(n["id"])]
+
+        if min_score is not None:
+            niches = [n for n in niches if (n.get("llm_score") or 0) >= min_score]
+        if max_score is not None:
+            niches = [n for n in niches if (n.get("llm_score") or 0) <= max_score]
+
+        if monetization and monetization != "any":
+            # Pain points JSON contains willingness-to-pay evidence
+            for n in niches:
+                pains = n.get("pain_points") or []
+                has_monetization = any(p.get("quote") for p in pains)
+                n["_has_monetization"] = has_monetization
+            if monetization == "yes":
+                niches = [n for n in niches if n.get("_has_monetization")]
+            elif monetization == "no":
+                niches = [n for n in niches if not n.get("_has_monetization")]
+            for n in niches:
+                n.pop("_has_monetization", None)
+
+        if trend and trend != "any":
+            niches = [n for n in niches if n.get("momentum_label") == trend]
+
+        if format == "csv":
+            from fastapi.responses import StreamingResponse
+            buf = io.StringIO()
+            fields = ["id", "keyword", "tool_concept", "llm_score", "tier", "build_complexity",
+                      "target_audience", "monetization", "momentum_label", "verdict", "last_seen"]
+            writer = csv.DictWriter(buf, fieldnames=fields, extrasaction="ignore")
+            writer.writeheader()
+            writer.writerows(niches)
+            buf.seek(0)
+            return StreamingResponse(
+                iter([buf.getvalue()]),
+                media_type="text/csv",
+                headers={"Content-Disposition": "attachment; filename=niches.csv"},
+            )
+
         return niches
     finally:
         db.close()
@@ -97,8 +156,110 @@ def get_niche(niche_id: str):
         if not niche:
             raise HTTPException(status_code=404, detail="Niche not found")
         niche["tier"] = _tier(niche["llm_score"])
+        niche["is_shortlisted"] = repository.is_shortlisted(db, niche_id)
         items = repository.get_niche_items(db, niche_id)
+        # Latest analysis row for web_validation + verdict details
+        analysis_row = db.execute(
+            "SELECT verdict, opportunity_score, weighted_score, tier, feasibility_score, "
+            "web_validation, a6_result, a7_result, a8_result "
+            "FROM niche_analyses WHERE niche_id=? ORDER BY analyzed_at DESC LIMIT 1",
+            (niche_id,),
+        ).fetchone()
+        niche["analysis"] = None
+        if analysis_row:
+            import json as _json
+            niche["analysis"] = {
+                "verdict": analysis_row[0],
+                "opportunity_score": analysis_row[1],
+                "weighted_score": analysis_row[2],
+                "pipeline_tier": analysis_row[3],
+                "feasibility_score": analysis_row[4],
+                "web_validation": _json.loads(analysis_row[5]) if analysis_row[5] else None,
+                "go_no_go_rationale": (_json.loads(analysis_row[6]) or {}).get("full_rationale") if analysis_row[6] else None,
+                "prd": _json.loads(analysis_row[7]) if analysis_row[7] else None,
+                "brief": _json.loads(analysis_row[8]) if analysis_row[8] else None,
+            }
         return {"niche": niche, "items": items}
+    finally:
+        db.close()
+
+
+class ShortlistNote(BaseModel):
+    note: Optional[str] = ""
+
+
+@app.post("/api/niches/{niche_id}/shortlist")
+def star_niche(niche_id: str, body: ShortlistNote = ShortlistNote()):
+    db = _db()
+    try:
+        niche = repository.get_niche_by_id(db, niche_id)
+        if not niche:
+            raise HTTPException(status_code=404, detail="Niche not found")
+        repository.add_to_shortlist(db, niche_id, body.note or "")
+        return {"ok": True}
+    finally:
+        db.close()
+
+
+@app.delete("/api/niches/{niche_id}/shortlist")
+def unstar_niche(niche_id: str):
+    db = _db()
+    try:
+        repository.remove_from_shortlist(db, niche_id)
+        return {"ok": True}
+    finally:
+        db.close()
+
+
+@app.get("/api/shortlist")
+def get_shortlist():
+    db = _db()
+    try:
+        return repository.list_shortlist(db)
+    finally:
+        db.close()
+
+
+@app.post("/api/niches/{niche_id}/validate")
+def validate_niche(niche_id: str):
+    """Re-run web validation (DDG search) for a niche on demand."""
+    db = _db()
+    try:
+        niche = repository.get_niche_by_id(db, niche_id)
+        if not niche:
+            raise HTTPException(status_code=404, detail="Niche not found")
+
+        import json as _json
+        from niche_radar.agents.web_validate import validate_opportunity
+
+        # Get the niche's keywords from aliases + keyword
+        keywords = ([niche.get("keyword", "")] + (niche.get("aliases") or []))
+        keywords = [k for k in keywords if k][:5]
+        vr = validate_opportunity(keywords, dry_run=False)
+        result_json = _json.dumps(vr.to_dict())
+
+        # Persist to the latest analysis row
+        analysis_id_row = db.execute(
+            "SELECT id FROM niche_analyses WHERE niche_id=? ORDER BY analyzed_at DESC LIMIT 1",
+            (niche_id,),
+        ).fetchone()
+        if analysis_id_row:
+            repository.set_web_validation(db, analysis_id_row[0], result_json)
+
+        return {"verdict": vr.verdict, "evidence": vr.evidence}
+    finally:
+        db.close()
+
+
+@app.get("/api/niches/{niche_id}/momentum")
+def get_momentum(niche_id: str):
+    db = _db()
+    try:
+        niche = repository.get_niche_by_id(db, niche_id)
+        if not niche:
+            raise HTTPException(status_code=404, detail="Niche not found")
+        from niche_radar.storage.momentum import compute_momentum
+        return compute_momentum(db, niche_id)
     finally:
         db.close()
 
@@ -189,6 +350,131 @@ def test_llm_connection():
         client = _get_llm_client(db, settings)
         client.complete("Reply with the word OK.")
         return {"ok": True, "message": "Connection successful"}
+    except Exception as exc:
+        return {"ok": False, "message": str(exc)}
+    finally:
+        db.close()
+
+
+# ── Source credentials & configuration ───────────────────────────────────────
+
+class SourceCredentialUpdate(BaseModel):
+    credentials: dict  # {key: value, ...}  — values are strings; None means delete
+
+
+@app.get("/api/sources")
+def list_sources():
+    """List all known sources with credential status and last collection timestamp."""
+    from niche_radar.collectors import ALL_SOURCES, _get_collector
+    db = _db()
+    try:
+        out = []
+        for slug in ALL_SOURCES:
+            try:
+                collector = _get_collector(slug)
+            except Exception:
+                continue
+            creds = repository.get_source_credentials(db, slug)
+            # Determine which required fields are missing
+            schema = getattr(collector, "CREDENTIAL_SCHEMA", [])
+            required_missing = [
+                f["key"] for f in schema
+                if not f.get("optional") and not creds.get(f["key"])
+            ]
+            # Last successful collection
+            row = db.execute(
+                "SELECT MAX(completed_at) FROM collection_runs WHERE source=? AND status != 'failed'",
+                (slug,),
+            ).fetchone()
+            last_success = row[0] if row else None
+            # Mask secrets in output
+            masked = {k: ("••••" if any(f["key"] == k and f.get("secret") for f in schema) else v)
+                      for k, v in creds.items()}
+            out.append({
+                "slug": slug,
+                "schema": schema,
+                "credentials_set": masked,
+                "required_missing": required_missing,
+                "configured": len(required_missing) == 0,
+                "last_success": last_success,
+            })
+        return out
+    finally:
+        db.close()
+
+
+@app.get("/api/sources/{slug}")
+def get_source(slug: str):
+    """Return credential schema + current (masked) values for one source.
+
+    Returns the same shape as a single item from GET /api/sources so the
+    per-source frontend page can reuse the same SourceStatus type.
+    """
+    from niche_radar.collectors import _get_collector
+    try:
+        collector = _get_collector(slug)
+    except ValueError:
+        raise HTTPException(status_code=404, detail=f"Unknown source: {slug}")
+    db = _db()
+    try:
+        schema = getattr(collector, "CREDENTIAL_SCHEMA", [])
+        creds = repository.get_source_credentials(db, slug)
+        required_missing = [
+            f["key"] for f in schema
+            if not f.get("optional") and not creds.get(f["key"])
+        ]
+        masked = {k: ("••••" if any(f["key"] == k and f.get("secret") for f in schema) else v)
+                  for k, v in creds.items()}
+        row = db.execute(
+            "SELECT MAX(completed_at) FROM collection_runs WHERE source=? AND status != 'failed'",
+            (slug,),
+        ).fetchone()
+        last_success = row[0] if row else None
+        return {
+            "slug": slug,
+            "schema": schema,
+            "credentials_set": masked,
+            "required_missing": required_missing,
+            "configured": len(required_missing) == 0,
+            "last_success": last_success,
+        }
+    finally:
+        db.close()
+
+
+@app.post("/api/sources/{slug}")
+def update_source_credentials(slug: str, body: SourceCredentialUpdate):
+    """Upsert or delete per-source credentials. Pass value=None to delete a key."""
+    from niche_radar.collectors import _get_collector
+    try:
+        _get_collector(slug)
+    except ValueError:
+        raise HTTPException(status_code=404, detail=f"Unknown source: {slug}")
+    db = _db()
+    try:
+        for key, value in body.credentials.items():
+            if value is None:
+                repository.delete_source_credential(db, slug, key)
+            else:
+                repository.set_source_credential(db, slug, key, str(value))
+        return {"ok": True}
+    finally:
+        db.close()
+
+
+@app.post("/api/sources/{slug}/test")
+def test_source_connection(slug: str):
+    """Invoke the collector's test_connection() classmethod and return the result."""
+    from niche_radar.collectors import _get_collector
+    try:
+        collector_cls = type(_get_collector(slug))
+    except ValueError:
+        raise HTTPException(status_code=404, detail=f"Unknown source: {slug}")
+    db = _db()
+    settings = get_settings()
+    try:
+        ok, message = collector_cls.test_connection(db, settings)
+        return {"ok": ok, "message": message}
     except Exception as exc:
         return {"ok": False, "message": str(exc)}
     finally:

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import re
+import sqlite3
 import time
 from datetime import datetime, timedelta, timezone
+from typing import ClassVar
 
 import structlog
 from tenacity import Retrying, stop_after_attempt, wait_exponential
@@ -14,6 +16,7 @@ from niche_radar.collectors.base import (
     CollectorResult,
     CollectorUnavailableError,
 )
+from niche_radar.storage.repository import get_source_credential
 
 logger = structlog.get_logger()
 SEED_KEYWORDS = [
@@ -49,7 +52,31 @@ def _to_int(text: str | None) -> int | None:
 class YouTubeCollector(BaseCollector):
     source_name = "youtube"
 
-    def collect(self, settings, dry_run: bool = False) -> CollectorResult:
+    CREDENTIAL_SCHEMA: ClassVar[list[dict]] = [
+        {"key": "api_key", "label": "YouTube Data API v3 Key (optional)", "secret": True, "optional": True, "help": "From console.cloud.google.com — improves reliability over scraping"},
+    ]
+
+    @classmethod
+    def test_connection(cls, db: sqlite3.Connection, settings) -> tuple[bool, str]:
+        import requests
+        api_key = get_source_credential(db, "youtube", "api_key", settings.youtube_api_key)
+        if api_key:
+            resp = requests.get(
+                "https://www.googleapis.com/youtube/v3/videos",
+                params={"part": "id", "chart": "mostPopular", "maxResults": 1, "key": api_key},
+                timeout=10,
+            )
+            if resp.status_code == 200:
+                return True, "YouTube API key valid"
+            return False, f"YouTube API returned {resp.status_code}: {resp.text[:100]}"
+        # Fall back to testing scrapetube availability
+        try:
+            import scrapetube  # noqa: F401
+            return True, "scrapetube available (no API key)"
+        except ImportError:
+            return False, "No YouTube API key set and scrapetube not installed"
+
+    def collect(self, settings, dry_run: bool = False, db: sqlite3.Connection | None = None) -> CollectorResult:
         start = time.perf_counter()
         if dry_run:
             return CollectorResult(self.source_name, [], "", "completed", 0)
@@ -61,7 +88,8 @@ class YouTubeCollector(BaseCollector):
                 import scrapetube
             except Exception:
                 scrapetube = None
-            if scrapetube is None and not settings.youtube_api_key:
+            youtube_api_key = get_source_credential(db, "youtube", "api_key", settings.youtube_api_key) if db else settings.youtube_api_key
+            if scrapetube is None and not youtube_api_key:
                 raise CollectorUnavailableError("scrapetube is not installed and no YouTube API key is configured")
 
             retryer = Retrying(
@@ -90,7 +118,7 @@ class YouTubeCollector(BaseCollector):
                             videos = list(scrapetube.get_search(query, limit=10))
                     used_api = False
                 except Exception as exc:
-                    if not settings.youtube_api_key:
+                    if not youtube_api_key:
                         logger.warning("youtube_search_failed", query=query, error=str(exc))
                         errors.append(f"{query}: {exc}")
                         continue
@@ -98,7 +126,7 @@ class YouTubeCollector(BaseCollector):
                     for attempt in retryer:
                         with attempt:
                             videos = self._search_api(
-                                requests, settings.youtube_api_key, query, published_after_iso,
+                                requests, youtube_api_key, query, published_after_iso,
                             )
                     used_api = True
 

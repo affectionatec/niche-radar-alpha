@@ -98,7 +98,7 @@ r/devops, r/sysadmin, r/cscareerquestions):
 For Hacker News (search via Algolia API — faster than haxor):
   Use: https://hn.algolia.com/api/v1/search?query=
   Target "Ask HN" posts only (story_type=ask_hn)
-  Filter: points > 10, num_comments > 5
+  Filter: points > 10, num_comments > 5 
 
 ## 5. UI/UX ENHANCEMENTS
 Review the frontend and suggest improvements for:

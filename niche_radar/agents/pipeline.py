@@ -49,6 +49,7 @@ from niche_radar.storage.repository import (
     insert_niche_analysis,
     link_niche_item,
     lookup_niche_by_alias_overlap,
+    set_web_validation,
     update_extraction_cluster,
     upsert_item_extraction,
     upsert_niche_candidate,
@@ -170,6 +171,14 @@ def _persist_extraction(
         a1_result=a1.model_dump(mode="json"),
         a2_result=result.a2.model_dump(mode="json") if result.a2 else None,
     )
+    # Compute per-item pain score after A2 — no LLM, cheap SQL.
+    if result.a2:
+        try:
+            from niche_radar.agents.pain_score import compute_pain_score, persist_pain_score
+            scores = compute_pain_score(db, raw_item_id, result.a2)
+            persist_pain_score(db, raw_item_id, scores)
+        except Exception:
+            pass  # pain score is best-effort; never block extraction
 
 
 def run_phase_a(
@@ -466,6 +475,18 @@ def _persist_cluster(
     )
     attach_latest_analysis(db, niche_id, analysis_id, result.verdict)
 
+    # Web validation: DDG search to check market existence (best-effort; no LLM).
+    if result.a2 and result.a2.keywords:
+        try:
+            from niche_radar.agents.web_validate import validate_opportunity
+            import json as _json
+            vr = validate_opportunity(result.a2.keywords, result.a2.what, dry_run=False)
+            set_web_validation(db, analysis_id, _json.dumps(vr.to_dict()))
+            if log_fn:
+                log_fn(f"cluster={cluster.cluster_id[:8]} web_validation={vr.verdict}")
+        except Exception as exc:
+            logger.warning("web_validate_failed", cluster=cluster.cluster_id[:8], error=str(exc))
+
     if log_fn:
         log_fn(
             f"cluster={cluster.cluster_id[:8]} verdict={result.verdict} "
@@ -592,6 +613,16 @@ def run_pipeline(
         persisted = run_phase_d(
             db, pipeline_run, pairs, dry_run=dry_run, log_fn=log_fn,
         )
+
+        # Update momentum for all active niches after analysis persisted.
+        if not dry_run and persisted > 0:
+            try:
+                from niche_radar.storage.momentum import update_momentum_for_all_niches
+                n_updated = update_momentum_for_all_niches(db)
+                if log_fn:
+                    log_fn(f"momentum_updated niches={n_updated}")
+            except Exception as exc_m:
+                logger.warning("momentum_update_failed", error=str(exc_m))
 
     except BudgetExceeded as exc:
         if log_fn:

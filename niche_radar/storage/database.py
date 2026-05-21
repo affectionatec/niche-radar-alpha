@@ -147,12 +147,44 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("UPDATE raw_items SET posted_at = collected_at WHERE posted_at IS NULL")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_raw_items_posted ON raw_items(posted_at)")
 
-    # v3 (8-agent pipeline): two new columns on niche_candidates surfacing the latest
-    # analysis verdict. Status stays freshness-driven; verdict is quality-driven.
+    # v3 (8-agent pipeline): new columns on niche_candidates.
     if "verdict" not in cols:
         conn.execute("ALTER TABLE niche_candidates ADD COLUMN verdict TEXT")
     if "latest_analysis_id" not in cols:
         conn.execute("ALTER TABLE niche_candidates ADD COLUMN latest_analysis_id TEXT")
+
+    # v4 (enhancement): momentum tracking on niche_candidates.
+    if "momentum_ratio" not in cols:
+        conn.execute("ALTER TABLE niche_candidates ADD COLUMN momentum_ratio REAL")
+    if "momentum_label" not in cols:
+        conn.execute("ALTER TABLE niche_candidates ADD COLUMN momentum_label TEXT")
+    if "momentum_updated_at" not in cols:
+        conn.execute("ALTER TABLE niche_candidates ADD COLUMN momentum_updated_at TIMESTAMP")
+
+    # v4: per-item pain score components on item_pain_extractions.
+    extraction_cols = {r[1] for r in conn.execute("PRAGMA table_info(item_pain_extractions)").fetchall()}
+    if "urgency" not in extraction_cols:
+        conn.execute("ALTER TABLE item_pain_extractions ADD COLUMN urgency REAL")
+    if "monetization_score" not in extraction_cols:
+        conn.execute("ALTER TABLE item_pain_extractions ADD COLUMN monetization_score INTEGER")
+    if "frequency_score" not in extraction_cols:
+        conn.execute("ALTER TABLE item_pain_extractions ADD COLUMN frequency_score INTEGER")
+    if "pain_score_total" not in extraction_cols:
+        conn.execute("ALTER TABLE item_pain_extractions ADD COLUMN pain_score_total REAL")
+
+    # v4: web validation result on niche_analyses.
+    analysis_cols = {r[1] for r in conn.execute("PRAGMA table_info(niche_analyses)").fetchall()}
+    if "web_validation" not in analysis_cols:
+        conn.execute("ALTER TABLE niche_analyses ADD COLUMN web_validation TEXT")
+
+    # v4: niche_shortlist table (starred niches).
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS niche_shortlist (
+            niche_id   TEXT PRIMARY KEY REFERENCES niche_candidates(id),
+            added_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            note       TEXT
+        )
+    """)
     conn.commit()
 
     # One-shot: when upgrading from the old "niche" analyzer to the AI-tool-opportunity

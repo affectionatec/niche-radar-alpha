@@ -1,6 +1,7 @@
 'use client';
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import useSWR from 'swr';
 import { endpoints, fetcher, postSettings, postSettingsTest } from '@/lib/api';
 import { LLMSettings } from '@/lib/types';
@@ -95,6 +96,25 @@ function SettingsContent() {
 
   return (
     <div style={{ maxWidth: '600px' }}>
+      {/* Data Sources link */}
+      <Link href="/settings/sources" style={{ textDecoration: 'none', display: 'block', marginBottom: '32px' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '16px 20px', border: '1px solid rgba(255,255,255,0.12)',
+          background: 'rgba(255,255,255,0.03)',
+        }}>
+          <div>
+            <div style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '13px', color: '#ffffff', marginBottom: '4px' }}>
+              DATA SOURCES
+            </div>
+            <div style={{ fontFamily: 'var(--font-inter)', fontSize: '12px', color: 'rgba(255,255,255,0.35)' }}>
+              Configure credentials for Reddit, Twitter, G2, Stack Overflow, and 8 other sources
+            </div>
+          </div>
+          <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '18px' }}>›</span>
+        </div>
+      </Link>
+
       {isOnboarding && (
         <div
           style={{

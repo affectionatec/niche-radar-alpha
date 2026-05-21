@@ -16,7 +16,13 @@ from niche_radar.storage.repository import (
 
 logger = structlog.get_logger()
 
-ALL_SOURCES = ["reddit", "hn", "google_trends", "github", "youtube"]
+ALL_SOURCES = [
+    "reddit", "hn", "google_trends", "github", "youtube",
+    # Phase 2 — P1 new sources
+    "product_hunt", "stack_overflow", "twitter", "g2_reviews",
+    # Phase 4 — P2 new sources
+    "indie_hackers", "app_store", "play_store",
+]
 
 
 def _get_collector(source: str):
@@ -36,6 +42,27 @@ def _get_collector(source: str):
     elif source == "youtube":
         from niche_radar.collectors.youtube import YouTubeCollector
         return YouTubeCollector()
+    elif source == "product_hunt":
+        from niche_radar.collectors.product_hunt import ProductHuntCollector
+        return ProductHuntCollector()
+    elif source == "stack_overflow":
+        from niche_radar.collectors.stack_overflow import StackOverflowCollector
+        return StackOverflowCollector()
+    elif source == "twitter":
+        from niche_radar.collectors.twitter import TwitterCollector
+        return TwitterCollector()
+    elif source == "g2_reviews":
+        from niche_radar.collectors.g2_reviews import G2ReviewsCollector
+        return G2ReviewsCollector()
+    elif source == "indie_hackers":
+        from niche_radar.collectors.indie_hackers import IndieHackersCollector
+        return IndieHackersCollector()
+    elif source == "app_store":
+        from niche_radar.collectors.app_store import AppStoreCollector
+        return AppStoreCollector()
+    elif source == "play_store":
+        from niche_radar.collectors.play_store import PlayStoreCollector
+        return PlayStoreCollector()
     else:
         raise ValueError(f"Unknown source: {source}")
 
@@ -56,7 +83,7 @@ def run_collectors(
 
         try:
             collector = _get_collector(source)
-            result = collector.collect(settings=settings, dry_run=dry_run)
+            result = collector.collect(settings=settings, dry_run=dry_run, db=db)
             result.run_id = run_id
 
             if not dry_run:
