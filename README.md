@@ -1,30 +1,18 @@
 # Niche Radar Alpha
 
-Automated trend-intelligence pipeline that monitors 5 public platforms, extracts emerging niche opportunities via NLP, and produces scored daily reports.
+Self-hosted trend-intelligence pipeline that monitors 12 public platforms, analyses emerging opportunities via an 8-agent LLM pipeline, and serves scored niche candidates through a web dashboard.
 
-## Data Sources
-
-| Source | Library | API Key? |
-|--------|---------|----------|
-| Google Trends | trendspyg | No |
-| Reddit | PRAW | Yes (free) |
-| Hacker News | haxor | No |
-| GitHub Trending | requests + BS4 | No (optional PAT) |
-| YouTube | scrapetube | No |
-
-## Quick Start (Local)
+## Quick Start
 
 ```bash
-python -m venv .venv && .venv\Scripts\activate  # Windows
-# source .venv/bin/activate                     # Linux/macOS
-pip install -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com -r requirements.txt
-cp .env.example .env   # Edit with your Reddit credentials
-python -m niche_radar collect --dry-run   # Verify setup
-python -m niche_radar collect             # Collect from all sources
-python -m niche_radar extract             # Run NLP pipeline
-python -m niche_radar score               # Score niche candidates
-python -m niche_radar report              # Generate daily report
-python -m niche_radar status              # Check system health
+# Backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env          # Add Reddit creds + LLM API key
+python -m niche_radar serve   # API on :8000 + scheduler
+
+# Frontend
+cd frontend && npm install && npm run dev   # Dashboard on :3000
 ```
 
 ## Docker Compose
@@ -34,11 +22,36 @@ docker compose up -d --build                  # SQLite (default)
 docker compose --profile postgres up -d       # With PostgreSQL
 ```
 
-Images are configured to use `docker.1panel.live` mirrors for China-mainland connectivity.
+Images use `docker.1panel.live` mirrors for China-mainland connectivity.
 
-For npm/npx in China mainland, set:
-```bash
-npm config set registry https://registry.npmmirror.com
+## Stack
+
+- **Language**: Python 3.11+
+- **Backend**: FastAPI + Uvicorn
+- **Frontend**: Next.js 14, React 18, Tailwind CSS, SWR
+- **Database**: SQLite (default) / PostgreSQL (optional)
+- **LLM**: OpenAI-compatible, Anthropic, DeepSeek, Groq, Ollama
+- **Scheduler**: APScheduler (collection 4h, analysis 6h, cleanup daily)
+
+## Structure
+
+```
+niche-radar-alpha/
+├── niche_radar/            # Python backend
+│   ├── collectors/         # 12 data source collectors (Reddit, HN, GitHub, …)
+│   ├── agents/             # 8-agent LLM pipeline (A1–A8)
+│   ├── llm/                # LLM client abstraction (OpenAI, Anthropic)
+│   ├── storage/            # SQLite repository + cleanup
+│   ├── api/                # FastAPI server (23 endpoints)
+│   └── reports/            # Markdown report generator
+├── frontend/               # Next.js dashboard (xAI dark theme)
+│   └── src/
+│       ├── app/            # 9 page routes (dashboard, niches, pipeline, …)
+│       ├── components/     # Navigation, NicheCard, SourceHealthTable
+│       └── lib/            # API client, types
+├── tests/                  # pytest suite
+├── data/                   # SQLite DB (git-ignored)
+└── reports/                # Generated reports (git-ignored)
 ```
 
 ## CLI Commands
@@ -46,12 +59,28 @@ npm config set registry https://registry.npmmirror.com
 | Command | Description |
 |---------|-------------|
 | `collect [--source NAME]` | Collect from all or one source |
-| `extract` | Run NLP keyword extraction + clustering |
-| `score` | Score active niche candidates |
-| `report [--format json\|markdown\|both]` | Generate report |
-| `serve` | Start continuous scheduler |
+| `analyze [--test]` | Run 8-agent LLM analysis pipeline |
+| `report` | Generate Markdown report |
+| `serve` | Start API server + background scheduler |
 | `cleanup` | Run data retention cleanup |
 | `status` | Show system health |
+
+## Data Sources
+
+| Source | Library | API Key? |
+|--------|---------|----------|
+| Reddit | PRAW | Yes (free) |
+| Hacker News | haxor / Algolia | No |
+| GitHub Trending | requests + BS4 | No (optional PAT) |
+| YouTube | scrapetube | No |
+| Google Trends | trendspyg | No |
+| Product Hunt | requests + BS4 | No |
+| Twitter/X | internal GraphQL | Cookie auth |
+| Stack Overflow | official API | No |
+| G2 Reviews | requests + BS4 | No |
+| Indie Hackers | requests + BS4 | No |
+| App Store | requests + BS4 | No |
+| Play Store | requests + BS4 | No |
 
 ## Testing
 
@@ -60,11 +89,10 @@ pytest -v                                    # Run all tests
 pytest --cov=niche_radar --cov-report=term   # With coverage
 ```
 
-## Architecture
+## Documentation
 
-```
-Scheduler → Collectors (5) → NLP Pipeline (KeyBERT + clustering)
-  → Scoring Engine (4 dimensions) → Report Generator (MD + JSON)
-```
-
-See [spec.md](spec.md) for full specification and [DESIGN.md](DESIGN.md) for UI/UX reference.
+- [CONTEXT.md](CONTEXT.md) — Domain glossary
+- [ARCHITECTURE.md](ARCHITECTURE.md) — System design and module map
+- [PRODUCT.md](PRODUCT.md) — Problem, users, features
+- [DESIGN.md](DESIGN.md) — UI/UX design system (xAI-inspired)
+- [spec.md](spec.md) — Full MVP specification
