@@ -240,3 +240,101 @@ export const sourceFreshnessRule: Record<string, string> = {
   app_store: 'app_store_hours',
   play_store: 'play_store_hours',
 };
+
+// ── LLM Provider registry ────────────────────────────────────────────────
+// Each provider maps to a backend provider type (openai_compat or anthropic)
+// plus a curated model list and default base URL.
+
+export interface LLMProvider {
+  id: string;
+  label: string;
+  backendProvider: 'openai_compat' | 'anthropic';
+  baseUrl: string;           // default base URL (empty = provider default)
+  models: string[];          // curated model list
+  defaultModel: string;
+  needsBaseUrl: boolean;     // show base URL field?
+  needsApiKey: boolean;      // require API key?
+}
+
+export const LLM_PROVIDERS: LLMProvider[] = [
+  {
+    id: 'deepseek',
+    label: 'DeepSeek',
+    backendProvider: 'openai_compat',
+    baseUrl: 'https://api.deepseek.com',
+    models: ['deepseek-chat', 'deepseek-reasoner'],
+    defaultModel: 'deepseek-chat',
+    needsBaseUrl: false,
+    needsApiKey: true,
+  },
+  {
+    id: 'openai',
+    label: 'OpenAI',
+    backendProvider: 'openai_compat',
+    baseUrl: '',
+    models: ['gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'gpt-4o', 'gpt-4o-mini', 'o3', 'o4-mini'],
+    defaultModel: 'gpt-4.1-mini',
+    needsBaseUrl: false,
+    needsApiKey: true,
+  },
+  {
+    id: 'anthropic',
+    label: 'Anthropic',
+    backendProvider: 'anthropic',
+    baseUrl: '',
+    models: ['claude-sonnet-4-20250514', 'claude-haiku-4-20250414', 'claude-opus-4-20250514'],
+    defaultModel: 'claude-sonnet-4-20250514',
+    needsBaseUrl: false,
+    needsApiKey: true,
+  },
+  {
+    id: 'groq',
+    label: 'Groq',
+    backendProvider: 'openai_compat',
+    baseUrl: 'https://api.groq.com/openai/v1',
+    models: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'gemma2-9b-it'],
+    defaultModel: 'llama-3.3-70b-versatile',
+    needsBaseUrl: false,
+    needsApiKey: true,
+  },
+  {
+    id: 'google',
+    label: 'Google Gemini',
+    backendProvider: 'openai_compat',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'],
+    defaultModel: 'gemini-2.5-flash',
+    needsBaseUrl: false,
+    needsApiKey: true,
+  },
+  {
+    id: 'xai',
+    label: 'xAI (Grok)',
+    backendProvider: 'openai_compat',
+    baseUrl: 'https://api.x.ai/v1',
+    models: ['grok-3', 'grok-3-mini', 'grok-2'],
+    defaultModel: 'grok-3-mini',
+    needsBaseUrl: false,
+    needsApiKey: true,
+  },
+  {
+    id: 'ollama',
+    label: 'Ollama (Local)',
+    backendProvider: 'openai_compat',
+    baseUrl: 'http://localhost:11434/v1',
+    models: ['llama3.3', 'qwen2.5', 'deepseek-r1', 'gemma2', 'phi4', 'mistral'],
+    defaultModel: 'llama3.3',
+    needsBaseUrl: true,
+    needsApiKey: false,
+  },
+  {
+    id: 'custom',
+    label: 'Custom',
+    backendProvider: 'openai_compat',
+    baseUrl: '',
+    models: [],
+    defaultModel: '',
+    needsBaseUrl: true,
+    needsApiKey: true,
+  },
+];
