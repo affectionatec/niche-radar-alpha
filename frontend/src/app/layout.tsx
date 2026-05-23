@@ -22,8 +22,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${GeistMono.variable} ${inter.variable}`}>
       <body style={{ backgroundColor: '#1f2228' }}>
+        <a href="#main-content" className="skip-to-content">Skip to content</a>
         <Navigation />
         <main
+          id="main-content"
           style={{
             maxWidth: '1200px',
             margin: '0 auto',

@@ -4,6 +4,7 @@ import useSWR from 'swr';
 import { endpoints, fetcher, postPipeline } from '@/lib/api';
 import { Job, JobDetail, JobStatus } from '@/lib/types';
 import { usePipelineState } from '@/lib/usePipelineState';
+import { color, font, fontSize, button as btnStyle } from '@/lib/tokens';
 import PipelineStages from '@/components/pipeline/PipelineStages';
 import AgentActivity from '@/components/pipeline/AgentActivity';
 import ActivityLog from '@/components/pipeline/ActivityLog';
@@ -11,18 +12,48 @@ import PipelineSummaryPanel from '@/components/pipeline/PipelineSummaryPanel';
 
 const SOURCES = ['', 'reddit', 'hn', 'google_trends', 'github', 'youtube'] as const;
 
-const STEP_BUTTONS: { label: string; step: string; primary?: boolean }[] = [
-  { label: 'COLLECT', step: 'collect' },
-  { label: 'ANALYZE', step: 'analyze' },
-  { label: 'REPORT', step: 'report' },
-  { label: 'RUN ALL', step: 'run-all', primary: true },
+const STEP_BUTTONS: { label: string; step: string; desc: string; primary?: boolean }[] = [
+  { label: 'COLLECT', step: 'collect', desc: 'Gather from sources' },
+  { label: 'ANALYZE', step: 'analyze', desc: 'LLM analysis' },
+  { label: 'REPORT', step: 'report', desc: 'Generate report' },
+  { label: 'RUN ALL', step: 'run-all', desc: 'Full pipeline', primary: true },
 ];
 
 function statusColor(status: JobStatus): string {
   if (status === 'done') return 'rgba(255,255,255,0.9)';
-  if (status === 'failed') return 'rgba(255,80,80,0.85)';
-  if (status === 'running') return 'rgba(255,255,255,0.6)';
-  return 'rgba(255,255,255,0.3)';
+  if (status === 'failed') return color.error;
+  if (status === 'running') return color.fgSecondary;
+  return color.fgGhost;
+}
+
+function statusDot(status: JobStatus): string {
+  if (status === 'done') return color.success;
+  if (status === 'failed') return color.error;
+  if (status === 'running') return color.fgSecondary;
+  return color.fgDisabled;
+}
+
+function ElapsedTime({ startTime }: { startTime: string }) {
+  const [elapsed, setElapsed] = useState('');
+
+  useEffect(() => {
+    const start = new Date(startTime).getTime();
+    function tick() {
+      const diff = Math.floor((Date.now() - start) / 1000);
+      const m = Math.floor(diff / 60);
+      const s = diff % 60;
+      setElapsed(m > 0 ? `${m}m ${s}s` : `${s}s`);
+    }
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [startTime]);
+
+  return (
+    <span style={{ fontFamily: font.mono, fontSize: fontSize.sm, color: color.fgDisabled, letterSpacing: '0.5px' }}>
+      {elapsed}
+    </span>
+  );
 }
 
 export default function PipelinePage() {
@@ -53,8 +84,6 @@ export default function PipelinePage() {
   );
 
   const jobLost = Boolean(activeJobId && activeJobError);
-
-  // Parse logs into structured pipeline state
   const pipelineState = usePipelineState(activeJob?.logs, activeJob?.step);
   const showVisualization = activeJobId && activeJob && (activeJob.step === 'analyze' || activeJob.step === 'run-all');
 
@@ -76,84 +105,78 @@ export default function PipelinePage() {
 
   return (
     <div>
-      <h1
-        style={{
-          fontFamily: 'var(--font-inter)',
-          fontSize: '30px',
-          fontWeight: 400,
-          color: '#ffffff',
-          marginBottom: '48px',
-        }}
-      >
-        PIPELINE
-      </h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '48px', flexWrap: 'wrap', gap: '16px' }}>
+        <div>
+          <h1 style={{ fontFamily: font.body, fontSize: fontSize['5xl'], fontWeight: 400, color: color.fg, marginBottom: '8px' }}>
+            PIPELINE
+          </h1>
+          <p style={{ fontFamily: font.body, fontSize: fontSize.lg, color: color.fgDisabled }}>
+            Collect data, run LLM analysis, and generate reports.
+          </p>
+        </div>
+        {activeJob?.status === 'running' && activeJob.created_at && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: color.success, animation: 'pulse-border 1.5s ease-in-out infinite' }} />
+            <span style={{ fontFamily: font.mono, fontSize: fontSize.base, color: color.fgMuted, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+              Running
+            </span>
+            <ElapsedTime startTime={activeJob.created_at} />
+          </div>
+        )}
+      </div>
 
       {/* Action bar */}
       <section style={{ marginBottom: '32px' }}>
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '12px',
-            alignItems: 'center',
-          }}
-        >
-          <select
-            value={source}
-            onChange={(e) => setSource(e.target.value)}
-            style={{
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              color: 'rgba(255,255,255,0.7)',
-              fontFamily: 'var(--font-geist-mono)',
-              fontSize: '11px',
-              letterSpacing: '0.8px',
-              padding: '10px 14px',
-              cursor: 'pointer',
-              height: '40px',
-            }}
-          >
-            {SOURCES.map((s) => (
-              <option key={s} value={s} style={{ background: '#1f2228' }}>
-                {s ? s.toUpperCase() : 'ALL SOURCES'}
-              </option>
-            ))}
-          </select>
-
-          {STEP_BUTTONS.map(({ label, step, primary }) => (
-            <button
-              key={step}
-              disabled={launching !== null}
-              onClick={() => launch(step)}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ fontFamily: font.body, fontSize: fontSize.xs, color: color.fgDisabled, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+              Source
+            </span>
+            <select
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
               style={{
-                background: primary ? '#ffffff' : 'transparent',
-                border: primary ? 'none' : '1px solid rgba(255,255,255,0.25)',
-                color: primary ? '#1f2228' : '#ffffff',
-                fontFamily: 'var(--font-geist-mono)',
-                fontSize: '11px',
-                fontWeight: primary ? 600 : 400,
-                letterSpacing: '1px',
-                textTransform: 'uppercase',
-                padding: '0 20px',
+                background: color.surfaceHover,
+                border: `1px solid ${color.border}`,
+                color: color.fgSecondary,
+                fontFamily: font.mono,
+                fontSize: fontSize.base,
+                letterSpacing: '0.8px',
+                padding: '10px 14px',
+                cursor: 'pointer',
                 height: '40px',
-                cursor: launching !== null ? 'not-allowed' : 'pointer',
-                opacity: launching !== null ? 0.5 : 1,
               }}
             >
-              {launching === step ? '...' : label}
-            </button>
-          ))}
+              {SOURCES.map((s) => (
+                <option key={s} value={s} style={{ background: color.bg }}>
+                  {s ? s.toUpperCase() : 'ALL SOURCES'}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+            {STEP_BUTTONS.map(({ label, step, desc, primary }) => (
+              <button
+                key={step}
+                disabled={launching !== null}
+                onClick={() => launch(step)}
+                aria-busy={launching === step}
+                title={desc}
+                style={{
+                  ...(primary ? btnStyle.primary : btnStyle.secondary),
+                  opacity: launching !== null ? 0.5 : 1,
+                  cursor: launching !== null ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {launching === step ? '...' : label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {error && (
-          <p
-            style={{
-              marginTop: '12px',
-              fontFamily: 'var(--font-geist-mono)',
-              fontSize: '12px',
-              color: 'rgba(255,80,80,0.85)',
-            }}
-          >
+          <p role="alert" style={{ marginTop: '12px', fontFamily: font.mono, fontSize: fontSize.md, color: color.error }}>
             {error}
           </p>
         )}
@@ -163,13 +186,14 @@ export default function PipelinePage() {
       {jobLost && (
         <section style={{ marginBottom: '24px' }}>
           <div
+            role="alert"
             style={{
               background: 'rgba(251,191,36,0.08)',
               border: '1px solid rgba(251,191,36,0.3)',
               padding: '14px 18px',
-              fontFamily: 'var(--font-geist-mono)',
-              fontSize: '12px',
-              color: 'rgba(251,191,36,0.9)',
+              fontFamily: font.mono,
+              fontSize: fontSize.md,
+              color: color.warning,
               letterSpacing: '0.3px',
               display: 'flex',
               justifyContent: 'space-between',
@@ -178,20 +202,14 @@ export default function PipelinePage() {
             }}
           >
             <span>
-              Job {activeJobId?.slice(0, 8)} is no longer tracked by the backend
-              (likely killed by a restart). Trigger a fresh run.
+              Job {activeJobId?.slice(0, 8)} is no longer tracked by the backend. Trigger a fresh run.
             </span>
             <button
               onClick={() => setActiveJobId(null)}
               style={{
-                background: 'transparent',
-                border: '1px solid rgba(251,191,36,0.5)',
-                color: 'rgba(251,191,36,0.9)',
-                fontFamily: 'var(--font-geist-mono)',
-                fontSize: '11px',
-                letterSpacing: '0.5px',
-                padding: '5px 12px',
-                cursor: 'pointer',
+                ...btnStyle.ghost,
+                borderColor: 'rgba(251,191,36,0.5)',
+                color: color.warning,
               }}
             >
               DISMISS
@@ -204,62 +222,25 @@ export default function PipelinePage() {
       {activeJobId && activeJob && (
         <section style={{ marginBottom: '48px' }}>
           {/* Job header */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '16px',
-            }}
-          >
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-              <span
-                style={{
-                  fontFamily: 'var(--font-geist-mono)',
-                  fontSize: '12px',
-                  letterSpacing: '0.8px',
-                  textTransform: 'uppercase',
-                  color: '#ffffff',
-                }}
-              >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: statusDot(activeJob.status) }} />
+              <span style={{ fontFamily: font.mono, fontSize: fontSize.md, letterSpacing: '0.8px', textTransform: 'uppercase', color: color.fg }}>
                 {activeJob.step}
               </span>
-              <span
-                style={{
-                  fontFamily: 'var(--font-geist-mono)',
-                  fontSize: '11px',
-                  letterSpacing: '0.6px',
-                  textTransform: 'uppercase',
-                  color: statusColor(activeJob.status),
-                }}
-              >
+              <span style={{ fontFamily: font.mono, fontSize: fontSize.base, letterSpacing: '0.6px', textTransform: 'uppercase', color: statusColor(activeJob.status) }}>
                 {activeJob.status}
               </span>
               {activeJob.status === 'running' && (
-                <span
-                  style={{
-                    fontFamily: 'var(--font-geist-mono)',
-                    fontSize: '9px',
-                    letterSpacing: '1px',
-                    color: 'rgba(255,255,255,0.3)',
-                    textTransform: 'uppercase',
-                  }}
-                >
+                <span style={{ fontFamily: font.mono, fontSize: fontSize.xs, letterSpacing: '1px', color: color.fgGhost, textTransform: 'uppercase' }}>
                   {activeJob.logs.length} log lines
                 </span>
               )}
             </div>
             <button
               onClick={() => setActiveJobId(null)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'rgba(255,255,255,0.3)',
-                cursor: 'pointer',
-                fontFamily: 'var(--font-geist-mono)',
-                fontSize: '11px',
-                letterSpacing: '0.5px',
-              }}
+              aria-label="Dismiss job view"
+              style={{ background: 'none', border: 'none', color: color.fgGhost, cursor: 'pointer', fontFamily: font.mono, fontSize: fontSize.base, letterSpacing: '0.5px' }}
             >
               DISMISS
             </button>
@@ -275,7 +256,6 @@ export default function PipelinePage() {
                 currentRunAllStep={pipelineState.currentRunAllStep}
               />
 
-              {/* Pipeline summary when complete */}
               {pipelineState.isComplete && pipelineState.summary && (
                 <PipelineSummaryPanel
                   summary={pipelineState.summary}
@@ -283,12 +263,10 @@ export default function PipelinePage() {
                 />
               )}
 
-              {/* Agent activity */}
               {pipelineState.agents.length > 0 && (
                 <AgentActivity agents={pipelineState.agents} />
               )}
 
-              {/* Collapsible raw logs */}
               <ActivityLog
                 logs={activeJob.logs}
                 isRunning={activeJob.status === 'running'}
@@ -299,20 +277,22 @@ export default function PipelinePage() {
           {/* Plain log viewer for collect/report steps */}
           {!showVisualization && (
             <div
+              role="log"
+              aria-label="Job output"
               style={{
-                backgroundColor: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                backgroundColor: color.surface,
+                border: `1px solid ${color.border}`,
                 padding: '16px 20px',
                 maxHeight: '420px',
                 overflowY: 'auto',
-                fontFamily: 'var(--font-geist-mono)',
-                fontSize: '12px',
-                color: 'rgba(255,255,255,0.7)',
+                fontFamily: font.mono,
+                fontSize: fontSize.md,
+                color: color.fgSecondary,
                 lineHeight: 1.75,
               }}
             >
               {activeJob.logs.length === 0 ? (
-                <span style={{ color: 'rgba(255,255,255,0.25)' }}>
+                <span style={{ color: color.fgGhost }}>
                   {activeJob.status === 'pending' ? 'Starting...' : 'Waiting for output...'}
                 </span>
               ) : (
@@ -327,112 +307,56 @@ export default function PipelinePage() {
 
       {/* Job history */}
       <section>
-        <h2
-          style={{
-            fontFamily: 'var(--font-inter)',
-            fontSize: '20px',
-            fontWeight: 400,
-            color: '#ffffff',
-            marginBottom: '20px',
-          }}
-        >
+        <h2 style={{ fontFamily: font.body, fontSize: fontSize['3xl'], fontWeight: 400, color: color.fg, marginBottom: '20px' }}>
           HISTORY
         </h2>
 
         {!jobs || jobs.length === 0 ? (
-          <p
-            style={{
-              fontFamily: 'var(--font-inter)',
-              fontSize: '13px',
-              color: 'rgba(255,255,255,0.3)',
-              fontStyle: 'italic',
-            }}
-          >
+          <p style={{ fontFamily: font.body, fontSize: fontSize.lg, color: color.fgGhost }}>
             No jobs yet. Use the buttons above to run a pipeline step.
           </p>
         ) : (
-          <div style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 100px 180px 100px',
-                padding: '10px 16px',
-                borderBottom: '1px solid rgba(255,255,255,0.08)',
-              }}
-            >
+          <div style={{ border: `1px solid ${color.border}` }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 180px 100px', padding: '10px 16px', borderBottom: `1px solid ${color.border}` }}>
               {['JOB', 'STEP', 'STARTED', 'STATUS'].map((h) => (
-                <span
-                  key={h}
-                  style={{
-                    fontFamily: 'var(--font-inter)',
-                    fontSize: '10px',
-                    color: 'rgba(255,255,255,0.35)',
-                    letterSpacing: '0.8px',
-                    textTransform: 'uppercase',
-                  }}
-                >
+                <span key={h} style={{ ...({ fontFamily: font.body, fontSize: fontSize.sm, color: color.fgDisabled, letterSpacing: '0.8px', textTransform: 'uppercase' } as const) }}>
                   {h}
                 </span>
               ))}
             </div>
             {jobs.map((job) => (
-              <div
+              <button
                 key={job.id}
                 onClick={() => setActiveJobId(job.id)}
+                aria-label={`View job ${job.id.slice(0, 8)}, step ${job.step}, status ${job.status}`}
                 style={{
                   display: 'grid',
                   gridTemplateColumns: '1fr 100px 180px 100px',
                   padding: '10px 16px',
                   borderBottom: '1px solid rgba(255,255,255,0.05)',
                   cursor: 'pointer',
-                  backgroundColor:
-                    job.id === activeJobId ? 'rgba(255,255,255,0.04)' : 'transparent',
+                  backgroundColor: job.id === activeJobId ? color.surfaceActive : 'transparent',
+                  width: '100%',
+                  border: 'none',
+                  textAlign: 'left',
                 }}
               >
-                <span
-                  style={{
-                    fontFamily: 'var(--font-geist-mono)',
-                    fontSize: '11px',
-                    color: 'rgba(255,255,255,0.35)',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
+                <span style={{ fontFamily: font.mono, fontSize: fontSize.base, color: color.fgDisabled, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {job.id.slice(0, 8)}
                 </span>
-                <span
-                  style={{
-                    fontFamily: 'var(--font-geist-mono)',
-                    fontSize: '11px',
-                    color: '#ffffff',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                  }}
-                >
+                <span style={{ fontFamily: font.mono, fontSize: fontSize.base, color: color.fg, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   {job.step}
                 </span>
-                <span
-                  style={{
-                    fontFamily: 'var(--font-inter)',
-                    fontSize: '12px',
-                    color: 'rgba(255,255,255,0.5)',
-                  }}
-                >
+                <span style={{ fontFamily: font.body, fontSize: fontSize.md, color: color.fgMuted }}>
                   {new Date(job.created_at).toLocaleString()}
                 </span>
-                <span
-                  style={{
-                    fontFamily: 'var(--font-geist-mono)',
-                    fontSize: '11px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    color: statusColor(job.status),
-                  }}
-                >
-                  {job.status}
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: statusDot(job.status), flexShrink: 0 }} />
+                  <span style={{ fontFamily: font.mono, fontSize: fontSize.base, textTransform: 'uppercase', letterSpacing: '0.5px', color: statusColor(job.status) }}>
+                    {job.status}
+                  </span>
                 </span>
-              </div>
+              </button>
             ))}
           </div>
         )}

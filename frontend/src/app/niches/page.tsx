@@ -121,6 +121,7 @@ export default function NichesPage() {
           placeholder="FILTER CONCEPT / KEYWORD"
           value={filter}
           onChange={e => setFilter(e.target.value)}
+          aria-label="Filter opportunities by concept or keyword"
           style={{
             background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)',
             color: '#ffffff', fontFamily: 'var(--font-geist-mono)', fontSize: '11px',
@@ -132,6 +133,7 @@ export default function NichesPage() {
           placeholder="MIN SCORE"
           value={minScore}
           onChange={e => setMinScore(e.target.value)}
+          aria-label="Minimum score filter"
           style={{
             background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)',
             color: '#ffffff', fontFamily: 'var(--font-geist-mono)', fontSize: '11px',

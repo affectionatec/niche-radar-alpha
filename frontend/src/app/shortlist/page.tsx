@@ -92,7 +92,7 @@ export default function ShortlistPage() {
               </div>
               <button
                 onClick={() => handleRemove(item.id)}
-                title="Remove from shortlist"
+                aria-label={`Remove ${item.tool_concept || item.keyword} from shortlist`}
                 style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.25)', cursor: 'pointer', fontSize: '16px', padding: '4px 8px', flexShrink: 0 }}
               >
                 ✕

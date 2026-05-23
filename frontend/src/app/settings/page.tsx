@@ -185,7 +185,7 @@ function SettingsContent() {
 
         {/* Base URL (OpenAI-compatible only) */}
         {provider === 'openai_compat' && (
-          <Field label="BASE URL" hint="Leave empty for OpenAI. Set for DeepSeek, Groq, Ollama, etc.">
+          <Field label="BASE URL" hint="Leave empty for OpenAI. Set for DeepSeek, Groq, Ollama, etc." htmlFor="base-url">
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
               {PRESET_BASE_URLS.map((p) => (
                 <button
@@ -207,6 +207,7 @@ function SettingsContent() {
               ))}
             </div>
             <Input
+              id="base-url"
               value={baseUrl}
               onChange={setBaseUrl}
               placeholder="https://api.deepseek.com"
@@ -215,7 +216,7 @@ function SettingsContent() {
         )}
 
         {/* Model */}
-        <Field label="MODEL">
+        <Field label="MODEL" htmlFor="model-input">
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
             {PRESET_MODELS[provider].map((m) => (
               <button
@@ -236,15 +237,17 @@ function SettingsContent() {
               </button>
             ))}
           </div>
-          <Input value={model} onChange={setModel} placeholder="model name" />
+          <Input value={model} onChange={setModel} placeholder="model name" id="model-input" />
         </Field>
 
         {/* API Key */}
         <Field
           label="API KEY"
           hint={current?.llm_api_key_set ? 'A key is already saved. Enter a new one to replace it.' : 'Required to run analysis.'}
+          htmlFor="api-key"
         >
           <Input
+            id="api-key"
             value={apiKey}
             onChange={setApiKey}
             placeholder={current?.llm_api_key_set ? '••••••••••••••••' : 'sk-...'}
@@ -295,6 +298,7 @@ function SettingsContent() {
             </button>
             {saved && (
               <span
+                role="status"
                 style={{
                   fontFamily: 'var(--font-geist-mono)',
                   fontSize: '11px',
@@ -307,6 +311,7 @@ function SettingsContent() {
             )}
             {error && (
               <span
+                role="alert"
                 style={{
                   fontFamily: 'var(--font-geist-mono)',
                   fontSize: '11px',
@@ -350,14 +355,17 @@ function Field({
   label,
   hint,
   children,
+  htmlFor,
 }: {
   label: string;
   hint?: string;
   children: React.ReactNode;
+  htmlFor?: string;
 }) {
   return (
     <div>
-      <div
+      <label
+        htmlFor={htmlFor}
         style={{
           fontFamily: 'var(--font-inter)',
           fontSize: '11px',
@@ -365,10 +373,11 @@ function Field({
           textTransform: 'uppercase',
           letterSpacing: '1px',
           marginBottom: hint ? '6px' : '10px',
+          display: 'block',
         }}
       >
         {label}
-      </div>
+      </label>
       {hint && (
         <div
           style={{
@@ -391,14 +400,17 @@ function Input({
   onChange,
   placeholder,
   type = 'text',
+  id,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   type?: string;
+  id?: string;
 }) {
   return (
     <input
+      id={id}
       type={type}
       value={value}
       onChange={(e) => onChange(e.target.value)}

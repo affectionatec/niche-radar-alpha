@@ -1,6 +1,7 @@
 'use client';
 
 import { PhaseId, PhaseState, PhaseStatus, RunAllStep, StepId } from '@/lib/usePipelineState';
+import { color, font, fontSize } from '@/lib/tokens';
 
 // ---------------------------------------------------------------------------
 // Icons
@@ -8,7 +9,7 @@ import { PhaseId, PhaseState, PhaseStatus, RunAllStep, StepId } from '@/lib/useP
 
 function CheckIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
       <path d="M3 7l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -16,7 +17,7 @@ function CheckIcon() {
 
 function SpinnerIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ animation: 'spin 1s linear infinite' }}>
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ animation: 'spin 1s linear infinite' }} aria-hidden="true">
       <circle cx="7" cy="7" r="5.5" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" />
       <path d="M12.5 7a5.5 5.5 0 00-5.5-5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
@@ -25,7 +26,7 @@ function SpinnerIcon() {
 
 function FailIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
       <path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
@@ -33,7 +34,7 @@ function FailIcon() {
 
 function SkipIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
       <path d="M4 7h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
@@ -43,34 +44,47 @@ function SkipIcon() {
 // Status indicator
 // ---------------------------------------------------------------------------
 
-function StatusNode({ status }: { status: PhaseStatus }) {
-  const colors: Record<PhaseStatus, { bg: string; border: string; text: string }> = {
-    pending: { bg: 'transparent', border: 'rgba(255,255,255,0.15)', text: 'rgba(255,255,255,0.25)' },
-    running: { bg: 'rgba(255,255,255,0.08)', border: 'rgba(255,255,255,0.5)', text: '#ffffff' },
-    done: { bg: 'rgba(255,255,255,0.12)', border: 'rgba(255,255,255,0.4)', text: '#ffffff' },
-    failed: { bg: 'rgba(255,80,80,0.12)', border: 'rgba(255,80,80,0.5)', text: 'rgba(255,80,80,0.9)' },
-    skipped: { bg: 'transparent', border: 'rgba(255,255,255,0.1)', text: 'rgba(255,255,255,0.25)' },
-  };
+const STATUS_COLORS: Record<PhaseStatus, { bg: string; border: string; text: string }> = {
+  pending: { bg: 'transparent', border: 'rgba(255,255,255,0.15)', text: 'rgba(255,255,255,0.25)' },
+  running: { bg: 'rgba(255,255,255,0.08)', border: 'rgba(255,255,255,0.5)', text: '#ffffff' },
+  done: { bg: 'rgba(255,255,255,0.12)', border: 'rgba(255,255,255,0.4)', text: '#ffffff' },
+  failed: { bg: 'rgba(255,80,80,0.12)', border: 'rgba(255,80,80,0.5)', text: 'rgba(255,80,80,0.9)' },
+  skipped: { bg: 'transparent', border: 'rgba(255,255,255,0.1)', text: 'rgba(255,255,255,0.25)' },
+};
 
-  const c = colors[status];
+const STATUS_LABEL: Record<PhaseStatus, string> = {
+  pending: 'Pending',
+  running: 'Running',
+  done: 'Complete',
+  failed: 'Failed',
+  skipped: 'Skipped',
+};
+
+function StatusNode({ status }: { status: PhaseStatus }) {
+  const c = STATUS_COLORS[status];
   const icon = status === 'done' ? <CheckIcon /> :
     status === 'running' ? <SpinnerIcon /> :
     status === 'failed' ? <FailIcon /> :
     status === 'skipped' ? <SkipIcon /> : null;
 
   return (
-    <div style={{
-      width: '28px',
-      height: '28px',
-      borderRadius: '50%',
-      border: `1.5px solid ${c.border}`,
-      background: c.bg,
-      color: c.text,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0,
-    }}>
+    <div
+      role="status"
+      aria-label={STATUS_LABEL[status]}
+      style={{
+        width: '32px',
+        height: '32px',
+        borderRadius: '50%',
+        border: `1.5px solid ${c.border}`,
+        background: c.bg,
+        color: c.text,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        animation: status === 'running' ? 'pulse-border 2s ease-in-out infinite' : 'none',
+      }}
+    >
       {icon}
     </div>
   );
@@ -82,15 +96,18 @@ function StatusNode({ status }: { status: PhaseStatus }) {
 
 function Connector({ active }: { active: boolean }) {
   return (
-    <div style={{
-      flex: 1,
-      height: '1.5px',
-      background: active ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.08)',
-      minWidth: '24px',
-      maxWidth: '80px',
-      alignSelf: 'center',
-      transition: 'background 0.3s',
-    }} />
+    <div
+      aria-hidden="true"
+      style={{
+        flex: 1,
+        height: '1.5px',
+        background: active ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.08)',
+        minWidth: '16px',
+        maxWidth: '80px',
+        alignSelf: 'center',
+        transition: 'background 0.3s',
+      }}
+    />
   );
 }
 
@@ -101,19 +118,24 @@ function Connector({ active }: { active: boolean }) {
 function ProgressBar({ current, total }: { current: number; total: number }) {
   const pct = total > 0 ? Math.round((current / total) * 100) : 0;
   return (
-    <div style={{
-      width: '100%',
-      height: '3px',
-      background: 'rgba(255,255,255,0.06)',
-      borderRadius: '2px',
-      overflow: 'hidden',
-      marginTop: '8px',
-    }}>
+    <div
+      role="progressbar"
+      aria-valuenow={current}
+      aria-valuemin={0}
+      aria-valuemax={total}
+      aria-label={`${current} of ${total} complete`}
+      style={{
+        width: '100%',
+        height: '3px',
+        background: 'rgba(255,255,255,0.06)',
+        overflow: 'hidden',
+        marginTop: '8px',
+      }}
+    >
       <div style={{
         width: `${pct}%`,
         height: '100%',
-        background: 'rgba(255,255,255,0.35)',
-        borderRadius: '2px',
+        background: pct === 100 ? color.success : 'rgba(255,255,255,0.4)',
         transition: 'width 0.3s ease',
       }} />
     </div>
@@ -121,8 +143,16 @@ function ProgressBar({ current, total }: { current: number; total: number }) {
 }
 
 // ---------------------------------------------------------------------------
-// Phase card
+// Phase card (analysis phases A-D)
 // ---------------------------------------------------------------------------
+
+const STAT_LABELS: Record<string, string> = {
+  passed: 'Passed',
+  rejected: 'Rejected',
+  extractions: 'Extracted',
+  clusters: 'Clusters',
+  totalClusters: 'Total',
+};
 
 function PhaseCard({ phase }: { phase: PhaseState }) {
   const isActive = phase.status === 'running';
@@ -139,26 +169,34 @@ function PhaseCard({ phase }: { phase: PhaseState }) {
       flexDirection: 'column',
       alignItems: 'center',
       gap: '6px',
-      minWidth: '100px',
-      flex: '0 1 140px',
+      minWidth: '90px',
+      flex: '0 1 150px',
+      padding: '12px 8px',
+      background: isActive ? 'rgba(255,255,255,0.03)' : 'transparent',
+      border: isActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
+      transition: 'background 0.3s, border-color 0.3s',
     }}>
       <StatusNode status={phase.status} />
+
       <span style={{
-        fontFamily: 'var(--font-geist-mono)',
-        fontSize: '11px',
+        fontFamily: font.mono,
+        fontSize: fontSize.base,
         letterSpacing: '1px',
         textTransform: 'uppercase',
-        color: isActive ? '#ffffff' : isDone ? 'rgba(255,255,255,0.7)' : isFailed ? 'rgba(255,80,80,0.85)' : 'rgba(255,255,255,0.3)',
+        color: isActive ? '#ffffff' : isDone ? color.fgSecondary : isFailed ? color.error : color.fgGhost,
         textAlign: 'center',
         transition: 'color 0.3s',
+        fontWeight: isActive ? 600 : 400,
       }}>
         {phase.id}: {phase.name}
       </span>
+
       <span style={{
-        fontFamily: 'var(--font-inter)',
-        fontSize: '10px',
-        color: 'rgba(255,255,255,0.3)',
+        fontFamily: font.body,
+        fontSize: fontSize.sm,
+        color: color.fgGhost,
         textAlign: 'center',
+        lineHeight: 1.3,
       }}>
         {phase.description}
       </span>
@@ -167,9 +205,9 @@ function PhaseCard({ phase }: { phase: PhaseState }) {
         <>
           <ProgressBar current={phase.progress.current} total={phase.progress.total} />
           <span style={{
-            fontFamily: 'var(--font-geist-mono)',
-            fontSize: '10px',
-            color: 'rgba(255,255,255,0.4)',
+            fontFamily: font.mono,
+            fontSize: fontSize.sm,
+            color: color.fgDisabled,
           }}>
             {phase.progress.current}/{phase.progress.total}
           </span>
@@ -177,15 +215,17 @@ function PhaseCard({ phase }: { phase: PhaseState }) {
       )}
 
       {statEntries.length > 0 && (
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '2px' }}>
           {statEntries.map(([k, v]) => (
             <span key={k} style={{
-              fontFamily: 'var(--font-geist-mono)',
-              fontSize: '9px',
-              color: 'rgba(255,255,255,0.35)',
+              fontFamily: font.mono,
+              fontSize: fontSize.xs,
+              color: k === 'passed' ? color.successMuted : k === 'rejected' ? color.errorMuted : color.fgDisabled,
+              background: 'rgba(255,255,255,0.04)',
+              padding: '1px 6px',
               letterSpacing: '0.3px',
             }}>
-              {k}={String(v)}
+              {STAT_LABELS[k] || k}: {String(v)}
             </span>
           ))}
         </div>
@@ -195,7 +235,7 @@ function PhaseCard({ phase }: { phase: PhaseState }) {
 }
 
 // ---------------------------------------------------------------------------
-// Run-all step card
+// Run-all step card (COLLECT → ANALYZE → REPORT)
 // ---------------------------------------------------------------------------
 
 function RunAllStepCard({ step }: { step: RunAllStep }) {
@@ -209,24 +249,44 @@ function RunAllStepCard({ step }: { step: RunAllStep }) {
     report: 'REPORT',
   };
 
+  const descriptions: Record<StepId, string> = {
+    collect: 'Gather data from sources',
+    analyze: 'LLM pipeline analysis',
+    report: 'Generate markdown report',
+  };
+
   return (
     <div style={{
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       gap: '6px',
-      minWidth: '80px',
+      minWidth: '100px',
+      flex: '0 1 140px',
+      padding: '12px 8px',
+      background: isActive ? 'rgba(255,255,255,0.03)' : 'transparent',
+      border: isActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
+      transition: 'background 0.3s, border-color 0.3s',
     }}>
       <StatusNode status={step.status} />
       <span style={{
-        fontFamily: 'var(--font-geist-mono)',
-        fontSize: '12px',
+        fontFamily: font.mono,
+        fontSize: fontSize.md,
         letterSpacing: '1px',
         textTransform: 'uppercase',
-        color: isActive ? '#ffffff' : isDone ? 'rgba(255,255,255,0.7)' : isFailed ? 'rgba(255,80,80,0.85)' : 'rgba(255,255,255,0.3)',
+        color: isActive ? '#ffffff' : isDone ? color.fgSecondary : isFailed ? color.error : color.fgGhost,
         transition: 'color 0.3s',
+        fontWeight: isActive ? 600 : 400,
       }}>
         {labels[step.step]}
+      </span>
+      <span style={{
+        fontFamily: font.body,
+        fontSize: fontSize.sm,
+        color: color.fgGhost,
+        textAlign: 'center',
+      }}>
+        {descriptions[step.step]}
       </span>
     </div>
   );
@@ -248,19 +308,23 @@ export default function PipelineStages({ phases, runAllSteps, isRunAll, currentR
   const showPhases = isRunAll ? currentRunAllStep === 'analyze' || runAllSteps.find(s => s.step === 'analyze')?.status === 'done' : true;
 
   return (
-    <div style={{
-      background: 'rgba(255,255,255,0.02)',
-      border: '1px solid rgba(255,255,255,0.08)',
-      padding: '28px 24px',
-    }}>
+    <div
+      role="region"
+      aria-label="Pipeline progress"
+      style={{
+        background: color.surface,
+        border: `1px solid ${color.border}`,
+        padding: '28px 24px',
+      }}
+    >
       {/* Run-all steps row */}
       {isRunAll && (
         <div style={{ marginBottom: showPhases ? '28px' : '0' }}>
           <div style={{
-            fontFamily: 'var(--font-geist-mono)',
-            fontSize: '10px',
+            fontFamily: font.mono,
+            fontSize: fontSize.sm,
             letterSpacing: '1px',
-            color: 'rgba(255,255,255,0.3)',
+            color: color.fgGhost,
             marginBottom: '16px',
             textTransform: 'uppercase',
           }}>
@@ -269,8 +333,9 @@ export default function PipelineStages({ phases, runAllSteps, isRunAll, currentR
           <div style={{
             display: 'flex',
             alignItems: 'flex-start',
-            gap: '0',
             justifyContent: 'center',
+            flexWrap: 'wrap',
+            gap: '0',
           }}>
             {runAllSteps.map((step, i) => (
               <div key={step.step} style={{ display: 'flex', alignItems: 'flex-start' }}>
@@ -287,11 +352,18 @@ export default function PipelineStages({ phases, runAllSteps, isRunAll, currentR
       {/* Analysis phases row */}
       {showPhases && (
         <>
+          {isRunAll && (
+            <div style={{
+              height: '1px',
+              background: color.border,
+              margin: '0 0 24px 0',
+            }} />
+          )}
           <div style={{
-            fontFamily: 'var(--font-geist-mono)',
-            fontSize: '10px',
+            fontFamily: font.mono,
+            fontSize: fontSize.sm,
             letterSpacing: '1px',
-            color: 'rgba(255,255,255,0.3)',
+            color: color.fgGhost,
             marginBottom: '16px',
             textTransform: 'uppercase',
           }}>
@@ -300,8 +372,9 @@ export default function PipelineStages({ phases, runAllSteps, isRunAll, currentR
           <div style={{
             display: 'flex',
             alignItems: 'flex-start',
-            gap: '0',
             justifyContent: 'center',
+            flexWrap: 'wrap',
+            gap: '0',
           }}>
             {phaseOrder.map((id, i) => (
               <div key={id} style={{ display: 'flex', alignItems: 'flex-start' }}>

@@ -12,11 +12,11 @@ const SOURCE_LABELS: Record<string, string> = {
   indie_hackers: 'Indie Hackers', app_store: 'App Store', play_store: 'Play Store',
 };
 
-function Input({ value, onChange, placeholder, type = 'text', disabled = false }:
-  { value: string; onChange: (v: string) => void; placeholder?: string; type?: string; disabled?: boolean }
+function Input({ value, onChange, placeholder, type = 'text', disabled = false, id }:
+  { value: string; onChange: (v: string) => void; placeholder?: string; type?: string; disabled?: boolean; id?: string }
 ) {
   return (
-    <input type={type} value={value} onChange={e => onChange(e.target.value)}
+    <input id={id} type={type} value={value} onChange={e => onChange(e.target.value)}
       placeholder={placeholder} disabled={disabled}
       style={{
         width: '100%', background: disabled ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)',
@@ -131,13 +131,16 @@ export default function SourceDetailPage({ params }: { params: Promise<{ source:
             <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
               {(data.schema || []).map(field => (
                 <div key={field.key}>
-                  <div style={{
-                    fontFamily: 'var(--font-inter)', fontSize: '11px', color: 'rgba(255,255,255,0.4)',
-                    textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px',
-                  }}>
+                  <label
+                    htmlFor={`field-${field.key}`}
+                    style={{
+                      fontFamily: 'var(--font-inter)', fontSize: '11px', color: 'rgba(255,255,255,0.4)',
+                      textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px', display: 'block',
+                    }}
+                  >
                     {field.label}
                     {!field.optional && <span style={{ color: 'rgba(255,80,80,0.85)', marginLeft: '4px' }}>*</span>}
-                  </div>
+                  </label>
                   {field.help && (
                     <div style={{ fontFamily: 'var(--font-inter)', fontSize: '12px', color: 'rgba(255,255,255,0.25)', marginBottom: '8px' }}>
                       {field.help}
@@ -149,6 +152,7 @@ export default function SourceDetailPage({ params }: { params: Promise<{ source:
                     </div>
                   )}
                   <Input
+                    id={`field-${field.key}`}
                     value={values[field.key] || ''}
                     onChange={v => setValues(prev => ({ ...prev, [field.key]: v }))}
                     placeholder={field.secret && data.credentials_set[field.key] ? '••••••••••••' : field.label.toLowerCase()}
@@ -187,7 +191,7 @@ export default function SourceDetailPage({ params }: { params: Promise<{ source:
               </div>
 
               {testResult !== null && (
-                <div style={{
+                <div role="alert" style={{
                   padding: '12px 16px', border: `1px solid ${testResult.ok ? 'rgba(74,222,128,0.3)' : 'rgba(255,80,80,0.3)'}`,
                   fontFamily: 'var(--font-geist-mono)', fontSize: '12px',
                   color: testResult.ok ? 'rgba(74,222,128,0.9)' : 'rgba(255,80,80,0.85)',

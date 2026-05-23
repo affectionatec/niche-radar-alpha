@@ -1,6 +1,7 @@
 'use client';
 
 import { PipelineSummary } from '@/lib/usePipelineState';
+import { color, font, fontSize } from '@/lib/tokens';
 
 interface PipelineSummaryPanelProps {
   summary: PipelineSummary;
@@ -8,16 +9,16 @@ interface PipelineSummaryPanelProps {
 }
 
 function verdictColor(verdict: string): string {
-  if (verdict === 'GO') return 'rgba(74,222,128,0.8)';
-  if (verdict === 'NO_GO') return 'rgba(255,80,80,0.7)';
-  if (verdict === 'MAYBE') return 'rgba(251,191,36,0.8)';
-  return 'rgba(255,255,255,0.4)';
+  if (verdict === 'GO') return color.success;
+  if (verdict === 'NO_GO') return color.error;
+  if (verdict === 'MAYBE') return color.warning;
+  return color.fgDisabled;
 }
 
 function tierColor(tier: string): string {
-  if (tier === 'high_priority') return 'rgba(74,222,128,0.7)';
-  if (tier === 'watchlist') return 'rgba(251,191,36,0.7)';
-  return 'rgba(255,255,255,0.3)';
+  if (tier === 'high_priority') return color.success;
+  if (tier === 'watchlist') return color.warning;
+  return color.fgGhost;
 }
 
 export default function PipelineSummaryPanel({ summary, clusterResults }: PipelineSummaryPanelProps) {
@@ -30,46 +31,26 @@ export default function PipelineSummaryPanel({ summary, clusterResults }: Pipeli
   ];
 
   return (
-    <div style={{
-      background: 'rgba(255,255,255,0.02)',
-      border: '1px solid rgba(255,255,255,0.08)',
-      padding: '20px 24px',
-    }}>
-      <div style={{
-        fontFamily: 'var(--font-geist-mono)',
-        fontSize: '10px',
-        letterSpacing: '1px',
-        color: 'rgba(255,255,255,0.3)',
-        textTransform: 'uppercase',
-        marginBottom: '16px',
-      }}>
+    <div
+      role="region"
+      aria-label="Pipeline results summary"
+      style={{ background: color.surface, border: `1px solid ${color.border}`, padding: '20px 24px' }}
+    >
+      <div style={{ fontFamily: font.mono, fontSize: fontSize.sm, letterSpacing: '1px', color: color.success, textTransform: 'uppercase', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M3 7l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
         Pipeline Complete
       </div>
 
       {/* Stats row */}
-      <div style={{
-        display: 'flex',
-        gap: '32px',
-        flexWrap: 'wrap',
-        marginBottom: clusterResults.length > 0 ? '20px' : '0',
-      }}>
+      <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap', marginBottom: clusterResults.length > 0 ? '20px' : '0' }}>
         {stats.map(({ label, value }) => (
           <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <span style={{
-              fontFamily: 'var(--font-geist-mono)',
-              fontSize: '9px',
-              letterSpacing: '0.8px',
-              color: 'rgba(255,255,255,0.3)',
-              textTransform: 'uppercase',
-            }}>
+            <span style={{ fontFamily: font.mono, fontSize: fontSize.xs, letterSpacing: '0.8px', color: color.fgGhost, textTransform: 'uppercase' }}>
               {label}
             </span>
-            <span style={{
-              fontFamily: 'var(--font-geist-mono)',
-              fontSize: '20px',
-              fontWeight: 300,
-              color: '#ffffff',
-            }}>
+            <span style={{ fontFamily: font.mono, fontSize: fontSize['3xl'], fontWeight: 300, color: color.fg }}>
               {value}
             </span>
           </div>
@@ -79,14 +60,7 @@ export default function PipelineSummaryPanel({ summary, clusterResults }: Pipeli
       {/* Cluster results */}
       {clusterResults.length > 0 && (
         <>
-          <div style={{
-            fontFamily: 'var(--font-geist-mono)',
-            fontSize: '10px',
-            letterSpacing: '1px',
-            color: 'rgba(255,255,255,0.3)',
-            textTransform: 'uppercase',
-            marginBottom: '10px',
-          }}>
+          <div style={{ fontFamily: font.mono, fontSize: fontSize.sm, letterSpacing: '1px', color: color.fgGhost, textTransform: 'uppercase', marginBottom: '10px' }}>
             Discovered Niches
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -97,39 +71,18 @@ export default function PipelineSummaryPanel({ summary, clusterResults }: Pipeli
                 gap: '12px',
                 padding: '6px 0',
                 borderBottom: i < clusterResults.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                flexWrap: 'wrap',
               }}>
-                <span style={{
-                  fontFamily: 'var(--font-geist-mono)',
-                  fontSize: '11px',
-                  fontWeight: 500,
-                  color: verdictColor(cr.verdict),
-                  width: '52px',
-                  flexShrink: 0,
-                }}>
+                <span style={{ fontFamily: font.mono, fontSize: fontSize.base, fontWeight: 500, color: verdictColor(cr.verdict), width: '52px', flexShrink: 0 }}>
                   {cr.verdict}
                 </span>
-                <span style={{
-                  fontFamily: 'var(--font-inter)',
-                  fontSize: '12px',
-                  color: '#ffffff',
-                  flex: 1,
-                }}>
+                <span style={{ fontFamily: font.body, fontSize: fontSize.md, color: color.fg, flex: 1, minWidth: '120px' }}>
                   {cr.niche}
                 </span>
-                <span style={{
-                  fontFamily: 'var(--font-geist-mono)',
-                  fontSize: '10px',
-                  color: 'rgba(255,255,255,0.4)',
-                }}>
+                <span style={{ fontFamily: font.mono, fontSize: fontSize.sm, color: color.fgDisabled }}>
                   {cr.score}
                 </span>
-                <span style={{
-                  fontFamily: 'var(--font-geist-mono)',
-                  fontSize: '9px',
-                  letterSpacing: '0.5px',
-                  color: tierColor(cr.tier),
-                  textTransform: 'uppercase',
-                }}>
+                <span style={{ fontFamily: font.mono, fontSize: fontSize.xs, letterSpacing: '0.5px', color: tierColor(cr.tier), textTransform: 'uppercase' }}>
                   {cr.tier.replace('_', ' ')}
                 </span>
               </div>
