@@ -99,12 +99,12 @@ function Connector({ active }: { active: boolean }) {
     <div
       aria-hidden="true"
       style={{
-        flex: 1,
+        width: '24px',
         height: '1.5px',
         background: active ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.08)',
-        minWidth: '16px',
-        maxWidth: '80px',
-        alignSelf: 'center',
+        // 12px card padding + 16px (half of 32px status circle) = 28px
+        marginTop: '28px',
+        flexShrink: 0,
         transition: 'background 0.3s',
       }}
     />
@@ -169,8 +169,7 @@ function PhaseCard({ phase }: { phase: PhaseState }) {
       flexDirection: 'column',
       alignItems: 'center',
       gap: '6px',
-      minWidth: '90px',
-      flex: '0 1 150px',
+      width: '140px',
       padding: '12px 8px',
       background: isActive ? 'rgba(255,255,255,0.03)' : 'transparent',
       border: isActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
@@ -261,8 +260,7 @@ function RunAllStepCard({ step }: { step: RunAllStep }) {
       flexDirection: 'column',
       alignItems: 'center',
       gap: '6px',
-      minWidth: '100px',
-      flex: '0 1 140px',
+      width: '140px',
       padding: '12px 8px',
       background: isActive ? 'rgba(255,255,255,0.03)' : 'transparent',
       border: isActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
@@ -335,7 +333,6 @@ export default function PipelineStages({ phases, runAllSteps, isRunAll, currentR
             alignItems: 'flex-start',
             justifyContent: 'center',
             flexWrap: 'wrap',
-            gap: '0',
           }}>
             {runAllSteps.map((step, i) => (
               <div key={step.step} style={{ display: 'flex', alignItems: 'flex-start' }}>
@@ -374,7 +371,6 @@ export default function PipelineStages({ phases, runAllSteps, isRunAll, currentR
             alignItems: 'flex-start',
             justifyContent: 'center',
             flexWrap: 'wrap',
-            gap: '0',
           }}>
             {phaseOrder.map((id, i) => (
               <div key={id} style={{ display: 'flex', alignItems: 'flex-start' }}>

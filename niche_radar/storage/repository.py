@@ -316,7 +316,8 @@ def get_niche_items(db: sqlite3.Connection, niche_id: str) -> list[dict]:
 
 
 def get_system_health(db: sqlite3.Connection) -> list[dict]:
-    sources = ["reddit", "google_trends", "hn", "github", "youtube"]
+    from niche_radar.collectors import ALL_SOURCES
+    sources = ALL_SOURCES
     latest_rows = db.execute(
         "SELECT cr.source, cr.status, cr.started_at, cr.items_collected "
         "FROM collection_runs cr "

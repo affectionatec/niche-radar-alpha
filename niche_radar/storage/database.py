@@ -119,6 +119,17 @@ CREATE INDEX IF NOT EXISTS idx_analyses_niche   ON niche_analyses(niche_id);
 CREATE INDEX IF NOT EXISTS idx_analyses_verdict ON niche_analyses(verdict);
 CREATE INDEX IF NOT EXISTS idx_analyses_tier    ON niche_analyses(tier);
 CREATE INDEX IF NOT EXISTS idx_analyses_run     ON niche_analyses(pipeline_run);
+
+CREATE TABLE IF NOT EXISTS pipeline_jobs (
+    id              TEXT PRIMARY KEY,
+    step            TEXT NOT NULL,
+    status          TEXT NOT NULL DEFAULT 'pending',
+    logs            TEXT DEFAULT '[]',
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at    TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_pipeline_jobs_created ON pipeline_jobs(created_at);
+CREATE INDEX IF NOT EXISTS idx_pipeline_jobs_status  ON pipeline_jobs(status);
 """
 
 
