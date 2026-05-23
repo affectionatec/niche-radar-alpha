@@ -4,9 +4,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import useSWR from 'swr';
 import { endpoints, fetcher } from '@/lib/api';
-import { LLMSettings, NicheScore, SystemStatus } from '@/lib/types';
+import { Job, LLMSettings, NicheScore, SystemStatus } from '@/lib/types';
 import NicheCard from '@/components/NicheCard';
-import SourceHealthTable from '@/components/SourceHealthTable';
+import DataFreshness from '@/components/DataFreshness';
+import SystemHealth from '@/components/SystemHealth';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -24,6 +25,9 @@ export default function Dashboard() {
 
   const { data: status } =
     useSWR<SystemStatus>(endpoints.status, fetcher, { refreshInterval: 30_000 });
+
+  const { data: jobs } =
+    useSWR<Job[]>(endpoints.jobs, fetcher, { refreshInterval: 15_000 });
 
   const highPriority = niches?.filter((n) => n.tier === 'high_priority') ?? [];
   const watchlist = niches?.filter((n) => n.tier === 'watchlist') ?? [];
@@ -126,61 +130,15 @@ export default function Dashboard() {
         )}
       </section>
 
-      {/* Freshness rules */}
+      {/* Data freshness */}
       {status?.freshness && (
         <section style={{ marginBottom: '64px' }}>
           <SectionHeading
             label="DATA FRESHNESS"
             count={null}
-            note={`ANALYSIS WINDOW · LAST ${status.freshness.analysis_window_days} DAYS`}
+            note={null}
           />
-          <div
-            style={{
-              border: '1px solid rgba(255,255,255,0.1)',
-              padding: '20px 24px',
-              fontFamily: 'var(--font-geist-mono)',
-              fontSize: '11px',
-              color: 'rgba(255,255,255,0.6)',
-              lineHeight: 1.8,
-            }}
-          >
-            <div style={{ marginBottom: '14px', color: 'rgba(255,255,255,0.45)', fontSize: '10px', letterSpacing: '1px', textTransform: 'uppercase' }}>
-              COLLECTION RULES — items older than these windows are dropped at collection time
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
-              <span>REDDIT &nbsp;<span style={{ color: 'rgba(74,222,128,0.85)' }}>≤ {status.freshness.rules.reddit_hours}h</span></span>
-              <span>HN &nbsp;<span style={{ color: 'rgba(74,222,128,0.85)' }}>≤ {status.freshness.rules.hn_hours}h</span></span>
-              <span>GITHUB &nbsp;<span style={{ color: 'rgba(74,222,128,0.85)' }}>≤ {status.freshness.rules.github_hours}h</span></span>
-              <span>GOOGLE TRENDS &nbsp;<span style={{ color: 'rgba(74,222,128,0.85)' }}>≤ {status.freshness.rules.google_trends_hours}h</span></span>
-              <span>YOUTUBE &nbsp;<span style={{ color: 'rgba(74,222,128,0.85)' }}>≤ {status.freshness.rules.youtube_hours}h</span></span>
-            </div>
-            {status.freshness.per_source.length > 0 && (
-              <>
-                <div style={{ marginBottom: '8px', color: 'rgba(255,255,255,0.45)', fontSize: '10px', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                  CURRENT CORPUS — newest item age per source
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
-                  {status.freshness.per_source.map((s) => (
-                    <span key={s.source}>
-                      {s.source.toUpperCase()} &nbsp;
-                      <span
-                        style={{
-                          color: (s.newest_age_hours ?? 999) <= 24
-                            ? 'rgba(74,222,128,0.85)'
-                            : (s.newest_age_hours ?? 999) <= 72
-                              ? 'rgba(251,191,36,0.85)'
-                              : 'rgba(255,140,140,0.85)',
-                        }}
-                      >
-                        {s.newest_age_hours !== null ? `${s.newest_age_hours.toFixed(0)}h ago` : '—'}
-                      </span>
-                      <span style={{ color: 'rgba(255,255,255,0.3)' }}> · {s.items} items</span>
-                    </span>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+          <DataFreshness freshness={status.freshness} />
         </section>
       )}
 
@@ -188,7 +146,7 @@ export default function Dashboard() {
       {status && (
         <section>
           <SectionHeading label="SYSTEM HEALTH" count={null} note={null} />
-          <SourceHealthTable sources={status.sources} />
+          <SystemHealth sources={status.sources} recentJobs={jobs} />
         </section>
       )}
     </div>
