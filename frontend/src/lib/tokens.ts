@@ -183,3 +183,60 @@ export function jobStatusColor(status: string): string {
   if (status === 'running') return color.fgSecondary;
   return color.fgGhost;
 }
+
+// ── Source registry ──────────────────────────────────────────────────────
+// Single source of truth for all 12 data sources.
+// Backend: niche_radar/collectors/__init__.py ALL_SOURCES
+
+export const ALL_SOURCES = [
+  'reddit', 'hn', 'google_trends', 'github', 'youtube',
+  'product_hunt', 'stack_overflow', 'twitter', 'g2_reviews',
+  'indie_hackers', 'app_store', 'play_store',
+] as const;
+
+export type SourceSlug = typeof ALL_SOURCES[number];
+
+export const sourceLabel: Record<string, string> = {
+  reddit: 'Reddit',
+  hn: 'Hacker News',
+  google_trends: 'Google Trends',
+  github: 'GitHub Trending',
+  youtube: 'YouTube',
+  product_hunt: 'Product Hunt',
+  stack_overflow: 'Stack Overflow',
+  twitter: 'Twitter / X',
+  g2_reviews: 'G2 Reviews',
+  indie_hackers: 'Indie Hackers',
+  app_store: 'App Store',
+  play_store: 'Play Store',
+};
+
+export const sourceIcon: Record<string, string> = {
+  reddit: '◆',
+  hn: '▲',
+  github: '◎',
+  google_trends: '◇',
+  youtube: '▶',
+  product_hunt: '◈',
+  stack_overflow: '▣',
+  twitter: '✕',
+  g2_reviews: '★',
+  indie_hackers: '◉',
+  app_store: '▧',
+  play_store: '▷',
+};
+
+export const sourceFreshnessRule: Record<string, string> = {
+  reddit: 'reddit_hours',
+  hn: 'hn_hours',
+  github: 'github_hours',
+  google_trends: 'google_trends_hours',
+  youtube: 'youtube_hours',
+  product_hunt: 'product_hunt_hours',
+  stack_overflow: 'stack_overflow_hours',
+  twitter: 'twitter_hours',
+  g2_reviews: 'g2_reviews_hours',
+  indie_hackers: 'indie_hackers_hours',
+  app_store: 'app_store_hours',
+  play_store: 'play_store_hours',
+};

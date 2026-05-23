@@ -1,6 +1,7 @@
 'use client';
 
 import { SourceFreshness, FreshnessSummary } from '@/lib/types';
+import { ALL_SOURCES, sourceIcon, sourceFreshnessRule, sourceLabel } from '@/lib/tokens';
 
 interface DataFreshnessProps {
   freshness: FreshnessSummary;
@@ -42,22 +43,6 @@ function barPercent(ageHours: number | null, ruleHours: number): number {
   return Math.max(5, Math.round(100 - (ratio / 3) * 100));
 }
 
-const SOURCE_RULES: Record<string, string> = {
-  reddit: 'reddit_hours',
-  hn: 'hn_hours',
-  github: 'github_hours',
-  google_trends: 'google_trends_hours',
-  youtube: 'youtube_hours',
-};
-
-const SOURCE_ICONS: Record<string, string> = {
-  reddit: '◆',
-  hn: '▲',
-  github: '◎',
-  google_trends: '◇',
-  youtube: '▶',
-};
-
 export default function DataFreshness({ freshness }: DataFreshnessProps) {
   const rules = freshness.rules as Record<string, number>;
   const sourceMap: Record<string, SourceFreshness> = {};
@@ -65,7 +50,7 @@ export default function DataFreshness({ freshness }: DataFreshnessProps) {
     sourceMap[s.source] = s;
   }
 
-  const allSources = ['reddit', 'hn', 'github', 'google_trends', 'youtube'];
+  const allSources = [...ALL_SOURCES];
 
   // Compute overall health
   const totalSources = allSources.length;
@@ -75,7 +60,7 @@ export default function DataFreshness({ freshness }: DataFreshnessProps) {
   let noDataCount = 0;
 
   for (const src of allSources) {
-    const ruleKey = SOURCE_RULES[src];
+    const ruleKey = sourceFreshnessRule[src];
     const ruleHours = rules[ruleKey] ?? 72;
     const data = sourceMap[src];
     const age = data?.newest_age_hours ?? null;
@@ -151,7 +136,7 @@ export default function DataFreshness({ freshness }: DataFreshnessProps) {
       {/* Source rows */}
       <div style={{ padding: '8px 0' }}>
         {allSources.map((src) => {
-          const ruleKey = SOURCE_RULES[src];
+          const ruleKey = sourceFreshnessRule[src];
           const ruleHours = rules[ruleKey] ?? 72;
           const data = sourceMap[src];
           const age = data?.newest_age_hours ?? null;
@@ -160,7 +145,7 @@ export default function DataFreshness({ freshness }: DataFreshnessProps) {
           const label = freshnessLabel(age);
           const status = freshnessStatus(age, ruleHours);
           const pct = barPercent(age, ruleHours);
-          const icon = SOURCE_ICONS[src] ?? '·';
+          const icon = sourceIcon[src] ?? '·';
 
           return (
             <div key={src} style={{
@@ -189,7 +174,7 @@ export default function DataFreshness({ freshness }: DataFreshnessProps) {
                   textTransform: 'uppercase',
                   color: 'rgba(255,255,255,0.7)',
                 }}>
-                  {src.replace('_', ' ')}
+                  {sourceLabel[src] || src.replace(/_/g, ' ')}
                 </span>
               </div>
 

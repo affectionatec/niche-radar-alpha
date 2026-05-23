@@ -3,21 +3,7 @@ import Link from 'next/link';
 import useSWR from 'swr';
 import { endpoints, fetcher } from '@/lib/api';
 import { SourceStatus } from '@/lib/types';
-
-const SOURCE_LABELS: Record<string, string> = {
-  reddit: 'Reddit',
-  hn: 'Hacker News',
-  google_trends: 'Google Trends',
-  github: 'GitHub Trending',
-  youtube: 'YouTube',
-  product_hunt: 'Product Hunt',
-  stack_overflow: 'Stack Overflow',
-  twitter: 'Twitter / X',
-  g2_reviews: 'G2 Reviews',
-  indie_hackers: 'Indie Hackers',
-  app_store: 'App Store',
-  play_store: 'Play Store',
-};
+import { sourceLabel } from '@/lib/tokens';
 
 const SOURCE_DESCRIPTIONS: Record<string, string> = {
   reddit: 'Pain-point posts from targeted subreddits via search queries',
@@ -94,7 +80,7 @@ export default function SourcesPage() {
               >
                 <div>
                   <div style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '13px', color: '#ffffff', marginBottom: '4px' }}>
-                    {SOURCE_LABELS[s.slug] || s.slug}
+                    {sourceLabel[s.slug] || s.slug}
                   </div>
                   <div style={{ fontFamily: 'var(--font-inter)', fontSize: '12px', color: 'rgba(255,255,255,0.35)' }}>
                     {SOURCE_DESCRIPTIONS[s.slug] || ''}

@@ -4,13 +4,7 @@ import Link from 'next/link';
 import useSWR from 'swr';
 import { endpoints, fetcher, postSourceCredentials, postSourceTest } from '@/lib/api';
 import { SourceStatus } from '@/lib/types';
-
-const SOURCE_LABELS: Record<string, string> = {
-  reddit: 'Reddit', hn: 'Hacker News', google_trends: 'Google Trends',
-  github: 'GitHub Trending', youtube: 'YouTube', product_hunt: 'Product Hunt',
-  stack_overflow: 'Stack Overflow', twitter: 'Twitter / X', g2_reviews: 'G2 Reviews',
-  indie_hackers: 'Indie Hackers', app_store: 'App Store', play_store: 'Play Store',
-};
+import { sourceLabel } from '@/lib/tokens';
 
 function Input({ value, onChange, placeholder, type = 'text', disabled = false, id }:
   { value: string; onChange: (v: string) => void; placeholder?: string; type?: string; disabled?: boolean; id?: string }
@@ -106,7 +100,7 @@ export default function SourceDetailPage({ params }: { params: Promise<{ source:
       </div>
 
       <h1 style={{ fontFamily: 'var(--font-inter)', fontSize: '30px', fontWeight: 400, color: '#ffffff', marginBottom: '8px' }}>
-        {SOURCE_LABELS[slug] || slug.toUpperCase()}
+        {sourceLabel[slug] || slug.toUpperCase()}
       </h1>
       <p style={{ fontFamily: 'var(--font-inter)', fontSize: '13px', color: 'rgba(255,255,255,0.35)', marginBottom: '48px' }}>
         Configure credentials for this data source. Secrets are stored in the database and never exposed in plaintext.

@@ -4,13 +4,11 @@ import useSWR from 'swr';
 import { endpoints, fetcher, postPipeline } from '@/lib/api';
 import { Job, JobDetail, JobStatus } from '@/lib/types';
 import { usePipelineState } from '@/lib/usePipelineState';
-import { color, font, fontSize, button as btnStyle } from '@/lib/tokens';
+import { color, font, fontSize, button as btnStyle, ALL_SOURCES, sourceLabel } from '@/lib/tokens';
 import PipelineStages from '@/components/pipeline/PipelineStages';
 import AgentActivity from '@/components/pipeline/AgentActivity';
 import ActivityLog from '@/components/pipeline/ActivityLog';
 import PipelineSummaryPanel from '@/components/pipeline/PipelineSummaryPanel';
-
-const SOURCES = ['', 'reddit', 'hn', 'google_trends', 'github', 'youtube'] as const;
 
 const STEP_BUTTONS: { label: string; step: string; desc: string; primary?: boolean }[] = [
   { label: 'COLLECT', step: 'collect', desc: 'Gather from sources' },
@@ -128,51 +126,46 @@ export default function PipelinePage() {
       {/* Action bar */}
       <section style={{ marginBottom: '32px' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <span style={{ fontFamily: font.body, fontSize: fontSize.xs, color: color.fgDisabled, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-              Source
-            </span>
-            <select
-              value={source}
-              onChange={(e) => setSource(e.target.value)}
+          <select
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            aria-label="Source filter"
+            style={{
+              background: color.surfaceHover,
+              border: `1px solid ${color.border}`,
+              color: color.fgSecondary,
+              fontFamily: font.mono,
+              fontSize: fontSize.base,
+              letterSpacing: '0.8px',
+              padding: '10px 14px',
+              cursor: 'pointer',
+              height: '40px',
+            }}
+          >
+            <option value="" style={{ background: color.bg }}>ALL SOURCES</option>
+            {ALL_SOURCES.map((s) => (
+              <option key={s} value={s} style={{ background: color.bg }}>
+                {sourceLabel[s] || s.toUpperCase()}
+              </option>
+            ))}
+          </select>
+
+          {STEP_BUTTONS.map(({ label, step, desc, primary }) => (
+            <button
+              key={step}
+              disabled={launching !== null}
+              onClick={() => launch(step)}
+              aria-busy={launching === step}
+              title={desc}
               style={{
-                background: color.surfaceHover,
-                border: `1px solid ${color.border}`,
-                color: color.fgSecondary,
-                fontFamily: font.mono,
-                fontSize: fontSize.base,
-                letterSpacing: '0.8px',
-                padding: '10px 14px',
-                cursor: 'pointer',
-                height: '40px',
+                ...(primary ? btnStyle.primary : btnStyle.secondary),
+                opacity: launching !== null ? 0.5 : 1,
+                cursor: launching !== null ? 'not-allowed' : 'pointer',
               }}
             >
-              {SOURCES.map((s) => (
-                <option key={s} value={s} style={{ background: color.bg }}>
-                  {s ? s.toUpperCase() : 'ALL SOURCES'}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-            {STEP_BUTTONS.map(({ label, step, desc, primary }) => (
-              <button
-                key={step}
-                disabled={launching !== null}
-                onClick={() => launch(step)}
-                aria-busy={launching === step}
-                title={desc}
-                style={{
-                  ...(primary ? btnStyle.primary : btnStyle.secondary),
-                  opacity: launching !== null ? 0.5 : 1,
-                  cursor: launching !== null ? 'not-allowed' : 'pointer',
-                }}
-              >
-                {launching === step ? '...' : label}
-              </button>
-            ))}
-          </div>
+              {launching === step ? '...' : label}
+            </button>
+          ))}
         </div>
 
         {error && (

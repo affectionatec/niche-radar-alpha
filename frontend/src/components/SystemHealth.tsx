@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { SourceHealth, Job, JobStatus } from '@/lib/types';
+import { sourceIcon, sourceLabel } from '@/lib/tokens';
 
 interface SystemHealthProps {
   sources: SourceHealth[];
@@ -42,14 +43,6 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
-const SOURCE_ICONS: Record<string, string> = {
-  reddit: '◆',
-  hn: '▲',
-  github: '◎',
-  google_trends: '◇',
-  youtube: '▶',
-};
-
 export default function SystemHealth({ sources, recentJobs }: SystemHealthProps) {
   const okCount = sources.filter(s => s.status === 'OK').length;
   const totalCount = sources.length;
@@ -81,7 +74,7 @@ export default function SystemHealth({ sources, recentJobs }: SystemHealthProps)
       }}>
         {sources.map((s) => {
           const dot = statusDot(s.status);
-          const icon = SOURCE_ICONS[s.source] ?? '·';
+          const icon = sourceIcon[s.source] ?? '·';
 
           return (
             <Link
@@ -122,7 +115,7 @@ export default function SystemHealth({ sources, recentJobs }: SystemHealthProps)
                       textTransform: 'uppercase',
                       color: '#ffffff',
                     }}>
-                      {s.source.replace('_', ' ')}
+                      {sourceLabel[s.source] || s.source.replace(/_/g, ' ')}
                     </span>
                   </div>
                   <div style={{
