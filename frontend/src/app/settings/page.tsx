@@ -3,7 +3,7 @@ import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import useSWR from 'swr';
-import { endpoints, fetcher, postSettings, postSettingsTest } from '@/lib/api';
+import { endpoints, fetcher, postSettings, postSettingsTest, fetchProviderModels } from '@/lib/api';
 import { LLMSettings } from '@/lib/types';
 import { color, font, fontSize, button as btnStyle, LLM_PROVIDERS, LLMProvider } from '@/lib/tokens';
 
@@ -49,6 +49,8 @@ function SettingsContent() {
   const [error, setError] = useState('');
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [testing, setTesting] = useState(false);
+  const [liveModels, setLiveModels] = useState<string[]>([]);
+  const [fetchingModels, setFetchingModels] = useState(false);
 
   useEffect(() => {
     if (current) {
@@ -63,6 +65,21 @@ function SettingsContent() {
     setSelectedProvider(p);
     setModel(p.defaultModel);
     setBaseUrl(p.baseUrl);
+    setLiveModels([]);
+  }
+
+  async function handleFetchModels() {
+    setFetchingModels(true);
+    try {
+      const result = await fetchProviderModels();
+      if (result.models.length > 0) {
+        setLiveModels(result.models);
+      }
+    } catch {
+      // Silently fail — hardcoded list remains
+    } finally {
+      setFetchingModels(false);
+    }
   }
 
   async function handleSave() {
@@ -201,6 +218,7 @@ function SettingsContent() {
 
         {/* ── Model selector ──────────────────────────────────────── */}
         <Field label="MODEL" htmlFor="model-input">
+          {/* Preset models from hardcoded registry */}
           {selectedProvider.models.length > 0 && (
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
               {selectedProvider.models.map((m) => (
@@ -223,12 +241,64 @@ function SettingsContent() {
               ))}
             </div>
           )}
-          <Input
-            value={model}
-            onChange={setModel}
-            placeholder={selectedProvider.id === 'custom' ? 'Enter model name' : 'Or type a custom model name'}
-            id="model-input"
-          />
+
+          {/* Live models from provider API */}
+          {liveModels.length > 0 && (
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{
+                fontFamily: font.mono, fontSize: fontSize.xs, color: color.fgGhost,
+                letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '6px',
+              }}>
+                FROM API ({liveModels.length} models)
+              </div>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', maxHeight: '120px', overflowY: 'auto' }}>
+                {liveModels.map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setModel(m)}
+                    style={{
+                      background: model === m ? color.surfaceSelected : 'transparent',
+                      border: `1px solid ${model === m ? color.borderStrong : color.border}`,
+                      color: model === m ? color.fg : color.fgMuted,
+                      fontFamily: font.mono,
+                      fontSize: fontSize.sm,
+                      letterSpacing: '0.3px',
+                      padding: '5px 12px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ flex: 1 }}>
+              <Input
+                value={model}
+                onChange={setModel}
+                placeholder={selectedProvider.id === 'custom' ? 'Enter model name' : 'Or type a custom model name'}
+                id="model-input"
+              />
+            </div>
+            {selectedProvider.id !== 'custom' && (current?.llm_api_key_set || !selectedProvider.needsApiKey) && (
+              <button
+                onClick={handleFetchModels}
+                disabled={fetchingModels}
+                title="Fetch available models from the provider API"
+                style={{
+                  ...btnStyle.ghost,
+                  whiteSpace: 'nowrap',
+                  opacity: fetchingModels ? 0.5 : 1,
+                  cursor: fetchingModels ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {fetchingModels ? '...' : '↻ REFRESH'}
+              </button>
+            )}
+          </div>
         </Field>
 
         {/* ── API Key ─────────────────────────────────────────────── */}

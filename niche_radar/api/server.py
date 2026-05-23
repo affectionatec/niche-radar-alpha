@@ -356,6 +356,62 @@ def test_llm_connection():
         db.close()
 
 
+@app.get("/api/settings/models")
+def list_provider_models():
+    """Fetch available models from the configured LLM provider's API.
+
+    Calls GET {base_url}/models (OpenAI-compatible) or returns an empty
+    list for providers that don't support model listing (e.g. Anthropic).
+    """
+    import httpx
+
+    db = _db()
+    settings = get_settings()
+    try:
+        provider = repository.get_app_setting(db, "llm_provider") or settings.llm_provider
+        base_url = repository.get_app_setting(db, "llm_base_url") or settings.llm_base_url
+        api_key = repository.get_app_setting(db, "llm_api_key") or settings.llm_api_key
+
+        # Anthropic doesn't have a list-models endpoint
+        if provider == "anthropic":
+            return {"models": [], "source": "none"}
+
+        # Build the models endpoint URL
+        url = (base_url.rstrip("/") if base_url else "https://api.openai.com/v1").rstrip("/")
+        if not url.endswith("/models"):
+            url += "/models"
+
+        headers: dict[str, str] = {}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
+        resp = httpx.get(url, headers=headers, timeout=10.0)
+        resp.raise_for_status()
+        data = resp.json()
+
+        # OpenAI-compatible format: {"data": [{"id": "model-name", ...}, ...]}
+        model_ids: list[str] = []
+        if "data" in data and isinstance(data["data"], list):
+            for m in data["data"]:
+                mid = m.get("id", "")
+                if mid:
+                    model_ids.append(mid)
+        # Ollama format: {"models": [{"name": "llama3.3", ...}, ...]}
+        elif "models" in data and isinstance(data["models"], list):
+            for m in data["models"]:
+                name = m.get("name", "")
+                if name:
+                    # Strip ":latest" tag that Ollama appends
+                    model_ids.append(name.split(":")[0] if ":" in name else name)
+
+        model_ids.sort()
+        return {"models": model_ids, "source": "api"}
+    except Exception as exc:
+        return {"models": [], "source": "error", "error": str(exc)}
+    finally:
+        db.close()
+
+
 # ── Source credentials & configuration ───────────────────────────────────────
 
 class SourceCredentialUpdate(BaseModel):

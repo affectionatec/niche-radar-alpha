@@ -34,6 +34,12 @@ export async function postSettingsTest(): Promise<{ ok: boolean; message: string
   return res.json() as Promise<{ ok: boolean; message: string }>;
 }
 
+export async function fetchProviderModels(): Promise<{ models: string[]; source: string; error?: string }> {
+  const res = await fetch('/api/settings/models');
+  if (!res.ok) throw new Error(`Model fetch failed: ${res.status}`);
+  return res.json() as Promise<{ models: string[]; source: string; error?: string }>;
+}
+
 export const endpoints = {
   status: '/api/status',
   niches: '/api/niches',
@@ -45,6 +51,7 @@ export const endpoints = {
   jobs: '/api/pipeline/jobs',
   jobLogs: (id: string) => `/api/pipeline/jobs/${id}/logs`,
   settings: '/api/settings',
+  settingsModels: '/api/settings/models',
   sources: '/api/sources',
   source: (slug: string) => `/api/sources/${slug}`,
   sourceTest: (slug: string) => `/api/sources/${slug}/test`,
