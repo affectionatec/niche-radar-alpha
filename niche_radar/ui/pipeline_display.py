@@ -283,11 +283,13 @@ class PipelineDisplay:
         parts.append(f"Elapsed: [yellow]{elapsed_str}[/yellow]")
         header = "  │  ".join(parts)
 
-        lines = Text()
-        lines.append("\n")
-        lines.append(f"  {header}\n\n")
+        # Build markup string for the stages panel
+        lines: list[str] = []
+        lines.append("")
+        lines.append(f"  {header}")
+        lines.append("")
 
-        _render_phase(
+        _render_phase_lines(
             lines, "A", "Signal Validation", s.phase_a,
             subs=[
                 ("A1", "Signal Filter", _detail_a1(s)),
@@ -296,9 +298,9 @@ class PipelineDisplay:
         )
 
         b_detail = f"{s.phase_b.total} extractions" if s.phase_b.status == PhaseStatus.DONE and s.phase_b.total else ""
-        _render_phase(lines, "B", "Clustering", s.phase_b, detail=b_detail)
+        _render_phase_lines(lines, "B", "Clustering", s.phase_b, detail=b_detail)
 
-        _render_phase(
+        _render_phase_lines(
             lines, "C", "Deep Analysis", s.phase_c,
             subs=[
                 ("A3", "Market Researcher", ""),
@@ -312,17 +314,22 @@ class PipelineDisplay:
         )
 
         d_detail = ", ".join(s.niches_persisted[-3:]) if s.niches_persisted else ""
-        _render_phase(lines, "D", "Persistence", s.phase_d, detail=d_detail)
+        _render_phase_lines(lines, "D", "Persistence", s.phase_d, detail=d_detail)
 
-        lines.append("\n")
-        stage_panel = Panel(lines, title="[bold]Niche Radar Pipeline[/bold]", border_style="blue")
+        lines.append("")
+        markup = "\n".join(lines)
+        stage_panel = Panel(
+            Text.from_markup(markup),
+            title="[bold]Niche Radar Pipeline[/bold]",
+            border_style="blue",
+        )
 
         if s.activity:
             activity_text = "\n".join(s.activity)
         else:
-            activity_text = "  Waiting for pipeline to start..."
+            activity_text = "  [dim]Waiting for pipeline to start...[/dim]"
         activity_panel = Panel(
-            activity_text,
+            Text.from_markup(activity_text),
             title="Activity",
             border_style="dim",
             height=min(len(s.activity) + 2, _ACTIVITY_MAX + 2) if s.activity else 3,
@@ -364,14 +371,14 @@ class PipelineDisplay:
 def _status_icon(status: PhaseStatus) -> str:
     return {
         PhaseStatus.PENDING: "○",
-        PhaseStatus.RUNNING: "●",
-        PhaseStatus.DONE: "✓",
-        PhaseStatus.FAILED: "✗",
+        PhaseStatus.RUNNING: "[cyan]●[/cyan]",
+        PhaseStatus.DONE: "[green]✓[/green]",
+        PhaseStatus.FAILED: "[red]✗[/red]",
     }[status]
 
 
-def _render_phase(
-    text: Text,
+def _render_phase_lines(
+    lines: list[str],
     letter: str,
     name: str,
     phase: PhaseState,
@@ -388,22 +395,22 @@ def _render_phase(
     elif phase.status == PhaseStatus.DONE and detail:
         progress = f"  {detail}"
     elif phase.status == PhaseStatus.PENDING:
-        progress = "  ⏳ Waiting"
+        progress = "  [dim]⏳ Waiting[/dim]"
 
-    style = "bold" if phase.status == PhaseStatus.RUNNING else ""
-    icon_color = {"done": "green", "failed": "red", "running": "cyan"}.get(phase.status.value, "")
-    icon_styled = f"[{icon_color}]{icon}[/{icon_color}]" if icon_color else icon
-    text.append(f"  {icon_styled} Phase {letter}  {name:<22s}{progress}\n", style=style)
+    bold_open = "[bold]" if phase.status == PhaseStatus.RUNNING else ""
+    bold_close = "[/bold]" if phase.status == PhaseStatus.RUNNING else ""
+    lines.append(f"  {icon} {bold_open}Phase {letter}  {name:<22s}{progress}{bold_close}")
 
     if subs and phase.status != PhaseStatus.PENDING:
         for i, (agent_id, agent_name, agent_detail) in enumerate(subs):
             connector = "└─" if i == len(subs) - 1 else "├─"
-            line = f"    {connector} {agent_id} {agent_name}"
+            line = f"    [dim]{connector} {agent_id} {agent_name}"
             if agent_detail:
                 line += f"  {agent_detail}"
-            text.append(f"{line}\n", style="dim")
+            line += "[/dim]"
+            lines.append(line)
 
-    text.append("\n")
+    lines.append("")
 
 
 def _detail_a1(s: PipelineState) -> str:
