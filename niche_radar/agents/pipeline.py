@@ -206,8 +206,12 @@ def run_phase_a(
             pool.submit(_phase_a_for_item, item, resolver, budget, log_fn)
             for item in items
         ]
+        done_count = 0
         for f in futures:
             raw_item_id, result = f.result()
+            done_count += 1
+            if log_fn:
+                log_fn(f"phase_a_item={done_count}/{len(items)}")
             if not dry_run:
                 _persist_extraction(db, raw_item_id, pipeline_run, result)
             if result.a1 and result.a1.is_valid_signal:
@@ -325,9 +329,13 @@ def run_phase_c(
             pool.submit(_phase_c_for_cluster, c, resolver, budget, log_fn): c
             for c in clusters
         }
+        done_count = 0
         for f in futures:
             cluster = futures[f]
             result = f.result()
+            done_count += 1
+            if log_fn:
+                log_fn(f"phase_c_cluster={done_count}/{len(clusters)}")
             out.append((cluster, result))
 
     if log_fn:
