@@ -68,6 +68,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--signal-id", default=None,
         help="Run the pipeline on a single raw_item by ID (forces dry-run unless combined with --commit).",
     )
+    p_analyze.add_argument(
+        "--no-tui", action="store_true", default=False,
+        help="Disable Rich TUI visualization; use plain text output.",
+    )
 
     # report
     sub.add_parser("report", help="Generate niche report")
@@ -158,7 +162,17 @@ def cmd_analyze(args: argparse.Namespace, settings) -> int:
         return 0
 
     from niche_radar.analysis import run_analysis
-    count = run_analysis(db=db, settings=settings, dry_run=args.dry_run, log_fn=print)
+
+    use_tui = not getattr(args, "no_tui", False) and sys.stdout.isatty()
+    if use_tui:
+        from niche_radar.ui.pipeline_display import PipelineDisplay
+
+        with PipelineDisplay() as display:
+            count = run_analysis(
+                db=db, settings=settings, dry_run=args.dry_run, log_fn=display.log
+            )
+    else:
+        count = run_analysis(db=db, settings=settings, dry_run=args.dry_run, log_fn=print)
     logger.info("analysis_complete", niches_produced=count)
     return 0
 

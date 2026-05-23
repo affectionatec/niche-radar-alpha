@@ -189,3 +189,21 @@ class TestRendering:
             d.log("pipeline_run=test items=5 budget=50")
             d.log("phase=A items=5")
             d.log("pipeline_done {}")
+
+
+class TestCLIIntegration:
+    """Verify --no-tui flag and auto-detect logic."""
+
+    def test_no_tui_flag_parsed(self):
+        from niche_radar.__main__ import build_parser
+
+        parser = build_parser()
+        args = parser.parse_args(["analyze", "--no-tui"])
+        assert args.no_tui is True
+
+    def test_no_tui_flag_default(self):
+        from niche_radar.__main__ import build_parser
+
+        parser = build_parser()
+        args = parser.parse_args(["analyze"])
+        assert args.no_tui is False
