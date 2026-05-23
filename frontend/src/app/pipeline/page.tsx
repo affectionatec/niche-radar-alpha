@@ -3,6 +3,11 @@ import { useState, useEffect, useRef } from 'react';
 import useSWR from 'swr';
 import { endpoints, fetcher, postPipeline } from '@/lib/api';
 import { Job, JobDetail, JobStatus } from '@/lib/types';
+import { usePipelineState } from '@/lib/usePipelineState';
+import PipelineStages from '@/components/pipeline/PipelineStages';
+import AgentActivity from '@/components/pipeline/AgentActivity';
+import ActivityLog from '@/components/pipeline/ActivityLog';
+import PipelineSummaryPanel from '@/components/pipeline/PipelineSummaryPanel';
 
 const SOURCES = ['', 'reddit', 'hn', 'google_trends', 'github', 'youtube'] as const;
 
@@ -25,7 +30,6 @@ export default function PipelinePage() {
   const [source, setSource] = useState('');
   const [launching, setLaunching] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const logsEndRef = useRef<HTMLDivElement>(null);
 
   const { data: jobs, mutate: mutateJobs } = useSWR<Job[]>(
     endpoints.jobs,
@@ -48,13 +52,11 @@ export default function PipelinePage() {
     },
   );
 
-  // Detect a job_id that the backend has lost (404). Pipeline jobs live in memory,
-  // so a backend restart wipes them — the browser's polling would otherwise spin forever.
   const jobLost = Boolean(activeJobId && activeJobError);
 
-  useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeJob?.logs?.length]);
+  // Parse logs into structured pipeline state
+  const pipelineState = usePipelineState(activeJob?.logs, activeJob?.step);
+  const showVisualization = activeJobId && activeJob && (activeJob.step === 'analyze' || activeJob.step === 'run-all');
 
   async function launch(step: string) {
     setError(null);
@@ -87,7 +89,7 @@ export default function PipelinePage() {
       </h1>
 
       {/* Action bar */}
-      <section style={{ marginBottom: '48px' }}>
+      <section style={{ marginBottom: '32px' }}>
         <div
           style={{
             display: 'flex',
@@ -157,9 +159,9 @@ export default function PipelinePage() {
         )}
       </section>
 
-      {/* Lost-job notice (backend restart wiped the in-memory job) */}
+      {/* Lost-job notice */}
       {jobLost && (
-        <section style={{ marginBottom: '32px' }}>
+        <section style={{ marginBottom: '24px' }}>
           <div
             style={{
               background: 'rgba(251,191,36,0.08)',
@@ -177,8 +179,7 @@ export default function PipelinePage() {
           >
             <span>
               Job {activeJobId?.slice(0, 8)} is no longer tracked by the backend
-              (likely killed by a restart). Pipeline jobs are kept in memory only.
-              Trigger a fresh run.
+              (likely killed by a restart). Trigger a fresh run.
             </span>
             <button
               onClick={() => setActiveJobId(null)}
@@ -199,15 +200,16 @@ export default function PipelinePage() {
         </section>
       )}
 
-      {/* Live log viewer */}
+      {/* Pipeline visualization */}
       {activeJobId && activeJob && (
         <section style={{ marginBottom: '48px' }}>
+          {/* Job header */}
           <div
             style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              marginBottom: '12px',
+              marginBottom: '16px',
             }}
           >
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
@@ -233,6 +235,19 @@ export default function PipelinePage() {
               >
                 {activeJob.status}
               </span>
+              {activeJob.status === 'running' && (
+                <span
+                  style={{
+                    fontFamily: 'var(--font-geist-mono)',
+                    fontSize: '9px',
+                    letterSpacing: '1px',
+                    color: 'rgba(255,255,255,0.3)',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {activeJob.logs.length} log lines
+                </span>
+              )}
             </div>
             <button
               onClick={() => setActiveJobId(null)}
@@ -249,30 +264,64 @@ export default function PipelinePage() {
               DISMISS
             </button>
           </div>
-          <div
-            style={{
-              backgroundColor: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              padding: '16px 20px',
-              maxHeight: '420px',
-              overflowY: 'auto',
-              fontFamily: 'var(--font-geist-mono)',
-              fontSize: '12px',
-              color: 'rgba(255,255,255,0.7)',
-              lineHeight: 1.75,
-            }}
-          >
-            {activeJob.logs.length === 0 ? (
-              <span style={{ color: 'rgba(255,255,255,0.25)' }}>
-                {activeJob.status === 'pending' ? 'Starting...' : 'Waiting for output...'}
-              </span>
-            ) : (
-              activeJob.logs.map((line: string, i: number) => (
-                <div key={i}>{line || ' '}</div>
-              ))
-            )}
-            <div ref={logsEndRef} />
-          </div>
+
+          {/* Visual workflow stages */}
+          {showVisualization && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <PipelineStages
+                phases={pipelineState.phases}
+                runAllSteps={pipelineState.runAllSteps}
+                isRunAll={pipelineState.isRunAll}
+                currentRunAllStep={pipelineState.currentRunAllStep}
+              />
+
+              {/* Pipeline summary when complete */}
+              {pipelineState.isComplete && pipelineState.summary && (
+                <PipelineSummaryPanel
+                  summary={pipelineState.summary}
+                  clusterResults={pipelineState.clusterResults}
+                />
+              )}
+
+              {/* Agent activity */}
+              {pipelineState.agents.length > 0 && (
+                <AgentActivity agents={pipelineState.agents} />
+              )}
+
+              {/* Collapsible raw logs */}
+              <ActivityLog
+                logs={activeJob.logs}
+                isRunning={activeJob.status === 'running'}
+              />
+            </div>
+          )}
+
+          {/* Plain log viewer for collect/report steps */}
+          {!showVisualization && (
+            <div
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                padding: '16px 20px',
+                maxHeight: '420px',
+                overflowY: 'auto',
+                fontFamily: 'var(--font-geist-mono)',
+                fontSize: '12px',
+                color: 'rgba(255,255,255,0.7)',
+                lineHeight: 1.75,
+              }}
+            >
+              {activeJob.logs.length === 0 ? (
+                <span style={{ color: 'rgba(255,255,255,0.25)' }}>
+                  {activeJob.status === 'pending' ? 'Starting...' : 'Waiting for output...'}
+                </span>
+              ) : (
+                activeJob.logs.map((line: string, i: number) => (
+                  <div key={i}>{line || ' '}</div>
+                ))
+              )}
+            </div>
+          )}
         </section>
       )}
 
