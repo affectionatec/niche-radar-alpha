@@ -100,7 +100,51 @@ sequenceDiagram
 
 ## Data Model
 
-Core tables: `collection_runs` → `raw_items` → `item_pain_extractions` (A1+A2 results) → `niche_item_links` → `niche_candidates` → `niche_analyses` (A3–A8 results). User curation via `shortlist_notes`. Settings in `app_settings`.
+Core tables: `collection_runs` → `raw_items` → `item_pain_extractions` (A1+A2 results) → `niche_item_links` → `niche_candidates` → `niche_analyses` (A3–A8 results). User curation via `shortlist_notes`. Settings in `app_settings`. Pipeline job persistence in `pipeline_jobs`.
+
+## Clustering Strategy
+
+Phase B groups validated pain extractions into coherent clusters before expensive A3–A8 analysis runs. This is the most cost-critical architectural choice — without clustering, every raw item would get its own A3–A8 chain (~5 LLM calls each).
+
+### Two-Step Algorithm
+
+```
+Step 1: Jaccard Pre-Grouping (no LLM, deterministic)
+  ├─ Extract keyword sets from A2 output (fallback: A1.pain_summary tokens)
+  ├─ Apply trivial stemmer (strip -ing, -ed, -s)
+  ├─ Compute pairwise Jaccard similarity
+  ├─ Build Union-Find components where Jaccard ≥ JACCARD_THRESHOLD
+  └─ Output: list of pre-clusters
+
+Step 2: LLM Refinement (only for large pre-clusters)
+  ├─ Skip if pre-cluster size < LLM_REFINE_MIN_SIZE (name by most-frequent keyword)
+  ├─ Chunk if > LLM_MAX_ITEMS_PER_CALL (prevent token overflow)
+  ├─ LLM confirms coherence or splits pre-cluster into sub-clusters
+  └─ Orphan items (dropped by LLM) → leftover cluster (never lose items)
+```
+
+### Configuration Constants
+
+| Constant | Default | Description |
+|----------|---------|-------------|
+| `JACCARD_THRESHOLD` | 0.5 | Minimum Jaccard similarity to merge two items |
+| `LLM_REFINE_MIN_SIZE` | 4 | Pre-clusters smaller than this skip LLM refinement |
+| `LLM_MAX_ITEMS_PER_CALL` | 40 | Max items sent to LLM in one refinement call |
+| `LLM_TEMPERATURE` | 0.2 | Low temperature for deterministic clustering |
+
+### Cost Analysis
+
+For N raw items that pass A1 filtering:
+- **Without clustering**: N × 6 LLM calls (A3–A8) = 6N calls
+- **With clustering**: 1 × clustering call (if needed) + C × 6 calls where C = number of clusters
+- Typical reduction: 50–100 raw items → 5–15 clusters → 80–90% LLM cost savings
+
+### Failure Modes
+
+- LLM refinement failure → falls back to single cluster (all items grouped together)
+- Bad LLM JSON shape → same fallback
+- Items not returned by LLM → automatically added to "leftover" cluster
+- No keywords available → falls back to A1.pain_summary token extraction
 
 ## Infrastructure
 

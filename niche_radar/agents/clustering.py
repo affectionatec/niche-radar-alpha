@@ -23,6 +23,8 @@ from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any
 
+import os
+
 import structlog
 
 from niche_radar.agents.orchestrator import BudgetExceeded
@@ -30,10 +32,10 @@ from niche_radar.llm.base import LLMClient
 
 logger = structlog.get_logger()
 
-JACCARD_THRESHOLD = 0.5
-LLM_REFINE_MIN_SIZE = 4
-LLM_MAX_ITEMS_PER_CALL = 40
-LLM_TEMPERATURE = 0.2
+JACCARD_THRESHOLD = float(os.environ.get("NR_JACCARD_THRESHOLD", "0.5"))
+LLM_REFINE_MIN_SIZE = int(os.environ.get("NR_CLUSTER_LLM_MIN_SIZE", "4"))
+LLM_MAX_ITEMS_PER_CALL = int(os.environ.get("NR_CLUSTER_LLM_MAX_ITEMS", "40"))
+LLM_TEMPERATURE = float(os.environ.get("NR_CLUSTER_LLM_TEMP", "0.2"))
 
 _CLUSTERING_SYSTEM_PROMPT = """\
 You are deduping pain points for a startup idea discovery system. Below are several \
