@@ -1,9 +1,10 @@
 'use client';
+import { useState } from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
 import { endpoints, fetcher } from '@/lib/api';
 import { SourceStatus } from '@/lib/types';
-import { color as c, font, sourceLabel } from '@/lib/tokens';
+import { color as c, font, fontSize, spacing, sourceLabel } from '@/lib/tokens';
 
 const SOURCE_DESCRIPTIONS: Record<string, string> = {
   reddit: 'Pain-point posts from targeted subreddits via search queries',
@@ -18,7 +19,16 @@ const SOURCE_DESCRIPTIONS: Record<string, string> = {
   indie_hackers: 'Revenue-validated product signals',
   app_store: '1-2 star reviews from configured iOS apps',
   play_store: '1-2 star reviews from configured Android apps',
+  xiaohongshu: 'Product reviews & lifestyle pain-points via TikHub API',
+  bilibili: 'Tech video complaints & tutorials via public API',
+  zhihu: 'Q&A pain-points & tool recommendations (cookie-based)',
+  weibo: 'Trending complaints & viral pain-points (cookie-based)',
+  douyin: 'Short video product pain-points via TikHub API',
 };
+
+const CN_SOURCES = new Set(['xiaohongshu', 'bilibili', 'zhihu', 'weibo', 'douyin']);
+
+type FilterTab = 'all' | 'global' | 'chinese';
 
 function StatusChip({ configured, last_success }: { configured: boolean; last_success: string | null }) {
   const color = configured ? c.success : c.warning;
@@ -34,9 +44,22 @@ function StatusChip({ configured, last_success }: { configured: boolean; last_su
 }
 
 export default function SourcesPage() {
+  const [filter, setFilter] = useState<FilterTab>('all');
   const { data: sources, isLoading, error } = useSWR<SourceStatus[]>(
     endpoints.sources, fetcher, { refreshInterval: 30_000 }
   );
+
+  const filtered = sources?.filter(s => {
+    if (filter === 'global') return !CN_SOURCES.has(s.slug);
+    if (filter === 'chinese') return CN_SOURCES.has(s.slug);
+    return true;
+  });
+
+  const tabs: { key: FilterTab; label: string; count?: number }[] = [
+    { key: 'all', label: 'ALL', count: sources?.length },
+    { key: 'global', label: 'GLOBAL', count: sources?.filter(s => !CN_SOURCES.has(s.slug)).length },
+    { key: 'chinese', label: 'CHINESE', count: sources?.filter(s => CN_SOURCES.has(s.slug)).length },
+  ];
 
   return (
     <div>
@@ -53,16 +76,42 @@ export default function SourcesPage() {
       <h1 style={{ fontFamily: font.body, fontSize: '30px', fontWeight: 400, color: c.fg, marginBottom: '8px' }}>
         DATA SOURCES
       </h1>
-      <p style={{ fontFamily: font.body, fontSize: '13px', color: c.fgDisabled, marginBottom: '48px' }}>
+      <p style={{ fontFamily: font.body, fontSize: '13px', color: c.fgDisabled, marginBottom: spacing['2xl'] }}>
         Configure credentials and search settings for each data source. Changes take effect immediately — no restart required.
       </p>
+
+      {/* Filter tabs */}
+      <div style={{
+        display: 'flex', gap: '2px', marginBottom: spacing['2xl'],
+        borderBottom: `1px solid ${c.border}`, paddingBottom: '0',
+      }}>
+        {tabs.map(tab => {
+          const active = filter === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setFilter(tab.key)}
+              style={{
+                fontFamily: font.mono, fontSize: fontSize.sm, letterSpacing: '1px',
+                color: active ? c.fg : c.fgGhost,
+                background: active ? c.surfaceActive : 'transparent',
+                border: 'none', borderBottom: active ? `2px solid ${c.fg}` : '2px solid transparent',
+                padding: `${spacing.sm} ${spacing.lg}`,
+                cursor: 'pointer', transition: 'all 0.15s',
+              }}
+            >
+              {tab.label}{tab.count !== undefined ? ` (${tab.count})` : ''}
+            </button>
+          );
+        })}
+      </div>
 
       {isLoading && <div style={{ color: c.fgDisabled, fontFamily: font.mono, fontSize: '12px' }}>LOADING...</div>}
       {error && <div style={{ color: c.error, fontFamily: font.mono, fontSize: '12px' }}>Failed to load sources</div>}
 
-      {sources && (
+      {filtered && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          {sources.map((s) => (
+          {filtered.map((s) => (
             <Link
               key={s.slug}
               href={`/settings/sources/${s.slug}`}
@@ -79,10 +128,20 @@ export default function SourcesPage() {
               onMouseLeave={e => (e.currentTarget.style.background = c.surface)}
               >
                 <div>
-                  <div style={{ fontFamily: font.mono, fontSize: '13px', color: c.fg, marginBottom: '4px' }}>
-                    {sourceLabel[s.slug] || s.slug}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+                    <span style={{ fontFamily: font.mono, fontSize: '13px', color: c.fg }}>
+                      {sourceLabel[s.slug] || s.slug}
+                    </span>
+                    {CN_SOURCES.has(s.slug) && (
+                      <span style={{
+                        fontFamily: font.mono, fontSize: fontSize.xs, color: c.fgGhost,
+                        border: `1px solid ${c.border}`, padding: '1px 6px', letterSpacing: '0.5px',
+                      }}>
+                        CN
+                      </span>
+                    )}
                   </div>
-                  <div style={{ fontFamily: font.body, fontSize: '12px', color: c.fgDisabled }}>
+                  <div style={{ fontFamily: font.body, fontSize: '12px', color: c.fgDisabled, marginTop: '4px' }}>
                     {SOURCE_DESCRIPTIONS[s.slug] || ''}
                   </div>
                   {s.last_success && (

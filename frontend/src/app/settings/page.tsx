@@ -546,12 +546,24 @@ const SOURCE_DESCRIPTIONS: Record<string, string> = {
   indie_hackers: 'Revenue-validated signals',
   app_store: 'iOS app reviews',
   play_store: 'Android app reviews',
+  xiaohongshu: 'Product reviews & lifestyle pain-points (TikHub)',
+  bilibili: 'Tech video complaints & tutorials',
+  zhihu: 'Q&A pain-points & tool recommendations',
+  weibo: 'Trending complaints & viral pain-points',
+  douyin: 'Short video product pain-points (TikHub)',
 };
+
+const CN_SOURCES = new Set(['xiaohongshu', 'bilibili', 'zhihu', 'weibo', 'douyin']);
 
 function DataSourcesSection() {
   const { data: sources, isLoading } = useSWR<SourceStatus[]>(
     endpoints.sources, fetcher, { refreshInterval: 30_000 }
   );
+
+  const globalSources = sources?.filter(s => !CN_SOURCES.has(s.slug));
+  const cnSources = sources?.filter(s => CN_SOURCES.has(s.slug));
+  const globalConfigured = globalSources?.filter(s => s.configured).length ?? 0;
+  const cnConfigured = cnSources?.filter(s => s.configured).length ?? 0;
 
   return (
     <div style={{ marginTop: spacing['4xl'], borderTop: `1px solid ${color.border}`, paddingTop: '40px' }}>
@@ -562,6 +574,17 @@ function DataSourcesSection() {
         }}>
           DATA SOURCES
         </div>
+        <Link href="/settings/sources" style={{
+          fontFamily: font.mono, fontSize: fontSize.xs, color: color.fgMuted,
+          textDecoration: 'none', letterSpacing: '0.8px',
+          padding: '4px 12px', border: `1px solid ${color.border}`,
+          transition: 'border-color 0.15s',
+        }}
+          onMouseEnter={e => (e.currentTarget.style.borderColor = color.borderStrong)}
+          onMouseLeave={e => (e.currentTarget.style.borderColor = color.border)}
+        >
+          VIEW ALL SOURCES →
+        </Link>
       </div>
       <p style={{
         fontFamily: font.body, fontSize: fontSize.md, color: color.fgGhost,
@@ -575,59 +598,81 @@ function DataSourcesSection() {
       )}
 
       {sources && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: color.surfaceHover }}>
-          {sources.map((s) => {
-            const configured = s.configured;
-            const statusColor = configured ? color.success : color.warning;
-            const statusLabel = configured ? 'CONFIGURED' : 'NEEDS SETUP';
+        <>
+          {/* Global Sources */}
+          <div style={{
+            fontFamily: font.mono, fontSize: fontSize.xs, color: color.fgGhost,
+            letterSpacing: '1px', marginBottom: spacing.sm,
+          }}>
+            GLOBAL · {globalConfigured}/{globalSources?.length ?? 0} CONFIGURED
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: color.surfaceHover, marginBottom: spacing['2xl'] }}>
+            {globalSources?.map((s) => (
+              <SourceRow key={s.slug} s={s} />
+            ))}
+          </div>
 
-            return (
-              <Link
-                key={s.slug}
-                href={`/settings/sources/${s.slug}`}
-                style={{ textDecoration: 'none' }}
-              >
-                <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: `${spacing.md} ${spacing.xl}`,
-                  background: color.bg,
-                  cursor: 'pointer',
-                  transition: 'background 0.15s',
-                }}
-                  onMouseEnter={e => (e.currentTarget.style.background = color.surface)}
-                  onMouseLeave={e => (e.currentTarget.style.background = color.bg)}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{
-                      fontFamily: font.mono, fontSize: fontSize.base, color: color.fg,
-                      letterSpacing: '0.5px', textTransform: 'uppercase' as const,
-                    }}>
-                      {sourceLabel[s.slug] || s.slug}
-                    </div>
-                    <div style={{
-                      fontFamily: font.body, fontSize: fontSize.sm, color: color.fgDisabled,
-                      marginTop: '2px',
-                    }}>
-                      {SOURCE_DESCRIPTIONS[s.slug] || ''}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md, flexShrink: 0 }}>
-                    <span style={{
-                      fontFamily: font.mono, fontSize: fontSize.xs, letterSpacing: '0.8px',
-                      color: statusColor, border: `1px solid ${statusColor}`,
-                      padding: '2px 8px',
-                    }}>
-                      {statusLabel}
-                    </span>
-                    <span style={{ color: color.fgGhost, fontSize: fontSize.lg }}>›</span>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+          {/* Chinese Sources */}
+          <div style={{
+            fontFamily: font.mono, fontSize: fontSize.xs, color: color.fgGhost,
+            letterSpacing: '1px', marginBottom: spacing.sm,
+          }}>
+            CHINESE · {cnConfigured}/{cnSources?.length ?? 0} CONFIGURED
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: color.surfaceHover }}>
+            {cnSources?.map((s) => (
+              <SourceRow key={s.slug} s={s} />
+            ))}
+          </div>
+        </>
       )}
     </div>
+  );
+}
+
+function SourceRow({ s }: { s: SourceStatus }) {
+  const configured = s.configured;
+  const statusColor = configured ? color.success : color.warning;
+  const statusLabel = configured ? 'CONFIGURED' : 'NEEDS SETUP';
+
+  return (
+    <Link href={`/settings/sources/${s.slug}`} style={{ textDecoration: 'none' }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: `${spacing.md} ${spacing.xl}`,
+        background: color.bg,
+        cursor: 'pointer',
+        transition: 'background 0.15s',
+      }}
+        onMouseEnter={e => (e.currentTarget.style.background = color.surface)}
+        onMouseLeave={e => (e.currentTarget.style.background = color.bg)}
+      >
+        <div style={{ minWidth: 0 }}>
+          <div style={{
+            fontFamily: font.mono, fontSize: fontSize.base, color: color.fg,
+            letterSpacing: '0.5px', textTransform: 'uppercase' as const,
+          }}>
+            {sourceLabel[s.slug] || s.slug}
+          </div>
+          <div style={{
+            fontFamily: font.body, fontSize: fontSize.sm, color: color.fgDisabled,
+            marginTop: '2px',
+          }}>
+            {SOURCE_DESCRIPTIONS[s.slug] || ''}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md, flexShrink: 0 }}>
+          <span style={{
+            fontFamily: font.mono, fontSize: fontSize.xs, letterSpacing: '0.8px',
+            color: statusColor, border: `1px solid ${statusColor}`,
+            padding: '2px 8px',
+          }}>
+            {statusLabel}
+          </span>
+          <span style={{ color: color.fgGhost, fontSize: fontSize.lg }}>›</span>
+        </div>
+      </div>
+    </Link>
   );
 }
 
