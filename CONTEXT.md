@@ -61,3 +61,13 @@
 **Definition**: A group of related raw items with overlapping keywords, formed by Jaccard pre-grouping then optionally refined by LLM.
 **Lives in**: `niche_radar/agents/clustering.py`
 **Distinct from**: Niche Candidate (a cluster becomes a niche candidate after scoring)
+
+## CN Source (Chinese Social Media Source)
+**Definition**: A collector targeting a Chinese social media platform — Xiaohongshu, Bilibili, Zhihu, Weibo, or Douyin. These sources ingest Chinese-language content and follow the same BaseCollector interface.
+**Lives in**: `niche_radar/collectors/xiaohongshu.py`, `bilibili.py`, `zhihu.py`, `weibo.py`, `douyin.py`
+**Distinct from**: Existing EN sources (Reddit, HN, etc.) — CN sources produce `language: "zh"` metadata
+
+## TikHub
+**Definition**: A third-party unified API service (tikhub.io) that provides stable access to multiple Chinese platforms (Xiaohongshu, Douyin) via a single API key.
+**Lives in**: `niche_radar/collectors/xiaohongshu.py`, `douyin.py` (as the underlying API client)
+**Distinct from**: Direct platform scraping — TikHub handles anti-bot and rate limiting
