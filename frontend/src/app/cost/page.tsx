@@ -1,6 +1,5 @@
 'use client';
 import useSWR from 'swr';
-import Link from 'next/link';
 import { endpoints, fetcher } from '@/lib/api';
 import { color, font, fontSize, spacing } from '@/lib/tokens';
 
@@ -74,32 +73,21 @@ export default function CostPage() {
   });
 
   return (
-    <main style={{ maxWidth: '900px', margin: '0 auto', padding: `${spacing['5xl']} ${spacing['2xl']}` }}>
+    <div>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['4xl'] }}>
-        <div>
-          <h1 style={{
-            fontFamily: font.body, fontSize: fontSize['5xl'], fontWeight: 400,
-            color: color.fg, margin: 0,
-          }}>
-            Cost Insights
-          </h1>
-          <p style={{
-            fontFamily: font.body, fontSize: fontSize.lg,
-            color: color.fgDisabled, marginTop: spacing.xs,
-          }}>
-            LLM token usage across pipeline runs — last 30 days
-          </p>
-        </div>
-        <Link
-          href="/settings"
-          style={{
-            fontFamily: font.mono, fontSize: fontSize.sm, letterSpacing: '0.8px',
-            color: color.fgMuted, textDecoration: 'none', textTransform: 'uppercase' as const,
-          }}
-        >
-          ← SETTINGS
-        </Link>
+      <div style={{ marginBottom: spacing['4xl'] }}>
+        <h1 style={{
+          fontFamily: font.body, fontSize: fontSize['5xl'], fontWeight: 400,
+          color: color.fg, margin: 0,
+        }}>
+          COST INSIGHTS
+        </h1>
+        <p style={{
+          fontFamily: font.body, fontSize: fontSize.lg,
+          color: color.fgDisabled, marginTop: spacing.xs,
+        }}>
+          LLM token usage across pipeline runs — last 30 days
+        </p>
       </div>
 
       {error && (
@@ -303,7 +291,7 @@ export default function CostPage() {
           )}
         </>
       )}
-    </main>
+    </div>
   );
 }
 

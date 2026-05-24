@@ -4,8 +4,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import useSWR from 'swr';
 import { endpoints, fetcher, postSettings, postSettingsTest, fetchProviderModels, fetchScoringWeights, saveScoringWeights } from '@/lib/api';
-import { LLMSettings } from '@/lib/types';
-import { color, font, fontSize, button as btnStyle, LLM_PROVIDERS, LLMProvider, SCORING_DIMENSIONS } from '@/lib/tokens';
+import { LLMSettings, SourceStatus } from '@/lib/types';
+import { color, font, fontSize, spacing, button as btnStyle, LLM_PROVIDERS, LLMProvider, SCORING_DIMENSIONS, sourceLabel } from '@/lib/tokens';
 
 function resolveProvider(backendProvider: string, baseUrl: string): LLMProvider {
   // Try to match a specific provider by base URL first
@@ -123,28 +123,6 @@ function SettingsContent() {
 
   return (
     <div style={{ maxWidth: '640px' }}>
-      {/* Data Sources link */}
-      <Link href="/settings/sources" style={{ textDecoration: 'none', display: 'block', marginBottom: '32px' }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '16px 20px', border: `1px solid ${color.borderStrong}`,
-          background: color.surface,
-        }}
-          onMouseEnter={e => (e.currentTarget.style.background = color.surfaceHover)}
-          onMouseLeave={e => (e.currentTarget.style.background = color.surface)}
-        >
-          <div>
-            <div style={{ fontFamily: font.mono, fontSize: fontSize.lg, color: color.fg, marginBottom: '4px' }}>
-              DATA SOURCES
-            </div>
-            <div style={{ fontFamily: font.body, fontSize: fontSize.md, color: color.fgDisabled }}>
-              Configure credentials for all 12 data sources
-            </div>
-          </div>
-          <span style={{ color: color.fgDisabled, fontSize: '18px' }}>›</span>
-        </div>
-      </Link>
-
       {isOnboarding && (
         <div style={{
           background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.35)',
@@ -363,6 +341,9 @@ function SettingsContent() {
 
       {/* ── PROMPT PACKS SECTION ──────────────────────────────────────── */}
       <PromptPacksSection />
+
+      {/* ── DATA SOURCES SECTION ──────────────────────────────────────── */}
+      <DataSourcesSection />
     </div>
   );
 }
@@ -548,6 +529,104 @@ function PromptPacksSection() {
       <p style={{ fontFamily: font.body, fontSize: fontSize.xs, color: color.fgGhost, marginTop: '16px' }}>
         Add custom packs to <code style={{ fontFamily: font.mono }}>prompt_packs/</code> as YAML files.
       </p>
+    </div>
+  );
+}
+
+const SOURCE_DESCRIPTIONS: Record<string, string> = {
+  reddit: 'Pain-point posts from targeted subreddits',
+  hn: 'Ask HN posts via Algolia search',
+  google_trends: 'Trending search terms',
+  github: 'Trending repos',
+  youtube: 'Pain-point videos',
+  product_hunt: 'Feature-request signals',
+  stack_overflow: 'Unanswered dev questions',
+  twitter: 'Social signals (free tier limited)',
+  g2_reviews: '1-2 star product reviews',
+  indie_hackers: 'Revenue-validated signals',
+  app_store: 'iOS app reviews',
+  play_store: 'Android app reviews',
+};
+
+function DataSourcesSection() {
+  const { data: sources, isLoading } = useSWR<SourceStatus[]>(
+    endpoints.sources, fetcher, { refreshInterval: 30_000 }
+  );
+
+  return (
+    <div style={{ marginTop: spacing['4xl'], borderTop: `1px solid ${color.border}`, paddingTop: '40px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+        <div style={{
+          fontFamily: font.mono, fontSize: fontSize.base, color: color.fgDisabled,
+          textTransform: 'uppercase' as const, letterSpacing: '1.5px',
+        }}>
+          DATA SOURCES
+        </div>
+      </div>
+      <p style={{
+        fontFamily: font.body, fontSize: fontSize.md, color: color.fgGhost,
+        marginBottom: spacing['2xl'], lineHeight: 1.6,
+      }}>
+        Configure credentials and search settings for each data source. Click a source to edit its configuration.
+      </p>
+
+      {isLoading && (
+        <div style={{ color: color.fgDisabled, fontFamily: font.mono, fontSize: fontSize.md }}>LOADING...</div>
+      )}
+
+      {sources && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: color.surfaceHover }}>
+          {sources.map((s) => {
+            const configured = s.configured;
+            const statusColor = configured ? color.success : color.warning;
+            const statusLabel = configured ? 'CONFIGURED' : 'NEEDS SETUP';
+
+            return (
+              <Link
+                key={s.slug}
+                href={`/settings/sources/${s.slug}`}
+                style={{ textDecoration: 'none' }}
+              >
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: `${spacing.md} ${spacing.xl}`,
+                  background: color.bg,
+                  cursor: 'pointer',
+                  transition: 'background 0.15s',
+                }}
+                  onMouseEnter={e => (e.currentTarget.style.background = color.surface)}
+                  onMouseLeave={e => (e.currentTarget.style.background = color.bg)}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{
+                      fontFamily: font.mono, fontSize: fontSize.base, color: color.fg,
+                      letterSpacing: '0.5px', textTransform: 'uppercase' as const,
+                    }}>
+                      {sourceLabel[s.slug] || s.slug}
+                    </div>
+                    <div style={{
+                      fontFamily: font.body, fontSize: fontSize.sm, color: color.fgDisabled,
+                      marginTop: '2px',
+                    }}>
+                      {SOURCE_DESCRIPTIONS[s.slug] || ''}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md, flexShrink: 0 }}>
+                    <span style={{
+                      fontFamily: font.mono, fontSize: fontSize.xs, letterSpacing: '0.8px',
+                      color: statusColor, border: `1px solid ${statusColor}`,
+                      padding: '2px 8px',
+                    }}>
+                      {statusLabel}
+                    </span>
+                    <span style={{ color: color.fgGhost, fontSize: fontSize.lg }}>›</span>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
