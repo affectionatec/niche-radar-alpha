@@ -161,7 +161,8 @@ def get_niche(niche_id: str):
         # Latest analysis row for web_validation + verdict details
         analysis_row = db.execute(
             "SELECT verdict, opportunity_score, weighted_score, tier, feasibility_score, "
-            "web_validation, a6_result, a7_result, a8_result, a4_result "
+            "web_validation, a6_result, a7_result, a8_result, a4_result, "
+            "a2_aggregate, a3_result, a5_result, confidence "
             "FROM niche_analyses WHERE niche_id=? ORDER BY analyzed_at DESC LIMIT 1",
             (niche_id,),
         ).fetchone()
@@ -172,6 +173,7 @@ def get_niche(niche_id: str):
             a4_scores = None
             if isinstance(a4_raw, dict):
                 a4_scores = a4_raw.get("scores", a4_raw)
+            a6_full = _json.loads(analysis_row[6]) if analysis_row[6] else None
             niche["analysis"] = {
                 "verdict": analysis_row[0],
                 "opportunity_score": analysis_row[1],
@@ -179,10 +181,13 @@ def get_niche(niche_id: str):
                 "pipeline_tier": analysis_row[3],
                 "feasibility_score": analysis_row[4],
                 "web_validation": _json.loads(analysis_row[5]) if analysis_row[5] else None,
-                "go_no_go_rationale": (_json.loads(analysis_row[6]) or {}).get("full_rationale") if analysis_row[6] else None,
+                "go_no_go_rationale": (a6_full or {}).get("full_rationale"),
                 "prd": _json.loads(analysis_row[7]) if analysis_row[7] else None,
                 "brief": _json.loads(analysis_row[8]) if analysis_row[8] else None,
                 "a4_scores": a4_scores,
+                "a6_detail": a6_full,
+                "a5_detail": _json.loads(analysis_row[12]) if analysis_row[12] else None,
+                "confidence": analysis_row[13],
             }
         return {"niche": niche, "items": items}
     finally:

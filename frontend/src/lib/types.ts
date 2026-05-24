@@ -79,6 +79,20 @@ export interface NicheAnalysis {
   prd: Record<string, unknown> | null;
   brief: Record<string, unknown> | null;
   a4_scores: A4Scores | null;
+  a6_detail: A6Detail | null;
+  a5_detail: Record<string, unknown> | null;
+  confidence: number | null;
+}
+
+export interface A6Detail {
+  verdict: string | null;
+  confidence: number | null;
+  one_line_rationale: string | null;
+  full_rationale: string | null;
+  killer_risk: string | null;
+  pivot_suggestion: string | null;
+  conditions_to_reconsider: string | null;
+  recommended_next_step: string | null;
 }
 
 export interface A4DimensionScore {
