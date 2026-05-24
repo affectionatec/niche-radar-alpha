@@ -100,9 +100,9 @@ defensibility: 0.10
 
 #### Acceptance Criteria
 
-- [ ] README lists all 7 dimensions with names, weights, and definitions
-- [ ] Niche Detail page displays per-dimension sub-scores
-- [ ] Settings provides weight customization (at minimum via YAML config)
+- [x] README lists all 7 dimensions with names, weights, and definitions
+- [x] Niche Detail page displays per-dimension sub-scores
+- [x] Settings provides weight customization (at minimum via YAML config)
 
 ---
 
@@ -148,7 +148,7 @@ Place real output samples from A7 (PRD Writer) and A8 (Brief Creator) in `docs/s
 
 - [ ] README header has a GIF or video demo
 - [ ] Dashboard section has at least 3 screenshots
-- [ ] `docs/sample-reports/` contains at least 2 complete output samples
+- [x] `docs/sample-reports/` contains at least 2 complete output samples
 
 ---
 
@@ -218,9 +218,9 @@ A6 Go/No-Go Judge: NO-GO
 
 #### Acceptance Criteria
 
-- [ ] `docs/AGENTS.md` documents the design logic of all 8 agents (full prompts not required)
-- [ ] Dashboard has "Why this verdict" agent-chain visualization
-- [ ] Settings provides a prompt override mechanism (at minimum file-level)
+- [x] `docs/AGENTS.md` documents the design logic of all 8 agents (full prompts not required)
+- [x] Dashboard has "Why this verdict" agent-chain visualization
+- [x] Settings provides a prompt override mechanism (at minimum file-level)
 
 ---
 
@@ -300,9 +300,9 @@ class CollectorHealthMonitor:
 
 #### Acceptance Criteria
 
-- [ ] README data sources table includes a reliability column
-- [ ] Dashboard has a Source Health view
-- [ ] Dashboard highlights broken scrapers (failures exceed N threshold) in red
+- [x] README data sources table includes a reliability column
+- [x] Dashboard has a Source Health view
+- [x] Dashboard highlights broken scrapers (failures exceed N threshold) in red
 
 ---
 
@@ -374,8 +374,8 @@ CLUSTERING_MIN_CLUSTER_SIZE=2
 
 #### Acceptance Criteria
 
-- [ ] `docs/ARCHITECTURE.md` includes a complete clustering design explanation
-- [ ] Key parameters are exposed as environment variables / Settings config
+- [x] `docs/ARCHITECTURE.md` includes a complete clustering design explanation
+- [x] Key parameters are exposed as environment variables / Settings config
 
 ---
 
@@ -450,9 +450,9 @@ Cost Breakdown (last 30 days, $14.40 total)
 
 #### Acceptance Criteria
 
-- [ ] LLM usage is recorded in the database
-- [ ] Settings page has a cost estimator
-- [ ] Dashboard has a Cost Insights view
+- [x] LLM usage is recorded in the database
+- [x] Settings page has a cost estimator
+- [x] Dashboard has a Cost Insights view
 
 ---
 
@@ -634,17 +634,17 @@ Ordered by ROI (return on investment):
 
 ### Weeks 2–3: Product Depth
 
-- [ ] **P0.3** — Publish agent design + agent-chain visualization on dashboard (2–3 days)
-- [ ] **P1.2** — Clustering design documentation (1 day)
-- [ ] **P1.3** — Cost estimation tool (1–2 days)
+- [x] **P0.3** — Publish agent design + agent-chain visualization on dashboard (2–3 days)
+- [x] **P1.2** — Clustering design documentation (1 day)
+- [x] **P1.3** — Cost estimation tool (1–2 days)
 
 **Expected outcome**: Upgrade from "looks like a nice tool" to "this is a serious tool." PR contributions and partnership inquiries begin.
 
 ### Weeks 4–6: Monetization Exploration
 
-- [ ] **P2.1** — Launch weekly digest email (Path B monetization)
-- [ ] **P2.3** — Ship 2–3 prompt packs
-- [ ] **P2.2** — Build golden set + eval pipeline
+- [x] **P2.1** — Launch weekly digest email (Path B monetization)
+- [x] **P2.3** — Ship 2–3 prompt packs
+- [x] **P2.2** — Build golden set + eval pipeline
 
 **Expected outcome**: First paying user acquired; PMF validated.
 

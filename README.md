@@ -146,11 +146,12 @@ Visit **http://localhost:3000**. If no LLM key is configured yet, you'll be redi
 |------|-------------|
 | **Home** | System health across all 12 sources, data freshness, collection stats |
 | **Niches** | Sortable table of scored candidates with LLM score, verdict, momentum |
-| **Niche Detail** | Full scoring breakdown per dimension, raw items, web validation, generated PRD |
+| **Niche Detail** | Full scoring breakdown per dimension, agent reasoning chain (A4→A5→A6), web validation, generated PRD |
 | **Shortlist** | User-curated starred opportunities |
-| **Pipeline** | Visual stage-by-stage workflow, agent activity feed, run history |
+| **Pipeline** | Visual stage-by-stage workflow, agent activity feed, A/B run comparison |
+| **Cost** | LLM token usage by agent, daily spend chart, per-run cost breakdown |
 | **Reports** | Browse generated Markdown analysis reports |
-| **Settings** | LLM provider config (8 providers, live model refresh), scoring weights, data source credentials |
+| **Settings** | LLM provider config (8 providers, live model refresh), scoring weights, prompt packs, data source credentials |
 
 > [!TIP]
 > See [sample reports](docs/sample-reports/) for examples of pipeline output — including a 🟢 GO verdict with full PRD and a 🔴 NO-GO verdict with detailed rationale.
@@ -224,20 +225,25 @@ niche-radar-alpha/
 │   ├── agents/                     # 8-agent LLM pipeline
 │   │   ├── pipeline.py             #   Phase A–D orchestration
 │   │   ├── models.py               #   A1–A8 Pydantic I/O
-│   │   ├── prompts.py              #   Agent system prompts
+│   │   ├── prompts.py              #   Agent system prompts + prompt pack loader
 │   │   └── clustering.py           #   Jaccard + LLM clustering
-│   ├── llm/                        # LLM client abstraction
+│   ├── llm/                        # LLM client abstraction + usage tracking
+│   ├── eval/                       # Golden set evaluation framework
 │   ├── storage/                    # SQLite/PostgreSQL repository
 │   ├── api/                        # FastAPI server + job manager
 │   └── reports/                    # Markdown report generator
 ├── frontend/                       # Next.js dashboard
 │   ├── Dockerfile                  # Frontend container
 │   └── src/
-│       ├── app/                    # Page routes (10 pages)
+│       ├── app/                    # Page routes (11 pages)
 │       ├── components/             # Shared UI components
 │       └── lib/                    # API client, types, design tokens
+├── prompt_packs/                   # YAML-based prompt override packs
+├── eval/                           # Golden set data for pipeline evaluation
 ├── docs/                           # Extended documentation
-│   ├── ARCHITECTURE.md             # System design & module map
+│   ├── ARCHITECTURE.md             # System design, module map, clustering strategy
+│   ├── AGENTS.md                   # Agent design philosophy + prompt documentation
+│   ├── MONETIZATION.md             # Monetization strategies + deployment guide
 │   ├── PRODUCT.md                  # Problem statement & features
 │   ├── DESIGN.md                   # UI/UX design system
 │   ├── spec.md                     # Full MVP specification
@@ -261,6 +267,52 @@ Key environment variables (see [`.env.example`](.env.example) for the full list)
 
 > [!IMPORTANT]
 > All settings can also be configured from the web dashboard's **Settings** page — no `.env` editing required after initial setup.
+
+### Clustering Configuration
+
+The clustering algorithm (Phase B) is configurable via environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NR_JACCARD_THRESHOLD` | `0.25` | Minimum keyword overlap to cluster items |
+| `NR_CLUSTER_LLM_MIN_SIZE` | `3` | Minimum cluster size for LLM refinement |
+| `NR_CLUSTER_LLM_MAX_ITEMS` | `40` | Max items per LLM refinement batch |
+| `NR_CLUSTER_LLM_TEMP` | `0.2` | Temperature for clustering LLM calls |
+
+## Prompt Packs
+
+Prompt packs customize how agents evaluate niches for different audiences. Three built-in packs are included:
+
+| Pack | Focus | Key Rules |
+|------|-------|-----------|
+| `indie_hacker` | Solo-founder economics | Build feasibility ↑, market size ↓, no funding required |
+| `vc_scout` | Venture-scale opportunities | TAM > $100M required, defensibility ↑, network effects |
+| `service_business` | Agency / consulting | Distribution ease ↑, recurring revenue, templatable delivery |
+
+Packs live in `prompt_packs/` as YAML files. Create your own by defining `overrides` per agent:
+
+```yaml
+name: my_pack
+description: "Custom evaluation lens"
+overrides:
+  a4:
+    append: |
+      Adjust scoring weights: build_feasibility = 0.25, market_size = 0.10
+  a6:
+    append: |
+      If monthly revenue < $5,000, lean NO-GO
+```
+
+View available packs from **Settings → Prompt Packs** in the dashboard.
+
+## Cost Tracking
+
+Every LLM call is automatically tracked — tokens, cost, and agent attribution. Visit the **Cost** page to see:
+
+- Total prompt/completion tokens across all runs
+- Per-agent usage breakdown (which agents consume the most)
+- Daily usage chart
+- Per-pipeline-run cost breakdown
 
 ## CLI Reference
 
@@ -307,7 +359,10 @@ pytest -v
 | Document | Description |
 |----------|-------------|
 | [CONTEXT.md](CONTEXT.md) | Domain glossary — canonical terms used in the codebase |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, module map, Mermaid diagrams |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, module map, clustering strategy |
+| [AGENTS.md](docs/AGENTS.md) | Agent design philosophy, prompts, failure cases |
 | [PRODUCT.md](docs/PRODUCT.md) | Problem statement, users, features, non-goals |
 | [DESIGN.md](docs/DESIGN.md) | UI/UX design system (xAI-inspired dark theme) |
+| [MONETIZATION.md](docs/MONETIZATION.md) | Monetization strategies and deployment guide |
 | [spec.md](docs/spec.md) | Full MVP specification |
+| [Sample Reports](docs/sample-reports/) | Example pipeline output (GO + NO-GO verdicts) |
