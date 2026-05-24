@@ -143,6 +143,21 @@ CREATE TABLE IF NOT EXISTS llm_usage (
 );
 CREATE INDEX IF NOT EXISTS idx_llm_usage_run ON llm_usage(pipeline_run);
 CREATE INDEX IF NOT EXISTS idx_llm_usage_created ON llm_usage(created_at);
+
+CREATE TABLE IF NOT EXISTS pipeline_runs (
+    id              TEXT PRIMARY KEY,
+    prompt_hash     TEXT NOT NULL,
+    model           TEXT NOT NULL,
+    item_count      INTEGER NOT NULL DEFAULT 0,
+    cluster_count   INTEGER NOT NULL DEFAULT 0,
+    niche_count     INTEGER NOT NULL DEFAULT 0,
+    budget_used     INTEGER NOT NULL DEFAULT 0,
+    label           TEXT,
+    started_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at    TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_pipeline_runs_started ON pipeline_runs(started_at);
+CREATE INDEX IF NOT EXISTS idx_pipeline_runs_hash    ON pipeline_runs(prompt_hash);
 """
 
 

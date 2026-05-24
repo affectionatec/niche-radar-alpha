@@ -1,0 +1,45 @@
+[
+  {
+    "item_id": "golden_001",
+    "text": "I spend 3 hours every week manually copying client feedback from Slack, email, and Figma comments into a single spreadsheet. There has to be a better way to consolidate design feedback.",
+    "source": "reddit",
+    "expected_a1_pass": true,
+    "expected_a6_verdict": "GO",
+    "expected_tier": "hot",
+    "expected_score_range": [45, 70],
+    "notes": "Clear pain, specific user, monetizable, moderate competition"
+  },
+  {
+    "item_id": "golden_002",
+    "text": "The weather is nice today. I went for a walk and saw a dog.",
+    "source": "reddit",
+    "expected_a1_pass": false,
+    "notes": "Pure noise — no pain point, no product need"
+  },
+  {
+    "item_id": "golden_003",
+    "text": "Why doesn't anyone build a simple tool to track my brain fog episodes and correlate them with sleep, diet, and medication? I'd pay $20/month for this.",
+    "source": "reddit",
+    "expected_a1_pass": true,
+    "expected_a6_verdict": "GO",
+    "expected_tier": "hot",
+    "expected_score_range": [40, 65],
+    "notes": "Explicit willingness to pay, niche health tracking"
+  },
+  {
+    "item_id": "golden_004",
+    "text": "I hate how Google keeps changing their search results. Everything is AI slop now.",
+    "source": "hn",
+    "expected_a1_pass": false,
+    "notes": "General complaint, no actionable product need"
+  },
+  {
+    "item_id": "golden_005",
+    "text": "As a DevOps engineer, I need to monitor 15 different SaaS tools for outages. Each has its own status page with different formats. I check them manually every morning.",
+    "source": "hn",
+    "expected_a1_pass": true,
+    "expected_a6_verdict": "GO",
+    "expected_score_range": [50, 70],
+    "notes": "Clear pain, specific audience (DevOps), existing competitors but gap exists"
+  }
+]

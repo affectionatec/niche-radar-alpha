@@ -14,6 +14,7 @@ A8's user prompt is special: it embeds the full JSON dumps of A1..A7 as context.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from string import Template
 from typing import Any
@@ -517,6 +518,12 @@ def build_system_prompt(agent_id: str) -> str:
     if agent_id not in SYSTEM_PROMPTS:
         raise ValueError(f"Unknown agent_id: {agent_id}")
     return SYSTEM_PROMPTS[agent_id]
+
+
+def compute_prompt_hash() -> str:
+    """Return a short hash of all system prompts — changes when any prompt is modified."""
+    combined = "".join(SYSTEM_PROMPTS[k] for k in sorted(SYSTEM_PROMPTS.keys()))
+    return hashlib.sha256(combined.encode()).hexdigest()[:12]
 
 
 AGENT_IDS: tuple[str, ...] = ("a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8")

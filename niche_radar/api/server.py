@@ -734,3 +734,84 @@ def get_cost_summary(days: int = 30):
         return get_usage_summary(db_path, days=days)
     finally:
         db.close()
+
+
+# ── Pipeline Runs (A/B comparison) ────────────────────────────────────────────
+
+@app.get("/api/pipeline/runs")
+def list_pipeline_runs(limit: int = 20):
+    """List versioned pipeline runs for A/B comparison."""
+    db = _db()
+    try:
+        rows = db.execute(
+            "SELECT id, prompt_hash, model, item_count, cluster_count, niche_count, "
+            "budget_used, label, started_at, completed_at "
+            "FROM pipeline_runs ORDER BY started_at DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+        return [
+            {
+                "id": r[0], "prompt_hash": r[1], "model": r[2],
+                "item_count": r[3], "cluster_count": r[4], "niche_count": r[5],
+                "budget_used": r[6], "label": r[7],
+                "started_at": r[8], "completed_at": r[9],
+            }
+            for r in rows
+        ]
+    finally:
+        db.close()
+
+
+@app.get("/api/pipeline/runs/{run_id}")
+def get_pipeline_run(run_id: str):
+    """Get a specific pipeline run with its niche results for comparison."""
+    db = _db()
+    try:
+        run_row = db.execute(
+            "SELECT id, prompt_hash, model, item_count, cluster_count, niche_count, "
+            "budget_used, label, started_at, completed_at "
+            "FROM pipeline_runs WHERE id=?", (run_id,),
+        ).fetchone()
+        if not run_row:
+            raise HTTPException(status_code=404, detail="Pipeline run not found")
+        niches = db.execute(
+            "SELECT na.niche_id, nc.keyword, na.verdict, na.opportunity_score, "
+            "na.weighted_score, na.tier, na.feasibility_score "
+            "FROM niche_analyses na JOIN niche_candidates nc ON na.niche_id = nc.id "
+            "WHERE na.pipeline_run=? ORDER BY na.weighted_score DESC",
+            (run_id,),
+        ).fetchall()
+        return {
+            "run": {
+                "id": run_row[0], "prompt_hash": run_row[1], "model": run_row[2],
+                "item_count": run_row[3], "cluster_count": run_row[4], "niche_count": run_row[5],
+                "budget_used": run_row[6], "label": run_row[7],
+                "started_at": run_row[8], "completed_at": run_row[9],
+            },
+            "niches": [
+                {
+                    "niche_id": n[0], "keyword": n[1], "verdict": n[2],
+                    "opportunity_score": n[3], "weighted_score": n[4],
+                    "tier": n[5], "feasibility_score": n[6],
+                }
+                for n in niches
+            ],
+        }
+    finally:
+        db.close()
+
+
+class PipelineRunLabel(BaseModel):
+    label: str
+
+
+@app.put("/api/pipeline/runs/{run_id}/label")
+def label_pipeline_run(run_id: str, body: PipelineRunLabel):
+    """Label a pipeline run (e.g. 'baseline', 'new-prompts-v2')."""
+    db = _db()
+    try:
+        db.execute("UPDATE pipeline_runs SET label=? WHERE id=?", (body.label, run_id))
+        db.commit()
+        return {"ok": True}
+    finally:
+        db.close()

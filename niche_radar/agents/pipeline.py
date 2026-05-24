@@ -28,6 +28,7 @@ import structlog
 from niche_radar.agents.aggregate import aggregate_cluster_a2
 from niche_radar.agents.clustering import Cluster, cluster_extractions
 from niche_radar.agents.llm_config import resolve_agent_client
+from niche_radar.agents.prompts import compute_prompt_hash
 from niche_radar.llm.usage import flush_usage
 from niche_radar.agents.models import A1Output, A2Output, PipelineResult
 from niche_radar.agents.orchestrator import (
@@ -553,6 +554,30 @@ def _flush_llm_usage(db: sqlite3.Connection, pipeline_run: str) -> None:
         logger.warning("llm_usage_flush_failed", error=str(exc))
 
 
+def _record_pipeline_run(
+    db: sqlite3.Connection,
+    pipeline_run: str,
+    settings: object,
+    item_count: int,
+    cluster_count: int,
+    niche_count: int,
+    budget_used: int,
+) -> None:
+    """Record a versioned pipeline run for A/B comparison."""
+    try:
+        model = getattr(settings, "llm_model", "unknown")
+        prompt_hash = compute_prompt_hash()
+        db.execute(
+            "INSERT OR IGNORE INTO pipeline_runs "
+            "(id, prompt_hash, model, item_count, cluster_count, niche_count, budget_used, completed_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+            (pipeline_run, prompt_hash, model, item_count, cluster_count, niche_count, budget_used),
+        )
+        db.commit()
+    except Exception as exc:
+        logger.warning("record_pipeline_run_failed", error=str(exc))
+
+
 def run_pipeline(
     db: sqlite3.Connection,
     settings,
@@ -658,6 +683,7 @@ def run_pipeline(
         }
 
     _flush_llm_usage(db, pipeline_run)
+    _record_pipeline_run(db, pipeline_run, settings, len(items), len(clusters), persisted, budget.count)
     summary = {
         "pipeline_run": pipeline_run,
         "items": len(items),
