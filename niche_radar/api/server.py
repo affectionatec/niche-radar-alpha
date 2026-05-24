@@ -719,3 +719,18 @@ def get_job_logs(job_id: str):
         "created_at": job.created_at,
         "completed_at": job.completed_at,
     }
+
+
+# ── Cost Insights ──────────────────────────────────────────────────────────────
+
+@app.get("/api/cost/summary")
+def get_cost_summary(days: int = 30):
+    """Aggregated LLM token usage for the Cost Insights dashboard."""
+    from niche_radar.llm.usage import get_usage_summary
+    db = _db()
+    try:
+        db_path_row = db.execute("PRAGMA database_list").fetchone()
+        db_path = db_path_row[2] if db_path_row else ""
+        return get_usage_summary(db_path, days=days)
+    finally:
+        db.close()

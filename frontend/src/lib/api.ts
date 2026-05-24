@@ -56,6 +56,7 @@ export const endpoints = {
   sources: '/api/sources',
   source: (slug: string) => `/api/sources/${slug}`,
   sourceTest: (slug: string) => `/api/sources/${slug}/test`,
+  costSummary: (days: number = 30) => `/api/cost/summary?days=${days}`,
 };
 
 export async function postSourceCredentials(

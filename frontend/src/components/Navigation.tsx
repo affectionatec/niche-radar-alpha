@@ -8,6 +8,7 @@ const NAV_LINKS = [
   { href: '/niches', label: 'OPPORTUNITIES' },
   { href: '/shortlist', label: 'SHORTLIST' },
   { href: '/reports', label: 'REPORTS' },
+  { href: '/cost', label: 'COST' },
   { href: '/settings', label: 'SETTINGS' },
 ];
 

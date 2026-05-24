@@ -80,6 +80,9 @@ def _call_agent(
     """
     model_cls = AGENT_MODEL_CLS[agent_id]
     last_exc: str | None = None
+    # Tag client with current agent for usage tracking
+    if hasattr(client, "set_agent"):
+        client.set_agent(agent_id)
 
     for attempt in range(retries + 1):
         if budget_check is not None:

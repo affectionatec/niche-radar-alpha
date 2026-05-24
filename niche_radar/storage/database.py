@@ -130,6 +130,19 @@ CREATE TABLE IF NOT EXISTS pipeline_jobs (
 );
 CREATE INDEX IF NOT EXISTS idx_pipeline_jobs_created ON pipeline_jobs(created_at);
 CREATE INDEX IF NOT EXISTS idx_pipeline_jobs_status  ON pipeline_jobs(status);
+
+CREATE TABLE IF NOT EXISTS llm_usage (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    pipeline_run    TEXT,
+    agent           TEXT NOT NULL,
+    model           TEXT NOT NULL,
+    prompt_tokens   INTEGER NOT NULL DEFAULT 0,
+    completion_tokens INTEGER NOT NULL DEFAULT 0,
+    total_tokens    INTEGER NOT NULL DEFAULT 0,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_llm_usage_run ON llm_usage(pipeline_run);
+CREATE INDEX IF NOT EXISTS idx_llm_usage_created ON llm_usage(created_at);
 """
 
 

@@ -4,12 +4,24 @@ from __future__ import annotations
 
 import json
 
+from niche_radar.llm.usage import record_usage
+
 
 class OpenAICompatClient:
     def __init__(self, api_key: str, model: str, base_url: str | None = None) -> None:
         from openai import OpenAI
         self._client = OpenAI(api_key=api_key, base_url=base_url or None)
         self._model = model
+        self._current_agent: str = "unknown"
+
+    def set_agent(self, agent: str) -> None:
+        """Set the current agent name for usage tracking."""
+        self._current_agent = agent
+
+    def _track(self, response: object) -> None:
+        usage = getattr(response, "usage", None)
+        if usage:
+            record_usage(self._current_agent, self._model, usage)
 
     def complete(self, prompt: str) -> str:
         response = self._client.chat.completions.create(
@@ -17,10 +29,10 @@ class OpenAICompatClient:
             messages=[{"role": "user", "content": prompt}],
             max_tokens=2048,
         )
+        self._track(response)
         return response.choices[0].message.content or ""
 
     def complete_json(self, prompt: str) -> dict:
-        # Try with json_object response format; fall back to text extraction
         try:
             response = self._client.chat.completions.create(
                 model=self._model,
@@ -28,6 +40,7 @@ class OpenAICompatClient:
                 response_format={"type": "json_object"},
                 max_tokens=4096,
             )
+            self._track(response)
             return json.loads(response.choices[0].message.content or "{}")
         except Exception:
             response = self._client.chat.completions.create(
@@ -35,6 +48,7 @@ class OpenAICompatClient:
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=4096,
             )
+            self._track(response)
             return _extract_json(response.choices[0].message.content or "")
 
     def complete_structured(
@@ -54,9 +68,11 @@ class OpenAICompatClient:
             response = self._client.chat.completions.create(
                 **kwargs, response_format={"type": "json_object"}
             )
+            self._track(response)
             return json.loads(response.choices[0].message.content or "{}")
         except Exception:
             response = self._client.chat.completions.create(**kwargs)
+            self._track(response)
             return _extract_json(response.choices[0].message.content or "")
 
 

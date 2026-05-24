@@ -28,6 +28,7 @@ import structlog
 from niche_radar.agents.aggregate import aggregate_cluster_a2
 from niche_radar.agents.clustering import Cluster, cluster_extractions
 from niche_radar.agents.llm_config import resolve_agent_client
+from niche_radar.llm.usage import flush_usage
 from niche_radar.agents.models import A1Output, A2Output, PipelineResult
 from niche_radar.agents.orchestrator import (
     BudgetExceeded,
@@ -538,6 +539,20 @@ def run_phase_d(
 # ============================================================================
 
 
+def _flush_llm_usage(db: sqlite3.Connection, pipeline_run: str) -> None:
+    """Flush accumulated LLM usage records to the database."""
+    try:
+        # Extract the database file path from the connection
+        db_path_row = db.execute("PRAGMA database_list").fetchone()
+        db_path = db_path_row[2] if db_path_row else ""
+        if db_path:
+            flushed = flush_usage(db_path, pipeline_run)
+            if flushed:
+                logger.info("llm_usage_flushed", count=flushed, pipeline_run=pipeline_run)
+    except Exception as exc:
+        logger.warning("llm_usage_flush_failed", error=str(exc))
+
+
 def run_pipeline(
     db: sqlite3.Connection,
     settings,
@@ -635,12 +650,14 @@ def run_pipeline(
     except BudgetExceeded as exc:
         if log_fn:
             log_fn(f"pipeline_aborted reason=budget_exceeded {exc}")
+        _flush_llm_usage(db, pipeline_run)
         return {
             "pipeline_run": pipeline_run, "items": len(items), "passed": -1,
             "clusters": -1, "persisted": -1, "budget_used": budget.count,
             "aborted": "budget_exceeded",
         }
 
+    _flush_llm_usage(db, pipeline_run)
     summary = {
         "pipeline_run": pipeline_run,
         "items": len(items),
