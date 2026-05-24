@@ -241,6 +241,30 @@ export const sourceFreshnessRule: Record<string, string> = {
   play_store: 'play_store_hours',
 };
 
+// ── Source reliability labels ────────────────────────────────────────────
+// Classification: how fragile is each collector?
+// 🟢 Stable = official API / RSS, rarely breaks
+// 🟡 Fragile = unofficial API, may change without notice
+// 🟠 Brittle = scraping, anti-bot measures, breaks periodically
+// 🔴 Very Brittle = aggressive anti-bot, requires auth/cookies, breaks often
+
+export type ReliabilityLevel = 'stable' | 'fragile' | 'brittle' | 'very_brittle';
+
+export const sourceReliability: Record<string, { level: ReliabilityLevel; label: string; color: string; icon: string; note: string }> = {
+  reddit:         { level: 'stable',       label: 'Stable',       color: 'rgba(74,222,128,0.85)',  icon: '🟢', note: 'Official API via PRAW' },
+  hn:             { level: 'stable',       label: 'Stable',       color: 'rgba(74,222,128,0.85)',  icon: '🟢', note: 'Official Algolia API' },
+  google_trends:  { level: 'fragile',      label: 'Fragile',      color: 'rgba(251,191,36,0.85)',  icon: '🟡', note: 'Unofficial pytrends library' },
+  github:         { level: 'stable',       label: 'Stable',       color: 'rgba(74,222,128,0.85)',  icon: '🟢', note: 'Official REST API' },
+  youtube:        { level: 'stable',       label: 'Stable',       color: 'rgba(74,222,128,0.85)',  icon: '🟢', note: 'Official Data API v3' },
+  product_hunt:   { level: 'fragile',      label: 'Fragile',      color: 'rgba(251,191,36,0.85)',  icon: '🟡', note: 'GraphQL API, auth changes possible' },
+  stack_overflow: { level: 'stable',       label: 'Stable',       color: 'rgba(74,222,128,0.85)',  icon: '🟢', note: 'Official API v2.3' },
+  twitter:        { level: 'very_brittle', label: 'Very Brittle', color: 'rgba(255,80,80,0.85)',   icon: '🔴', note: 'Cookie auth + GraphQL, breaks often' },
+  g2_reviews:     { level: 'brittle',      label: 'Brittle',      color: 'rgba(255,160,60,0.85)',  icon: '🟠', note: 'HTML scraping, anti-bot' },
+  indie_hackers:  { level: 'brittle',      label: 'Brittle',      color: 'rgba(255,160,60,0.85)',  icon: '🟠', note: 'HTML scraping' },
+  app_store:      { level: 'fragile',      label: 'Fragile',      color: 'rgba(251,191,36,0.85)',  icon: '🟡', note: 'Unofficial itunes API / scraping' },
+  play_store:     { level: 'fragile',      label: 'Fragile',      color: 'rgba(251,191,36,0.85)',  icon: '🟡', note: 'google-play-scraper' },
+};
+
 // ── LLM Provider registry ────────────────────────────────────────────────
 // Each provider maps to a backend provider type (openai_compat or anthropic)
 // plus a curated model list and default base URL.

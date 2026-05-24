@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { SourceHealth, Job, JobStatus } from '@/lib/types';
-import { sourceIcon, sourceLabel } from '@/lib/tokens';
+import { sourceIcon, sourceLabel, sourceReliability } from '@/lib/tokens';
 
 interface SystemHealthProps {
   sources: SourceHealth[];
@@ -75,6 +75,7 @@ export default function SystemHealth({ sources, recentJobs }: SystemHealthProps)
         {sources.map((s) => {
           const dot = statusDot(s.status);
           const icon = sourceIcon[s.source] ?? '·';
+          const reliability = sourceReliability[s.source];
 
           return (
             <Link
@@ -176,6 +177,36 @@ export default function SystemHealth({ sources, recentJobs }: SystemHealthProps)
                     {timeAgo(s.last_run)}
                   </span>
                 </div>
+
+                {/* Reliability badge */}
+                {reliability && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    borderTop: '1px solid rgba(255,255,255,0.04)',
+                    paddingTop: '8px',
+                  }}>
+                    <span style={{ fontSize: '10px' }}>{reliability.icon}</span>
+                    <span style={{
+                      fontFamily: 'var(--font-geist-mono)',
+                      fontSize: '9px',
+                      letterSpacing: '0.5px',
+                      color: reliability.color,
+                      textTransform: 'uppercase',
+                    }}>
+                      {reliability.label}
+                    </span>
+                    <span style={{
+                      fontFamily: 'var(--font-inter)',
+                      fontSize: '9px',
+                      color: 'rgba(255,255,255,0.25)',
+                      marginLeft: 'auto',
+                    }}>
+                      {reliability.note}
+                    </span>
+                  </div>
+                )}
               </div>
             </Link>
           );

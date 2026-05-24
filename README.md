@@ -157,20 +157,20 @@ Visit **http://localhost:3000**. If no LLM key is configured yet, you'll be redi
 
 ## Data Sources
 
-| Source | Method | Credentials |
-|--------|--------|-------------|
-| Reddit | PRAW (official API) | Client ID + Secret ([free](https://www.reddit.com/prefs/apps)) |
-| Hacker News | Firebase + Algolia API | None |
-| GitHub Trending | HTML scraping | None (optional PAT) |
-| YouTube | scrapetube | None |
-| Google Trends | trendspyg | None |
-| Product Hunt | HTML scraping | None |
-| Twitter / X | GraphQL API | Cookie auth |
-| Stack Overflow | Official API | None |
-| G2 Reviews | HTML scraping | None |
-| Indie Hackers | HTML scraping | None |
-| App Store | HTML scraping | None |
-| Play Store | HTML scraping | None |
+| Source | Method | Credentials | Reliability |
+|--------|--------|-------------|-------------|
+| Reddit | PRAW (official API) | Client ID + Secret ([free](https://www.reddit.com/prefs/apps)) | 🟢 Stable |
+| Hacker News | Firebase + Algolia API | None | 🟢 Stable |
+| GitHub Trending | REST API | None (optional PAT) | 🟢 Stable |
+| YouTube | Data API v3 | None | 🟢 Stable |
+| Stack Overflow | Official API v2.3 | None | 🟢 Stable |
+| Google Trends | pytrends (unofficial) | None | 🟡 Fragile |
+| Product Hunt | GraphQL API | None | 🟡 Fragile |
+| App Store | iTunes API / scraping | None | 🟡 Fragile |
+| Play Store | google-play-scraper | None | 🟡 Fragile |
+| G2 Reviews | HTML scraping | None | 🟠 Brittle |
+| Indie Hackers | HTML scraping | None | 🟠 Brittle |
+| Twitter / X | GraphQL + cookie auth | Cookie auth | 🔴 Very Brittle |
 
 > [!TIP]
 > Most sources work out of the box with zero credentials. All source credentials can be managed from **Settings → Data Sources** in the dashboard.
