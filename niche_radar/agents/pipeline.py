@@ -28,7 +28,7 @@ import structlog
 from niche_radar.agents.aggregate import aggregate_cluster_a2
 from niche_radar.agents.clustering import Cluster, cluster_extractions
 from niche_radar.agents.llm_config import resolve_agent_client
-from niche_radar.agents.prompts import compute_prompt_hash
+from niche_radar.agents.prompts import PromptPack, compute_prompt_hash, load_prompt_pack
 from niche_radar.llm.usage import flush_usage
 from niche_radar.agents.models import A1Output, A2Output, PipelineResult
 from niche_radar.agents.orchestrator import (
@@ -136,6 +136,7 @@ def _phase_a_for_item(
     resolver: ClientsResolver,
     budget: BudgetTracker | None,
     log_fn: LogFn | None,
+    prompt_pack: PromptPack | None = None,
 ) -> tuple[str, PipelineResult]:
     """Run A1 + A2 on one raw_item. Returns (raw_item_id, PipelineResult)."""
     raw_signal = {
@@ -144,7 +145,7 @@ def _phase_a_for_item(
         "url": raw_item.get("url"),
         "scraped_at": raw_item.get("posted_at") or raw_item.get("collected_at"),
     }
-    result = run_single(raw_signal, resolver, budget_check=budget, log_fn=log_fn)
+    result = run_single(raw_signal, resolver, budget_check=budget, log_fn=log_fn, prompt_pack=prompt_pack)
     return raw_item["id"], result
 
 
@@ -193,6 +194,7 @@ def run_phase_a(
     overrides: dict[str, LLMClient] | None = None,
     budget: BudgetTracker | None = None,
     log_fn: LogFn | None = None,
+    prompt_pack: PromptPack | None = None,
 ) -> int:
     """Filter + extract per item. Returns count of items that passed A1."""
     if not items:
@@ -205,7 +207,7 @@ def run_phase_a(
     workers = min(len(items), _PHASE_MAX_WORKERS)
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = [
-            pool.submit(_phase_a_for_item, item, resolver, budget, log_fn)
+            pool.submit(_phase_a_for_item, item, resolver, budget, log_fn, prompt_pack)
             for item in items
         ]
         done_count = 0
@@ -291,6 +293,7 @@ def _phase_c_for_cluster(
     resolver: ClientsResolver,
     budget: BudgetTracker | None,
     log_fn: LogFn | None,
+    prompt_pack: PromptPack | None = None,
 ) -> PipelineResult:
     """Build cluster_context (aggregated A2 + synthetic raw_signal) and run A3..A8."""
     a2_agg = aggregate_cluster_a2(cluster.extractions)
@@ -305,7 +308,7 @@ def _phase_c_for_cluster(
         },
         "a2": a2_agg,
     }
-    return run_cluster(cluster_context, resolver, budget_check=budget, log_fn=log_fn)
+    return run_cluster(cluster_context, resolver, budget_check=budget, log_fn=log_fn, prompt_pack=prompt_pack)
 
 
 def run_phase_c(
@@ -316,6 +319,7 @@ def run_phase_c(
     overrides: dict[str, LLMClient] | None = None,
     budget: BudgetTracker | None = None,
     log_fn: LogFn | None = None,
+    prompt_pack: PromptPack | None = None,
 ) -> list[tuple[Cluster, PipelineResult]]:
     """Run A3-A8 on every cluster in parallel. Returns list of (cluster, result) pairs."""
     if not clusters:
@@ -328,7 +332,7 @@ def run_phase_c(
     out: list[tuple[Cluster, PipelineResult]] = []
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {
-            pool.submit(_phase_c_for_cluster, c, resolver, budget, log_fn): c
+            pool.submit(_phase_c_for_cluster, c, resolver, budget, log_fn, prompt_pack): c
             for c in clusters
         }
         done_count = 0
@@ -562,16 +566,18 @@ def _record_pipeline_run(
     cluster_count: int,
     niche_count: int,
     budget_used: int,
+    prompt_pack: PromptPack | None = None,
 ) -> None:
     """Record a versioned pipeline run for A/B comparison."""
     try:
         model = getattr(settings, "llm_model", "unknown")
-        prompt_hash = compute_prompt_hash()
+        prompt_hash = compute_prompt_hash(prompt_pack)
+        label = f"pack:{prompt_pack.name}" if prompt_pack else None
         db.execute(
             "INSERT OR IGNORE INTO pipeline_runs "
-            "(id, prompt_hash, model, item_count, cluster_count, niche_count, budget_used, completed_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
-            (pipeline_run, prompt_hash, model, item_count, cluster_count, niche_count, budget_used),
+            "(id, prompt_hash, model, item_count, cluster_count, niche_count, budget_used, label, completed_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+            (pipeline_run, prompt_hash, model, item_count, cluster_count, niche_count, budget_used, label),
         )
         db.commit()
     except Exception as exc:
@@ -587,14 +593,23 @@ def run_pipeline(
     overrides: dict[str, LLMClient] | None = None,
     items_override: list[dict] | None = None,
     max_calls: int | None = None,
+    prompt_pack_name: str | None = None,
 ) -> dict[str, Any]:
     """Run all four phases. Returns a summary dict.
 
     - items_override: bypass DB lookup of unprocessed items (used by --test and --signal-id).
     - overrides: per-agent LLM client overrides (test injection).
     - max_calls: hard cap on LLM calls per run. None = use BudgetTracker.for_run default.
+    - prompt_pack_name: optional name of a prompt pack from prompt_packs/ directory.
     """
     pipeline_run = str(uuid.uuid4())
+
+    # Load prompt pack if specified
+    prompt_pack: PromptPack | None = None
+    if prompt_pack_name:
+        prompt_pack = load_prompt_pack(prompt_pack_name)
+        if prompt_pack and log_fn:
+            log_fn(f"prompt_pack={prompt_pack.name} agents={list(prompt_pack.overrides.keys())}")
 
     # Determine items
     if items_override is not None:
@@ -626,6 +641,7 @@ def run_pipeline(
         passed = run_phase_a(
             db, settings, pipeline_run, items,
             dry_run=dry_run, overrides=overrides, budget=budget, log_fn=log_fn,
+            prompt_pack=prompt_pack,
         )
 
         # In dry_run we never wrote extractions, so phase B has nothing to read.
@@ -656,6 +672,7 @@ def run_pipeline(
         pairs = run_phase_c(
             db, settings, clusters,
             overrides=overrides, budget=budget, log_fn=log_fn,
+            prompt_pack=prompt_pack,
         )
 
         persisted = run_phase_d(
@@ -683,7 +700,7 @@ def run_pipeline(
         }
 
     _flush_llm_usage(db, pipeline_run)
-    _record_pipeline_run(db, pipeline_run, settings, len(items), len(clusters), persisted, budget.count)
+    _record_pipeline_run(db, pipeline_run, settings, len(items), len(clusters), persisted, budget.count, prompt_pack)
     summary = {
         "pipeline_run": pipeline_run,
         "items": len(items),

@@ -1,0 +1,30 @@
+# Indie Hacker — Prompt Pack
+# Tuned for solo developers building $1K–$50K MRR bootstrapped products.
+# Raises build-feasibility weight, lowers market-size bar, penalises ideas
+# that require external funding or large teams.
+
+name: indie_hacker
+description: >
+  Niche evaluation tuned for indie developers.
+  Prioritises build feasibility and solo-founder economics;
+  penalises ideas requiring funding or large teams.
+
+overrides:
+  a4:
+    append: |
+      IMPORTANT scoring weight adjustments for this evaluation:
+      - build_feasibility: weight = 0.25 (significantly raised — the builder is one person)
+      - market_size: weight = 0.10 (lowered — a $10K/month niche is perfectly fine)
+      - solo_founder_fit: weight = 0.15 (new dimension — can one person build AND sell this?)
+      When scoring, penalise ideas that require:
+      - A team of more than 2 people to launch
+      - External funding before generating revenue
+      - Enterprise sales cycles (> 30 days)
+
+  a6:
+    append: |
+      Apply these additional rules before rendering your verdict:
+      - If estimated monthly revenue potential is $5,000–$50,000, lean GO
+      - If external funding is required to start, lean NO-GO
+      - If the product requires regulatory approval, lean NO-GO
+      - If a solo developer can ship an MVP in < 4 weeks, that is a strong GO signal

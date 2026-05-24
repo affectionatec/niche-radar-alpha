@@ -815,3 +815,12 @@ def label_pipeline_run(run_id: str, body: PipelineRunLabel):
         return {"ok": True}
     finally:
         db.close()
+
+
+# ---------- Prompt Packs endpoints ----------
+
+@app.get("/api/prompt-packs")
+def get_prompt_packs():
+    """List available prompt packs."""
+    from niche_radar.agents.prompts import list_prompt_packs
+    return list_prompt_packs()

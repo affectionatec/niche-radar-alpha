@@ -59,6 +59,7 @@ export const endpoints = {
   costSummary: (days: number = 30) => `/api/cost/summary?days=${days}`,
   pipelineRuns: '/api/pipeline/runs',
   pipelineRun: (id: string) => `/api/pipeline/runs/${id}`,
+  promptPacks: '/api/prompt-packs',
 };
 
 export async function postSourceCredentials(

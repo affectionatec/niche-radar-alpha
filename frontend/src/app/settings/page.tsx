@@ -360,6 +360,9 @@ function SettingsContent() {
 
       {/* ── SCORING WEIGHTS SECTION ──────────────────────────────────── */}
       <ScoringWeightsSection />
+
+      {/* ── PROMPT PACKS SECTION ──────────────────────────────────────── */}
+      <PromptPacksSection />
     </div>
   );
 }
@@ -472,6 +475,79 @@ function ScoringWeightsSection() {
           </span>
         )}
       </div>
+    </div>
+  );
+}
+
+interface PromptPackInfo {
+  name: string;
+  description: string;
+  file: string;
+  agents: string[];
+}
+
+function PromptPacksSection() {
+  const { data: packs } = useSWR<PromptPackInfo[]>(endpoints.promptPacks, fetcher);
+
+  if (!packs || packs.length === 0) return null;
+
+  return (
+    <div style={{
+      marginTop: '48px',
+      border: `1px solid ${color.border}`,
+      padding: '32px',
+      background: color.surface,
+    }}>
+      <h2 style={{
+        fontFamily: font.mono, fontSize: fontSize.sm,
+        letterSpacing: '1px', color: color.fgDisabled,
+        textTransform: 'uppercase', margin: '0 0 8px 0',
+      }}>
+        PROMPT PACKS
+      </h2>
+      <p style={{ fontFamily: font.body, fontSize: fontSize.md, color: color.fgGhost, margin: '0 0 24px 0' }}>
+        Prompt packs customize how agents evaluate niches for different audiences. Select a pack when running the pipeline to change scoring weights and verdict rules.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {packs.map((pack) => (
+          <div
+            key={pack.name}
+            style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '16px 20px', background: color.surfaceHover,
+              border: `1px solid ${color.border}`,
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                <span style={{ fontFamily: font.mono, fontSize: fontSize.base, color: color.fg, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  {pack.name.replace(/_/g, ' ')}
+                </span>
+                <span style={{ fontFamily: font.mono, fontSize: fontSize.xs, color: color.fgGhost }}>
+                  {pack.file}
+                </span>
+              </div>
+              <div style={{ fontFamily: font.body, fontSize: fontSize.md, color: color.fgMuted, marginBottom: '6px' }}>
+                {pack.description}
+              </div>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {pack.agents.map(a => (
+                  <span key={a} style={{
+                    fontFamily: font.mono, fontSize: fontSize.xs, color: color.fgGhost,
+                    background: 'rgba(255,255,255,0.05)', padding: '2px 8px',
+                    letterSpacing: '0.5px', textTransform: 'uppercase',
+                  }}>
+                    {a}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <p style={{ fontFamily: font.body, fontSize: fontSize.xs, color: color.fgGhost, marginTop: '16px' }}>
+        Add custom packs to <code style={{ fontFamily: font.mono }}>prompt_packs/</code> as YAML files.
+      </p>
     </div>
   );
 }

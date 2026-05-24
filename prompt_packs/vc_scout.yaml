@@ -1,0 +1,30 @@
+# VC Scout — Prompt Pack
+# Tuned for venture capital analysts evaluating market opportunities.
+# Raises market-size and defensibility weights; penalises small niches.
+
+name: vc_scout
+description: >
+  Niche evaluation tuned for venture capital scouts.
+  Prioritises large TAM, defensibility, and network effects;
+  automatically rejects markets under $100M TAM.
+
+overrides:
+  a4:
+    append: |
+      IMPORTANT scoring weight adjustments for this evaluation:
+      - market_size: weight = 0.30 (dominant factor — VCs need large outcomes)
+      - defensibility: weight = 0.20 (moats matter for VC-backed companies)
+      - build_feasibility: weight = 0.05 (low — well-funded teams can build anything)
+      - network_effects: weight = 0.15 (new dimension — does the product get better with more users?)
+      When scoring, reward ideas that:
+      - Address markets > $1B TAM
+      - Have potential for winner-take-most dynamics
+      - Can reach $10M ARR within 3 years
+
+  a6:
+    append: |
+      Apply these additional rules before rendering your verdict:
+      - TAM < $100M → automatic NO-GO
+      - If the market has strong network effects, lean GO
+      - If the product is a commodity with no switching costs, lean NO-GO
+      - If there are already 3+ well-funded competitors, lean NO-GO unless there is a clear 10x advantage

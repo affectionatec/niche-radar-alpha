@@ -513,17 +513,84 @@ def _build_a8_user_prompt(context: dict) -> str:
     return "\n".join(sections)
 
 
-def build_system_prompt(agent_id: str) -> str:
-    """Return the system prompt for an agent. Raises if unknown."""
+def build_system_prompt(agent_id: str, prompt_pack: "PromptPack | None" = None) -> str:
+    """Return the system prompt for an agent, optionally extended by a prompt pack."""
     if agent_id not in SYSTEM_PROMPTS:
         raise ValueError(f"Unknown agent_id: {agent_id}")
-    return SYSTEM_PROMPTS[agent_id]
+    base = SYSTEM_PROMPTS[agent_id]
+    if prompt_pack and agent_id in prompt_pack.overrides:
+        override = prompt_pack.overrides[agent_id]
+        if override.get("append"):
+            base = base + "\n\n" + override["append"].strip()
+    return base
 
 
-def compute_prompt_hash() -> str:
+def compute_prompt_hash(prompt_pack: "PromptPack | None" = None) -> str:
     """Return a short hash of all system prompts — changes when any prompt is modified."""
-    combined = "".join(SYSTEM_PROMPTS[k] for k in sorted(SYSTEM_PROMPTS.keys()))
+    parts: list[str] = []
+    for k in sorted(SYSTEM_PROMPTS.keys()):
+        parts.append(build_system_prompt(k, prompt_pack))
+    combined = "".join(parts)
     return hashlib.sha256(combined.encode()).hexdigest()[:12]
 
 
 AGENT_IDS: tuple[str, ...] = ("a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8")
+
+
+# ---------- Prompt Packs ----------
+
+import os
+from pathlib import Path
+
+import yaml
+
+
+class PromptPack:
+    """A YAML-based override set for agent system prompts."""
+
+    def __init__(self, name: str, description: str, overrides: dict[str, dict[str, str]]):
+        self.name = name
+        self.description = description
+        self.overrides = overrides  # {agent_id: {"append": str}}
+
+    @classmethod
+    def load(cls, path: str | Path) -> "PromptPack":
+        with open(path) as f:
+            data = yaml.safe_load(f)
+        return cls(
+            name=data["name"],
+            description=data.get("description", ""),
+            overrides=data.get("overrides", {}),
+        )
+
+    def to_dict(self) -> dict:
+        return {"name": self.name, "description": self.description, "agents": list(self.overrides.keys())}
+
+
+def list_prompt_packs(directory: str | Path | None = None) -> list[dict]:
+    """List available prompt packs from the prompt_packs/ directory."""
+    if directory is None:
+        directory = Path(__file__).resolve().parent.parent.parent / "prompt_packs"
+    directory = Path(directory)
+    if not directory.is_dir():
+        return []
+    packs = []
+    for f in sorted(directory.glob("*.yaml")):
+        try:
+            pack = PromptPack.load(f)
+            info = pack.to_dict()
+            info["file"] = f.name
+            packs.append(info)
+        except Exception:
+            continue
+    return packs
+
+
+def load_prompt_pack(name: str, directory: str | Path | None = None) -> PromptPack | None:
+    """Load a prompt pack by name (filename without extension)."""
+    if directory is None:
+        directory = Path(__file__).resolve().parent.parent.parent / "prompt_packs"
+    path = Path(directory) / f"{name}.yaml"
+    if not path.is_file():
+        return None
+    return PromptPack.load(path)

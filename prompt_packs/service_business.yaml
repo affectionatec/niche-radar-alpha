@@ -1,0 +1,30 @@
+# Service Business — Prompt Pack
+# Tuned for service-industry practitioners (agencies, consultants, freelancers).
+# Prioritises distribution ease, recurring revenue, and client acquisition cost.
+
+name: service_business
+description: >
+  Niche evaluation tuned for service businesses and agencies.
+  Prioritises ease of client acquisition, recurring revenue potential,
+  and low delivery complexity.
+
+overrides:
+  a4:
+    append: |
+      IMPORTANT scoring weight adjustments for this evaluation:
+      - distribution_ease: weight = 0.25 (top priority — can clients be reached cheaply?)
+      - recurring_revenue: weight = 0.20 (retainers and subscriptions preferred)
+      - build_feasibility: weight = 0.10 (service businesses often use existing tools)
+      - market_size: weight = 0.10 (a $5M niche with high margins is ideal)
+      When scoring, reward ideas that:
+      - Can be sold via cold outreach, SEO, or referrals (not paid ads)
+      - Involve ongoing service delivery (not one-time projects)
+      - Have clients with budgets > $1K/month
+
+  a6:
+    append: |
+      Apply these additional rules before rendering your verdict:
+      - If client acquisition requires enterprise sales (RFPs, procurement), lean NO-GO
+      - If the service can be templated and delivered repeatedly, lean GO
+      - If pricing is unclear or hard to justify, lean NO-GO
+      - If there is a clear "hero" deliverable (audit, report, dashboard), that is a GO signal

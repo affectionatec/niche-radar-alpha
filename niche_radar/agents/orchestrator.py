@@ -35,7 +35,7 @@ from niche_radar.agents.models import (
     A8Output,
     PipelineResult,
 )
-from niche_radar.agents.prompts import build_system_prompt, build_user_prompt
+from niche_radar.agents.prompts import PromptPack, build_system_prompt, build_user_prompt
 from niche_radar.llm.base import LLMClient
 
 logger = structlog.get_logger()
@@ -127,10 +127,11 @@ def _run_one(
     budget_check: BudgetCheck | None,
     log_fn: LogFn | None,
     result: PipelineResult,
+    prompt_pack: PromptPack | None = None,
 ) -> BaseModel | None:
     """Build prompts, call the agent, attach output to result and ctx. Returns model or None."""
     client, temperature = clients(agent_id)
-    system = build_system_prompt(agent_id)
+    system = build_system_prompt(agent_id, prompt_pack)
     user = build_user_prompt(agent_id, ctx)
     model, err = _call_agent(agent_id, client, system, user, temperature, budget_check)
     if model is None:
@@ -151,12 +152,13 @@ def run_single(
     clients: ClientsResolver,
     budget_check: BudgetCheck | None = None,
     log_fn: LogFn | None = None,
+    prompt_pack: PromptPack | None = None,
 ) -> PipelineResult:
     """A1 → A2. Short-circuit if A1 rejects (is_valid_signal == False) or A1 fails."""
     result = PipelineResult(raw_signal=raw_signal)
     ctx: dict[str, Any] = {"raw_signal": raw_signal}
 
-    a1 = _run_one("a1", ctx, clients, budget_check, log_fn, result)
+    a1 = _run_one("a1", ctx, clients, budget_check, log_fn, result, prompt_pack)
     if a1 is None:
         # Without A1 we can't safely proceed.
         result.short_circuited_at = "a1"
@@ -172,7 +174,7 @@ def run_single(
     if log_fn:
         log_fn(f"A1=PASS conf={a1.confidence} type={a1.signal_type}")
 
-    a2 = _run_one("a2", ctx, clients, budget_check, log_fn, result)
+    a2 = _run_one("a2", ctx, clients, budget_check, log_fn, result, prompt_pack)
     if a2 is not None and log_fn:
         log_fn("A2=DONE")
     return result
@@ -183,6 +185,7 @@ def run_cluster(
     clients: ClientsResolver,
     budget_check: BudgetCheck | None = None,
     log_fn: LogFn | None = None,
+    prompt_pack: PromptPack | None = None,
 ) -> PipelineResult:
     """A3 → A4 → A5 → A6 → (A7 if GO) → A8.
 
@@ -197,17 +200,17 @@ def run_cluster(
     )
     ctx = dict(cluster_context)  # don't mutate caller's dict
 
-    _run_one("a3", ctx, clients, budget_check, log_fn, result)
-    _run_one("a4", ctx, clients, budget_check, log_fn, result)
-    _run_one("a5", ctx, clients, budget_check, log_fn, result)
-    a6 = _run_one("a6", ctx, clients, budget_check, log_fn, result)
+    _run_one("a3", ctx, clients, budget_check, log_fn, result, prompt_pack)
+    _run_one("a4", ctx, clients, budget_check, log_fn, result, prompt_pack)
+    _run_one("a5", ctx, clients, budget_check, log_fn, result, prompt_pack)
+    a6 = _run_one("a6", ctx, clients, budget_check, log_fn, result, prompt_pack)
 
     # Per refactor_prompt.md: A7 only runs if A6 verdict == GO.
     if isinstance(a6, A6Output) and a6.verdict == "GO":
-        _run_one("a7", ctx, clients, budget_check, log_fn, result)
+        _run_one("a7", ctx, clients, budget_check, log_fn, result, prompt_pack)
 
     # A8 always runs (refactor_prompt.md).
-    _run_one("a8", ctx, clients, budget_check, log_fn, result)
+    _run_one("a8", ctx, clients, budget_check, log_fn, result, prompt_pack)
 
     if log_fn:
         verdict = result.a6.verdict if result.a6 else "?"

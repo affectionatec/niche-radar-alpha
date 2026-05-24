@@ -26,6 +26,7 @@ apscheduler>=3.10,<4.0
 
 # Reports
 Jinja2>=3.1,<4.0
+PyYAML>=6.0,<7.0
 
 # Terminal UI
 rich>=13.0,<14.0
