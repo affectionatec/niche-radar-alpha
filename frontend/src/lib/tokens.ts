@@ -185,13 +185,15 @@ export function jobStatusColor(status: string): string {
 }
 
 // ── Source registry ──────────────────────────────────────────────────────
-// Single source of truth for all 12 data sources.
+// Single source of truth for all 17 data sources.
 // Backend: niche_radar/collectors/__init__.py ALL_SOURCES
 
 export const ALL_SOURCES = [
   'reddit', 'hn', 'google_trends', 'github', 'youtube',
   'product_hunt', 'stack_overflow', 'twitter', 'g2_reviews',
   'indie_hackers', 'app_store', 'play_store',
+  // Chinese social media sources
+  'xiaohongshu', 'bilibili', 'zhihu', 'weibo', 'douyin',
 ] as const;
 
 export type SourceSlug = typeof ALL_SOURCES[number];
@@ -209,6 +211,11 @@ export const sourceLabel: Record<string, string> = {
   indie_hackers: 'Indie Hackers',
   app_store: 'App Store',
   play_store: 'Play Store',
+  xiaohongshu: 'Xiaohongshu',
+  bilibili: 'Bilibili',
+  zhihu: 'Zhihu',
+  weibo: 'Weibo',
+  douyin: 'Douyin',
 };
 
 export const sourceIcon: Record<string, string> = {
@@ -224,6 +231,11 @@ export const sourceIcon: Record<string, string> = {
   indie_hackers: '◉',
   app_store: '▧',
   play_store: '▷',
+  xiaohongshu: '📕',
+  bilibili: '📺',
+  zhihu: '💬',
+  weibo: '🔥',
+  douyin: '🎵',
 };
 
 export const sourceFreshnessRule: Record<string, string> = {
@@ -239,6 +251,11 @@ export const sourceFreshnessRule: Record<string, string> = {
   indie_hackers: 'indie_hackers_hours',
   app_store: 'app_store_hours',
   play_store: 'play_store_hours',
+  xiaohongshu: 'xiaohongshu_hours',
+  bilibili: 'bilibili_hours',
+  zhihu: 'zhihu_hours',
+  weibo: 'weibo_hours',
+  douyin: 'douyin_hours',
 };
 
 // ── Source reliability labels ────────────────────────────────────────────
@@ -263,6 +280,11 @@ export const sourceReliability: Record<string, { level: ReliabilityLevel; label:
   indie_hackers:  { level: 'brittle',      label: 'Brittle',      color: 'rgba(255,160,60,0.85)',  icon: '🟠', note: 'HTML scraping' },
   app_store:      { level: 'fragile',      label: 'Fragile',      color: 'rgba(251,191,36,0.85)',  icon: '🟡', note: 'Unofficial itunes API / scraping' },
   play_store:     { level: 'fragile',      label: 'Fragile',      color: 'rgba(251,191,36,0.85)',  icon: '🟡', note: 'google-play-scraper' },
+  xiaohongshu:    { level: 'stable',       label: 'Stable',       color: 'rgba(74,222,128,0.85)',  icon: '🟢', note: 'TikHub API' },
+  bilibili:       { level: 'stable',       label: 'Stable',       color: 'rgba(74,222,128,0.85)',  icon: '🟢', note: 'Community API library' },
+  zhihu:          { level: 'fragile',      label: 'Fragile',      color: 'rgba(251,191,36,0.85)',  icon: '🟡', note: 'Cookie-based scraping' },
+  weibo:          { level: 'fragile',      label: 'Fragile',      color: 'rgba(251,191,36,0.85)',  icon: '🟡', note: 'Cookie-based scraping' },
+  douyin:         { level: 'very_brittle', label: 'Very Brittle', color: 'rgba(255,80,80,0.85)',   icon: '🔴', note: 'TikHub API, aggressive anti-bot' },
 };
 
 // ── LLM Provider registry ────────────────────────────────────────────────

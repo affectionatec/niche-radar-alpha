@@ -60,10 +60,10 @@ export default function SystemHealth({ sources, recentJobs }: SystemHealthProps)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* Source cards — balanced 4-column grid (4×3 for 12 sources) */}
+      {/* Source cards — responsive grid (auto-fills 5-6 columns at 1200px) */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
         gap: '1px',
         background: color.surfaceHover,
       }}>

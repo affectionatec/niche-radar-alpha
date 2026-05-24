@@ -22,6 +22,8 @@ ALL_SOURCES = [
     "product_hunt", "stack_overflow", "twitter", "g2_reviews",
     # Phase 4 — P2 new sources
     "indie_hackers", "app_store", "play_store",
+    # Chinese social media sources
+    "xiaohongshu", "bilibili", "zhihu", "weibo", "douyin",
 ]
 
 
@@ -63,6 +65,21 @@ def _get_collector(source: str):
     elif source == "play_store":
         from niche_radar.collectors.play_store import PlayStoreCollector
         return PlayStoreCollector()
+    elif source == "xiaohongshu":
+        from niche_radar.collectors.xiaohongshu import XiaohongshuCollector
+        return XiaohongshuCollector()
+    elif source == "bilibili":
+        from niche_radar.collectors.bilibili import BilibiliCollector
+        return BilibiliCollector()
+    elif source == "zhihu":
+        from niche_radar.collectors.zhihu import ZhihuCollector
+        return ZhihuCollector()
+    elif source == "weibo":
+        from niche_radar.collectors.weibo import WeiboCollector
+        return WeiboCollector()
+    elif source == "douyin":
+        from niche_radar.collectors.douyin import DouyinCollector
+        return DouyinCollector()
     else:
         raise ValueError(f"Unknown source: {source}")
 

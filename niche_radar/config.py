@@ -44,6 +44,13 @@ class Settings(BaseSettings):
     freshness_google_trends_hours: int = 24  # 1 day — trending = today
     freshness_youtube_hours: int = 336     # 14 days — video discovery is slow
 
+    # Chinese social media freshness
+    freshness_xiaohongshu_hours: int = 72  # 3 days — note lifecycle
+    freshness_bilibili_hours: int = 168    # 7 days — video content persists
+    freshness_zhihu_hours: int = 168       # 7 days — Q&A threads persist
+    freshness_weibo_hours: int = 48        # 2 days — microblog decays fast
+    freshness_douyin_hours: int = 72       # 3 days — short video lifecycle
+
     # Analysis-time freshness — only feed the LLM items posted within this window.
     # Niches whose last_seen falls outside this window are auto-archived.
     analysis_window_days: int = 7
