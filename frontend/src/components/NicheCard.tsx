@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { NicheScore } from '@/lib/types';
+import { color, font } from '@/lib/tokens';
 
 const COMPLEXITY_LABEL: Record<number, string> = {
   1: 'WEEKEND',
@@ -12,10 +13,10 @@ const COMPLEXITY_LABEL: Record<number, string> = {
 };
 
 function complexityColor(c: number | null): string {
-  if (c === null) return 'rgba(255,255,255,0.3)';
-  if (c <= 2) return 'rgba(74,222,128,0.85)';
-  if (c === 3) return 'rgba(251,191,36,0.85)';
-  return 'rgba(255,140,140,0.85)';
+  if (c === null) return color.fgGhost;
+  if (c <= 2) return color.success;
+  if (c === 3) return color.warning;
+  return color.error;
 }
 
 export default function NicheCard({ niche }: { niche: NicheScore }) {
@@ -29,8 +30,8 @@ export default function NicheCard({ niche }: { niche: NicheScore }) {
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
-          backgroundColor: 'rgba(255, 255, 255, 0.03)',
-          border: `1px solid ${hovered ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.1)'}`,
+          backgroundColor: color.surface,
+          border: `1px solid ${hovered ? color.borderStrong : color.border}`,
           padding: '24px',
           cursor: 'pointer',
           transition: 'border-color 0.15s ease',
@@ -51,10 +52,10 @@ export default function NicheCard({ niche }: { niche: NicheScore }) {
         >
           <span
             style={{
-              fontFamily: 'var(--font-geist-mono)',
+              fontFamily: font.mono,
               fontSize: '11px',
-              color: 'rgba(255,255,255,0.45)',
-              textTransform: 'uppercase',
+              color: color.fgMuted,
+              textTransform: 'uppercase' as const,
               letterSpacing: '1px',
               lineHeight: 1.3,
             }}
@@ -63,10 +64,10 @@ export default function NicheCard({ niche }: { niche: NicheScore }) {
           </span>
           <span
             style={{
-              fontFamily: 'var(--font-geist-mono)',
+              fontFamily: font.mono,
               fontSize: '28px',
               fontWeight: 300,
-              color: '#ffffff',
+              color: color.fg,
               lineHeight: 1,
               flexShrink: 0,
             }}
@@ -78,9 +79,9 @@ export default function NicheCard({ niche }: { niche: NicheScore }) {
         {/* Tool concept (the headline) */}
         <p
           style={{
-            fontFamily: 'var(--font-inter)',
+            fontFamily: font.body,
             fontSize: '15px',
-            color: '#ffffff',
+            color: color.fg,
             lineHeight: 1.4,
             marginBottom: '14px',
             display: '-webkit-box',
@@ -96,7 +97,7 @@ export default function NicheCard({ niche }: { niche: NicheScore }) {
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
           <span
             style={{
-              fontFamily: 'var(--font-geist-mono)',
+              fontFamily: font.mono,
               fontSize: '10px',
               color: complexityColor(niche.build_complexity),
               border: `1px solid ${complexityColor(niche.build_complexity)}`,
@@ -109,10 +110,10 @@ export default function NicheCard({ niche }: { niche: NicheScore }) {
           {niche.target_audience && (
             <span
               style={{
-                fontFamily: 'var(--font-geist-mono)',
+                fontFamily: font.mono,
                 fontSize: '10px',
-                color: 'rgba(255,255,255,0.55)',
-                border: '1px solid rgba(255,255,255,0.15)',
+                color: color.fgMuted,
+                border: `1px solid ${color.borderStrong}`,
                 padding: '3px 8px',
                 letterSpacing: '0.4px',
                 overflow: 'hidden',
@@ -130,9 +131,9 @@ export default function NicheCard({ niche }: { niche: NicheScore }) {
         {niche.llm_reasoning && (
           <p
             style={{
-              fontFamily: 'var(--font-inter)',
+              fontFamily: font.body,
               fontSize: '12px',
-              color: 'rgba(255,255,255,0.5)',
+              color: color.fgMuted,
               lineHeight: 1.55,
               marginBottom: '14px',
               display: '-webkit-box',
@@ -153,13 +154,13 @@ export default function NicheCard({ niche }: { niche: NicheScore }) {
             justifyContent: 'space-between',
             alignItems: 'center',
             gap: '12px',
-            fontFamily: 'var(--font-inter)',
+            fontFamily: font.body,
             fontSize: '11px',
-            color: 'rgba(255, 255, 255, 0.35)',
+            color: color.fgDisabled,
             letterSpacing: '0.3px',
             marginTop: 'auto',
             paddingTop: '8px',
-            borderTop: '1px solid rgba(255,255,255,0.06)',
+            borderTop: `1px solid ${color.surfaceHover}`,
           }}
         >
           <span

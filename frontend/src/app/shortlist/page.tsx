@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import useSWR from 'swr';
 import { endpoints, fetcher, toggleShortlist } from '@/lib/api';
+import { color, font } from '@/lib/tokens';
 
 interface ShortlistItem {
   id: string;
@@ -16,7 +17,7 @@ interface ShortlistItem {
 }
 
 const VERDICT_COLOR: Record<string, string> = {
-  GO: 'rgba(74,222,128,0.85)', 'NO-GO': 'rgba(255,80,80,0.85)', PIVOT: 'rgba(251,191,36,0.85)',
+  GO: color.success, 'NO-GO': color.error, PIVOT: color.warning,
 };
 const TREND_EMOJI: Record<string, string> = { growing: '📈', stable: '➡️', declining: '📉' };
 
@@ -32,22 +33,22 @@ export default function ShortlistPage() {
 
   return (
     <div>
-      <h1 style={{ fontFamily: 'var(--font-inter)', fontSize: '30px', fontWeight: 400, color: '#ffffff', marginBottom: '8px' }}>
+      <h1 style={{ fontFamily: font.body, fontSize: '30px', fontWeight: 400, color: color.fg, marginBottom: '8px' }}>
         SHORTLIST
       </h1>
-      <p style={{ fontFamily: 'var(--font-inter)', fontSize: '13px', color: 'rgba(255,255,255,0.35)', marginBottom: '48px' }}>
+      <p style={{ fontFamily: font.body, fontSize: '13px', color: color.fgDisabled, marginBottom: '48px' }}>
         Opportunities you&apos;ve starred for closer review.
       </p>
 
-      {isLoading && <div style={{ color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-geist-mono)', fontSize: '12px' }}>LOADING...</div>}
-      {error && <div style={{ color: 'rgba(255,80,80,0.85)', fontFamily: 'var(--font-geist-mono)', fontSize: '12px' }}>Failed to load shortlist</div>}
+      {isLoading && <div style={{ color: color.fgDisabled, fontFamily: font.mono, fontSize: '12px' }}>LOADING...</div>}
+      {error && <div style={{ color: color.error, fontFamily: font.mono, fontSize: '12px' }}>Failed to load shortlist</div>}
 
       {items && items.length === 0 && (
-        <div style={{ border: '1px solid rgba(255,255,255,0.08)', padding: '48px', textAlign: 'center' }}>
-          <p style={{ fontFamily: 'var(--font-inter)', fontSize: '13px', color: 'rgba(255,255,255,0.25)', marginBottom: '20px' }}>
+        <div style={{ border: `1px solid ${color.surfaceActive}`, padding: '48px', textAlign: 'center' as const }}>
+          <p style={{ fontFamily: font.body, fontSize: '13px', color: color.fgGhost, marginBottom: '20px' }}>
             No starred opportunities yet.
           </p>
-          <Link href="/niches" style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '11px', color: 'rgba(255,255,255,0.6)', textDecoration: 'none', border: '1px solid rgba(255,255,255,0.2)', padding: '8px 16px', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+          <Link href="/niches" style={{ fontFamily: font.mono, fontSize: '11px', color: color.fgSecondary, textDecoration: 'none', border: `1px solid ${color.borderStrong}`, padding: '8px 16px', letterSpacing: '0.8px', textTransform: 'uppercase' as const }}>
             BROWSE OPPORTUNITIES →
           </Link>
         </div>
@@ -56,36 +57,36 @@ export default function ShortlistPage() {
       {items && items.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
           {items.map(item => (
-            <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', gap: '16px' }}>
+            <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: color.surface, border: `1px solid ${color.surfaceActive}`, gap: '16px' }}>
               <div style={{ flex: 1, overflow: 'hidden' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px', flexWrap: 'wrap' }}>
-                  <Link href={`/niches/${item.id}`} style={{ fontFamily: 'var(--font-inter)', fontSize: '14px', color: '#ffffff', textDecoration: 'none' }}>
+                  <Link href={`/niches/${item.id}`} style={{ fontFamily: font.body, fontSize: '14px', color: color.fg, textDecoration: 'none' }}>
                     {item.tool_concept || item.keyword}
                   </Link>
                   {item.verdict && (
-                    <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '9px', color: VERDICT_COLOR[item.verdict] || 'rgba(255,255,255,0.35)', border: `1px solid ${VERDICT_COLOR[item.verdict] || 'rgba(255,255,255,0.2)'}`, padding: '1px 6px' }}>
+                    <span style={{ fontFamily: font.mono, fontSize: '9px', color: VERDICT_COLOR[item.verdict] || color.fgDisabled, border: `1px solid ${VERDICT_COLOR[item.verdict] || color.borderStrong}`, padding: '1px 6px' }}>
                       {item.verdict}
                     </span>
                   )}
                   {item.momentum_label && (
-                    <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '10px', color: item.momentum_label === 'growing' ? 'rgba(74,222,128,0.7)' : 'rgba(255,255,255,0.3)' }}>
+                    <span style={{ fontFamily: font.mono, fontSize: '10px', color: item.momentum_label === 'growing' ? color.successMuted : color.fgGhost }}>
                       {TREND_EMOJI[item.momentum_label]} {item.momentum_label}
                     </span>
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                  <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '12px', color: '#ffffff' }}>
+                  <span style={{ fontFamily: font.mono, fontSize: '12px', color: color.fg }}>
                     {item.llm_score?.toFixed(0) ?? '—'}
                   </span>
-                  <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                  <span style={{ fontFamily: font.mono, fontSize: '10px', color: color.fgGhost, letterSpacing: '0.5px', textTransform: 'uppercase' as const }}>
                     {item.keyword}
                   </span>
                   {item.note && (
-                    <span style={{ fontFamily: 'var(--font-inter)', fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
+                    <span style={{ fontFamily: font.body, fontSize: '12px', color: color.fgMuted, fontStyle: 'italic' }}>
                       {item.note}
                     </span>
                   )}
-                  <span style={{ fontFamily: 'var(--font-inter)', fontSize: '11px', color: 'rgba(255,255,255,0.2)' }}>
+                  <span style={{ fontFamily: font.body, fontSize: '11px', color: color.fgGhost }}>
                     {new Date(item.added_at).toLocaleDateString()}
                   </span>
                 </div>
@@ -93,7 +94,7 @@ export default function ShortlistPage() {
               <button
                 onClick={() => handleRemove(item.id)}
                 aria-label={`Remove ${item.tool_concept || item.keyword} from shortlist`}
-                style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.25)', cursor: 'pointer', fontSize: '16px', padding: '4px 8px', flexShrink: 0 }}
+                style={{ background: 'transparent', border: 'none', color: color.fgGhost, cursor: 'pointer', fontSize: '16px', padding: '4px 8px', flexShrink: 0 }}
               >
                 ✕
               </button>

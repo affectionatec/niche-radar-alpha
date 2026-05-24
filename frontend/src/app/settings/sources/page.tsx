@@ -3,7 +3,7 @@ import Link from 'next/link';
 import useSWR from 'swr';
 import { endpoints, fetcher } from '@/lib/api';
 import { SourceStatus } from '@/lib/types';
-import { sourceLabel } from '@/lib/tokens';
+import { color as c, font, sourceLabel } from '@/lib/tokens';
 
 const SOURCE_DESCRIPTIONS: Record<string, string> = {
   reddit: 'Pain-point posts from targeted subreddits via search queries',
@@ -21,11 +21,11 @@ const SOURCE_DESCRIPTIONS: Record<string, string> = {
 };
 
 function StatusChip({ configured, last_success }: { configured: boolean; last_success: string | null }) {
-  const color = configured ? 'rgba(74,222,128,0.85)' : 'rgba(251,191,36,0.85)';
+  const color = configured ? c.success : c.warning;
   const label = configured ? 'CONFIGURED' : 'NEEDS SETUP';
   return (
     <span style={{
-      fontFamily: 'var(--font-geist-mono)', fontSize: '10px', letterSpacing: '0.8px',
+      fontFamily: font.mono, fontSize: '10px', letterSpacing: '0.8px',
       color, border: `1px solid ${color}`, padding: '2px 8px',
     }}>
       {label}
@@ -42,23 +42,23 @@ export default function SourcesPage() {
     <div>
       <div style={{ marginBottom: '32px' }}>
         <Link href="/settings" style={{
-          fontFamily: 'var(--font-geist-mono)', fontSize: '12px',
-          color: 'rgba(255,255,255,0.4)', textDecoration: 'none',
-          textTransform: 'uppercase', letterSpacing: '0.8px',
+          fontFamily: font.mono, fontSize: '12px',
+          color: c.fgMuted, textDecoration: 'none',
+          textTransform: 'uppercase' as const, letterSpacing: '0.8px',
         }}>
           ← SETTINGS
         </Link>
       </div>
 
-      <h1 style={{ fontFamily: 'var(--font-inter)', fontSize: '30px', fontWeight: 400, color: '#ffffff', marginBottom: '8px' }}>
+      <h1 style={{ fontFamily: font.body, fontSize: '30px', fontWeight: 400, color: c.fg, marginBottom: '8px' }}>
         DATA SOURCES
       </h1>
-      <p style={{ fontFamily: 'var(--font-inter)', fontSize: '13px', color: 'rgba(255,255,255,0.35)', marginBottom: '48px' }}>
+      <p style={{ fontFamily: font.body, fontSize: '13px', color: c.fgDisabled, marginBottom: '48px' }}>
         Configure credentials and search settings for each data source. Changes take effect immediately — no restart required.
       </p>
 
-      {isLoading && <div style={{ color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-geist-mono)', fontSize: '12px' }}>LOADING...</div>}
-      {error && <div style={{ color: 'rgba(255,80,80,0.85)', fontFamily: 'var(--font-geist-mono)', fontSize: '12px' }}>Failed to load sources</div>}
+      {isLoading && <div style={{ color: c.fgDisabled, fontFamily: font.mono, fontSize: '12px' }}>LOADING...</div>}
+      {error && <div style={{ color: c.error, fontFamily: font.mono, fontSize: '12px' }}>Failed to load sources</div>}
 
       {sources && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -71,29 +71,29 @@ export default function SourcesPage() {
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '16px 20px',
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.08)',
+                background: c.surface,
+                border: `1px solid ${c.surfaceActive}`,
                 cursor: 'pointer',
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+              onMouseEnter={e => (e.currentTarget.style.background = c.surfaceHover)}
+              onMouseLeave={e => (e.currentTarget.style.background = c.surface)}
               >
                 <div>
-                  <div style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '13px', color: '#ffffff', marginBottom: '4px' }}>
+                  <div style={{ fontFamily: font.mono, fontSize: '13px', color: c.fg, marginBottom: '4px' }}>
                     {sourceLabel[s.slug] || s.slug}
                   </div>
-                  <div style={{ fontFamily: 'var(--font-inter)', fontSize: '12px', color: 'rgba(255,255,255,0.35)' }}>
+                  <div style={{ fontFamily: font.body, fontSize: '12px', color: c.fgDisabled }}>
                     {SOURCE_DESCRIPTIONS[s.slug] || ''}
                   </div>
                   {s.last_success && (
-                    <div style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '10px', color: 'rgba(255,255,255,0.2)', marginTop: '4px' }}>
+                    <div style={{ fontFamily: font.mono, fontSize: '10px', color: c.fgGhost, marginTop: '4px' }}>
                       Last run: {new Date(s.last_success).toLocaleDateString()}
                     </div>
                   )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                   <StatusChip configured={s.configured} last_success={s.last_success} />
-                  <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '16px' }}>›</span>
+                  <span style={{ color: c.fgGhost, fontSize: '16px' }}>›</span>
                 </div>
               </div>
             </Link>

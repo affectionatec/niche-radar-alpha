@@ -4,7 +4,7 @@ import useSWR from 'swr';
 import { endpoints, fetcher, postPipeline } from '@/lib/api';
 import { Job, JobDetail, JobStatus } from '@/lib/types';
 import { usePipelineState } from '@/lib/usePipelineState';
-import { color, font, fontSize, button as btnStyle, ALL_SOURCES, sourceLabel } from '@/lib/tokens';
+import { color, font, fontSize, spacing, button as btnStyle, ALL_SOURCES, sourceLabel } from '@/lib/tokens';
 import PipelineStages from '@/components/pipeline/PipelineStages';
 import AgentActivity from '@/components/pipeline/AgentActivity';
 import ActivityLog from '@/components/pipeline/ActivityLog';
@@ -379,46 +379,46 @@ function PipelineRunsSection() {
 
   if (!runs || runs.length === 0) return null;
 
-  // Group by prompt_hash to highlight version changes
   const hashes = Array.from(new Set(runs.map(r => r.prompt_hash)));
   const hashColor = (h: string) => {
     const idx = hashes.indexOf(h);
-    const colors = ['rgba(74,222,128,0.6)', 'rgba(125,211,252,0.6)', 'rgba(251,191,36,0.6)', 'rgba(255,140,140,0.6)'];
+    const colors = [color.successMuted, color.info, color.warningMuted, color.errorMuted];
     return colors[idx % colors.length];
   };
 
+  const GRID_COLS = '80px 100px 80px 60px 60px 60px 1fr';
+
   return (
-    <section style={{ marginTop: '48px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <h2 style={{ fontFamily: font.mono, fontSize: fontSize.sm, letterSpacing: '1px', color: color.fgDisabled, textTransform: 'uppercase', margin: 0 }}>
+    <section style={{ marginTop: spacing['4xl'] }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
+        <h2 style={{ fontFamily: font.mono, fontSize: fontSize.sm, letterSpacing: '1px', color: color.fgDisabled, textTransform: 'uppercase' as const, margin: 0 }}>
           PIPELINE RUNS (A/B)
         </h2>
         <span style={{ fontFamily: font.mono, fontSize: fontSize.xs, color: color.fgGhost }}>
           {hashes.length} prompt version{hashes.length !== 1 ? 's' : ''}
         </span>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'rgba(255,255,255,0.06)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: color.surfaceHover }}>
         {/* Header */}
         <div style={{
-          display: 'grid', gridTemplateColumns: '70px 90px 60px 50px 50px 50px 50px 1fr',
-          padding: '8px 16px', background: '#1f2228', gap: '8px',
+          display: 'grid', gridTemplateColumns: GRID_COLS,
+          padding: `${spacing.sm} ${spacing.lg}`, background: color.bg, gap: spacing.sm,
         }}>
-          {['RUN', 'PROMPTS', 'MODEL', 'ITEMS', 'CLUST', 'NICHE', 'CALLS', 'LABEL'].map(h => (
+          {['RUN', 'PROMPTS', 'MODEL', 'ITEMS', 'CLUST', 'NICHES', 'LABEL'].map(h => (
             <span key={h} style={{ fontFamily: font.mono, fontSize: fontSize.xs, color: color.fgGhost, letterSpacing: '0.5px' }}>{h}</span>
           ))}
         </div>
         {runs.slice(0, 15).map((run) => (
           <div key={run.id} style={{
-            display: 'grid', gridTemplateColumns: '70px 90px 60px 50px 50px 50px 50px 1fr',
-            padding: '10px 16px', background: '#1f2228', gap: '8px', alignItems: 'center',
+            display: 'grid', gridTemplateColumns: GRID_COLS,
+            padding: `${spacing.md} ${spacing.lg}`, background: color.bg, gap: spacing.sm, alignItems: 'center',
           }}>
             <span style={{ fontFamily: font.mono, fontSize: fontSize.base, color: color.fgMuted }}>{run.id.slice(0, 8)}</span>
             <span style={{ fontFamily: font.mono, fontSize: fontSize.sm, color: hashColor(run.prompt_hash) }}>{run.prompt_hash}</span>
-            <span style={{ fontFamily: font.mono, fontSize: fontSize.xs, color: color.fgDisabled, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{run.model}</span>
+            <span style={{ fontFamily: font.mono, fontSize: fontSize.xs, color: color.fgDisabled, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{run.model}</span>
             <span style={{ fontFamily: font.mono, fontSize: fontSize.base, color: color.fg }}>{run.item_count}</span>
             <span style={{ fontFamily: font.mono, fontSize: fontSize.base, color: color.fg }}>{run.cluster_count}</span>
             <span style={{ fontFamily: font.mono, fontSize: fontSize.base, color: color.fg }}>{run.niche_count}</span>
-            <span style={{ fontFamily: font.mono, fontSize: fontSize.base, color: color.fgMuted }}>{run.budget_used}</span>
             <span style={{ fontFamily: font.mono, fontSize: fontSize.sm, color: run.label ? color.fg : color.fgGhost }}>
               {run.label || '—'}
             </span>

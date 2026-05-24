@@ -5,6 +5,7 @@ import Link from 'next/link';
 import useSWR from 'swr';
 import { endpoints, fetcher } from '@/lib/api';
 import { Job, LLMSettings, NicheScore, SystemStatus } from '@/lib/types';
+import { color, font, fontSize, spacing } from '@/lib/tokens';
 import NicheCard from '@/components/NicheCard';
 import DataFreshness from '@/components/DataFreshness';
 import SystemHealth from '@/components/SystemHealth';
@@ -37,12 +38,12 @@ export default function Dashboard() {
       <div style={{ padding: '96px 0', textAlign: 'center' }}>
         <p
           style={{
-            fontFamily: 'var(--font-geist-mono)',
-            fontSize: '13px',
-            color: 'rgba(255,255,255,0.35)',
+            fontFamily: font.mono,
+            fontSize: fontSize.lg,
+            color: color.fgDisabled,
             letterSpacing: '1px',
-            textTransform: 'uppercase',
-            marginBottom: '24px',
+            textTransform: 'uppercase' as const,
+            marginBottom: spacing['2xl'],
           }}
         >
           CANNOT CONNECT TO API — IS THE BACKEND RUNNING ON PORT 8000?
@@ -60,14 +61,14 @@ export default function Dashboard() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'flex-start',
-          paddingBottom: '48px',
-          marginBottom: '48px',
-          borderBottom: '1px solid rgba(255,255,255,0.1)',
-          flexWrap: 'wrap',
-          gap: '32px',
+          paddingBottom: spacing['4xl'],
+          marginBottom: spacing['4xl'],
+          borderBottom: `1px solid ${color.border}`,
+          flexWrap: 'wrap' as const,
+          gap: spacing['3xl'],
         }}
       >
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '48px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: spacing['4xl'] }}>
           {status ? (
             <>
               <Stat label="OPPORTUNITIES" value={status.active_niches} />
@@ -87,15 +88,15 @@ export default function Dashboard() {
         <Link
           href="/pipeline"
           style={{
-            fontFamily: 'var(--font-geist-mono)',
-            fontSize: '11px',
+            fontFamily: font.mono,
+            fontSize: fontSize.base,
             fontWeight: 600,
-            color: '#1f2228',
-            backgroundColor: '#ffffff',
+            color: color.bg,
+            backgroundColor: color.fg,
             textDecoration: 'none',
             letterSpacing: '1px',
-            textTransform: 'uppercase',
-            padding: '0 20px',
+            textTransform: 'uppercase' as const,
+            padding: `0 ${spacing.xl}`,
             height: '40px',
             display: 'inline-flex',
             alignItems: 'center',
@@ -107,7 +108,7 @@ export default function Dashboard() {
       </div>
 
       {/* High priority */}
-      <section style={{ marginBottom: '64px' }}>
+      <section style={{ marginBottom: spacing['5xl'] }}>
         <SectionHeading label="HIGH PRIORITY" count={highPriority.length} note="SCORE ≥ 80 · BUILD NOW" />
         {nichesLoading ? (
           <LoadingGrid />
@@ -119,7 +120,7 @@ export default function Dashboard() {
       </section>
 
       {/* Watchlist */}
-      <section style={{ marginBottom: '64px' }}>
+      <section style={{ marginBottom: spacing['5xl'] }}>
         <SectionHeading label="WATCHLIST" count={watchlist.length} note="SCORE 65–79 · MONITOR" />
         {nichesLoading ? (
           <LoadingGrid />
@@ -132,7 +133,7 @@ export default function Dashboard() {
 
       {/* Data freshness */}
       {status?.freshness && (
-        <section style={{ marginBottom: '64px' }}>
+        <section style={{ marginBottom: spacing['5xl'] }}>
           <SectionHeading
             label="DATA FRESHNESS"
             count={null}
@@ -158,11 +159,11 @@ function Stat({ label, value }: { label: string; value: number | string }) {
     <div>
       <div
         style={{
-          fontFamily: 'var(--font-inter)',
-          fontSize: '11px',
-          color: 'rgba(255,255,255,0.4)',
-          marginBottom: '8px',
-          textTransform: 'uppercase',
+          fontFamily: font.body,
+          fontSize: fontSize.base,
+          color: color.fgMuted,
+          marginBottom: spacing.sm,
+          textTransform: 'uppercase' as const,
           letterSpacing: '0.6px',
         }}
       >
@@ -170,10 +171,10 @@ function Stat({ label, value }: { label: string; value: number | string }) {
       </div>
       <div
         style={{
-          fontFamily: 'var(--font-geist-mono)',
-          fontSize: '28px',
+          fontFamily: font.mono,
+          fontSize: fontSize['4xl'],
           fontWeight: 300,
-          color: '#ffffff',
+          color: color.fg,
           lineHeight: 1,
         }}
       >
@@ -197,16 +198,16 @@ function SectionHeading({
       style={{
         display: 'flex',
         alignItems: 'baseline',
-        gap: '16px',
-        marginBottom: '24px',
+        gap: spacing.lg,
+        marginBottom: spacing['2xl'],
       }}
     >
       <h2
         style={{
-          fontFamily: 'var(--font-inter)',
-          fontSize: '30px',
+          fontFamily: font.body,
+          fontSize: fontSize['5xl'],
           fontWeight: 400,
-          color: '#ffffff',
+          color: color.fg,
           lineHeight: 1.2,
         }}
       >
@@ -215,9 +216,9 @@ function SectionHeading({
       {count !== null && (
         <span
           style={{
-            fontFamily: 'var(--font-geist-mono)',
-            fontSize: '13px',
-            color: 'rgba(255,255,255,0.35)',
+            fontFamily: font.mono,
+            fontSize: fontSize.lg,
+            color: color.fgDisabled,
           }}
         >
           {count}
@@ -226,10 +227,10 @@ function SectionHeading({
       {note && (
         <span
           style={{
-            fontFamily: 'var(--font-geist-mono)',
-            fontSize: '11px',
-            color: 'rgba(255,255,255,0.25)',
-            textTransform: 'uppercase',
+            fontFamily: font.mono,
+            fontSize: fontSize.base,
+            color: color.fgGhost,
+            textTransform: 'uppercase' as const,
             letterSpacing: '0.5px',
           }}
         >
@@ -247,7 +248,7 @@ function NicheGrid({ niches }: { niches: NicheScore[] }) {
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
         gap: '1px',
-        backgroundColor: 'rgba(255,255,255,0.08)',
+        backgroundColor: color.surfaceActive,
       }}
     >
       {niches.map((n) => (
@@ -261,19 +262,19 @@ function EmptySection({ href, cta }: { href: string; cta: string }) {
   return (
     <div
       style={{
-        border: '1px solid rgba(255,255,255,0.08)',
-        padding: '48px',
+        border: `1px solid ${color.surfaceActive}`,
+        padding: spacing['4xl'],
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: '24px',
+        gap: spacing['2xl'],
       }}
     >
       <span
         style={{
-          fontFamily: 'var(--font-inter)',
-          fontSize: '13px',
-          color: 'rgba(255,255,255,0.25)',
+          fontFamily: font.body,
+          fontSize: fontSize.lg,
+          color: color.fgGhost,
         }}
       >
         No data yet.
@@ -281,14 +282,14 @@ function EmptySection({ href, cta }: { href: string; cta: string }) {
       <Link
         href={href}
         style={{
-          fontFamily: 'var(--font-geist-mono)',
-          fontSize: '11px',
-          color: 'rgba(255,255,255,0.7)',
+          fontFamily: font.mono,
+          fontSize: fontSize.base,
+          color: color.fgSecondary,
           textDecoration: 'none',
-          border: '1px solid rgba(255,255,255,0.2)',
-          padding: '8px 16px',
+          border: `1px solid ${color.borderStrong}`,
+          padding: `${spacing.sm} ${spacing.lg}`,
           letterSpacing: '0.8px',
-          textTransform: 'uppercase',
+          textTransform: 'uppercase' as const,
         }}
       >
         {cta} →
@@ -304,14 +305,14 @@ function LoadingGrid() {
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
         gap: '1px',
-        backgroundColor: 'rgba(255,255,255,0.08)',
+        backgroundColor: color.surfaceActive,
       }}
     >
       {[0, 1, 2].map((i) => (
         <div
           key={i}
           style={{
-            backgroundColor: 'rgba(255,255,255,0.03)',
+            backgroundColor: color.surface,
             height: '200px',
           }}
         />

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { color, font, fontSize } from '@/lib/tokens';
 
 const NAV_LINKS = [
   { href: '/pipeline', label: 'PIPELINE' },
@@ -26,8 +27,8 @@ export default function Navigation() {
       role="navigation"
       aria-label="Main navigation"
       style={{
-        backgroundColor: '#1f2228',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+        backgroundColor: color.bg,
+        borderBottom: `1px solid ${color.border}`,
         padding: '0 24px',
         height: '56px',
         display: 'flex',
@@ -42,19 +43,19 @@ export default function Navigation() {
         <Link
           href="/"
           style={{
-            fontFamily: 'var(--font-geist-mono)',
-            fontSize: '14px',
+            fontFamily: font.mono,
+            fontSize: fontSize.xl,
             fontWeight: 400,
-            color: '#ffffff',
+            color: color.fg,
             textDecoration: 'none',
             letterSpacing: '1.4px',
-            textTransform: 'uppercase',
+            textTransform: 'uppercase' as const,
           }}
         >
           NICHE RADAR
         </Link>
 
-        {/* Mobile menu button */}
+        {/* Mobile menu button — hidden by default, shown via CSS media query */}
         <button
           className="mobile-menu-btn"
           onClick={() => setMenuOpen(!menuOpen)}
@@ -66,7 +67,7 @@ export default function Navigation() {
             justifyContent: 'center',
             background: 'none',
             border: 'none',
-            color: 'rgba(255,255,255,0.6)',
+            color: color.fgMuted,
             cursor: 'pointer',
             padding: '4px',
             width: '32px',
@@ -101,13 +102,13 @@ export default function Navigation() {
                 onClick={() => setMenuOpen(false)}
                 aria-current={active ? 'page' : undefined}
                 style={{
-                  fontFamily: 'var(--font-inter)',
-                  fontSize: '11px',
-                  color: active ? '#ffffff' : 'rgba(255,255,255,0.45)',
+                  fontFamily: font.body,
+                  fontSize: fontSize.base,
+                  color: active ? color.fg : color.fgMuted,
                   textDecoration: 'none',
                   letterSpacing: '0.8px',
-                  textTransform: 'uppercase',
-                  borderBottom: active ? '1px solid rgba(255,255,255,0.5)' : '1px solid transparent',
+                  textTransform: 'uppercase' as const,
+                  borderBottom: active ? `1px solid ${color.borderFocus}` : '1px solid transparent',
                   paddingBottom: '2px',
                   transition: 'color 0.15s, border-color 0.15s',
                 }}
@@ -120,11 +121,11 @@ export default function Navigation() {
       </div>
       <span
         style={{
-          fontFamily: 'var(--font-geist-mono)',
-          fontSize: '11px',
-          color: 'rgba(255, 255, 255, 0.3)',
+          fontFamily: font.mono,
+          fontSize: fontSize.base,
+          color: color.fgGhost,
           letterSpacing: '1px',
-          textTransform: 'uppercase',
+          textTransform: 'uppercase' as const,
         }}
       >
         ALPHA

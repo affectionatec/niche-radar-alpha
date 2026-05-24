@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { endpoints, fetcher } from '@/lib/api';
 import { ReportFile } from '@/lib/types';
+import { color, font } from '@/lib/tokens';
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -38,14 +39,14 @@ export default function ReportsPage() {
 
   if (error) {
     return (
-      <div style={{ padding: '96px 0', textAlign: 'center' }}>
+      <div style={{ padding: '96px 0', textAlign: 'center' as const }}>
         <p
           style={{
-            fontFamily: 'var(--font-geist-mono)',
+            fontFamily: font.mono,
             fontSize: '12px',
-            color: 'rgba(255,255,255,0.3)',
+            color: color.fgGhost,
             letterSpacing: '0.8px',
-            textTransform: 'uppercase',
+            textTransform: 'uppercase' as const,
           }}
         >
           CANNOT CONNECT TO API
@@ -68,19 +69,19 @@ export default function ReportsPage() {
       >
         <h1
           style={{
-            fontFamily: 'var(--font-inter)',
+            fontFamily: font.body,
             fontSize: '30px',
             fontWeight: 400,
-            color: '#ffffff',
+            color: color.fg,
           }}
         >
           REPORTS
           {reports && (
             <span
               style={{
-                fontFamily: 'var(--font-geist-mono)',
+                fontFamily: font.mono,
                 fontSize: '13px',
-                color: 'rgba(255,255,255,0.35)',
+                color: color.fgDisabled,
                 marginLeft: '16px',
               }}
             >
@@ -91,14 +92,14 @@ export default function ReportsPage() {
         <Link
           href="/pipeline"
           style={{
-            fontFamily: 'var(--font-geist-mono)',
+            fontFamily: font.mono,
             fontSize: '11px',
-            color: 'rgba(255,255,255,0.5)',
+            color: color.fgMuted,
             textDecoration: 'none',
-            border: '1px solid rgba(255,255,255,0.15)',
+            border: `1px solid ${color.borderStrong}`,
             padding: '8px 14px',
             letterSpacing: '0.8px',
-            textTransform: 'uppercase',
+            textTransform: 'uppercase' as const,
           }}
         >
           GENERATE REPORT →
@@ -110,9 +111,9 @@ export default function ReportsPage() {
       ) : !reports || reports.length === 0 ? (
         <div
           style={{
-            border: '1px solid rgba(255,255,255,0.08)',
+            border: `1px solid ${color.surfaceActive}`,
             padding: '48px',
-            textAlign: 'center',
+            textAlign: 'center' as const,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -121,9 +122,9 @@ export default function ReportsPage() {
         >
           <span
             style={{
-              fontFamily: 'var(--font-inter)',
+              fontFamily: font.body,
               fontSize: '13px',
-              color: 'rgba(255,255,255,0.25)',
+              color: color.fgGhost,
             }}
           >
             No reports yet.
@@ -131,14 +132,14 @@ export default function ReportsPage() {
           <Link
             href="/pipeline"
             style={{
-              fontFamily: 'var(--font-geist-mono)',
+              fontFamily: font.mono,
               fontSize: '11px',
-              color: 'rgba(255,255,255,0.7)',
+              color: color.fgSecondary,
               textDecoration: 'none',
-              border: '1px solid rgba(255,255,255,0.2)',
+              border: `1px solid ${color.borderStrong}`,
               padding: '8px 16px',
               letterSpacing: '0.8px',
-              textTransform: 'uppercase',
+              textTransform: 'uppercase' as const,
             }}
           >
             GENERATE REPORT →
@@ -150,11 +151,11 @@ export default function ReportsPage() {
             display: 'grid',
             gridTemplateColumns: selected ? '280px 1fr' : '1fr',
             gap: '1px',
-            backgroundColor: 'rgba(255,255,255,0.08)',
+            backgroundColor: color.surfaceActive,
             alignItems: 'start',
           }}
         >
-          <div style={{ backgroundColor: '#1f2228' }}>
+          <div style={{ backgroundColor: color.bg }}>
             {reports.map((r) => (
               <button
                 key={r.filename}
@@ -163,10 +164,10 @@ export default function ReportsPage() {
                   width: '100%',
                   background:
                     r.filename === selected
-                      ? 'rgba(255,255,255,0.07)'
+                      ? color.surfaceHover
                       : 'transparent',
                   border: 'none',
-                  borderBottom: '1px solid rgba(255,255,255,0.05)',
+                  borderBottom: `1px solid ${color.surfaceHover}`,
                   padding: '14px 16px',
                   textAlign: 'left',
                   cursor: 'pointer',
@@ -177,9 +178,9 @@ export default function ReportsPage() {
               >
                 <span
                   style={{
-                    fontFamily: 'var(--font-geist-mono)',
+                    fontFamily: font.mono,
                     fontSize: '12px',
-                    color: r.filename === selected ? '#ffffff' : 'rgba(255,255,255,0.75)',
+                    color: r.filename === selected ? color.fg : color.fgSecondary,
                     display: 'block',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -190,9 +191,9 @@ export default function ReportsPage() {
                 </span>
                 <span
                   style={{
-                    fontFamily: 'var(--font-inter)',
+                    fontFamily: font.body,
                     fontSize: '11px',
-                    color: 'rgba(255,255,255,0.3)',
+                    color: color.fgGhost,
                   }}
                 >
                   {formatSize(r.size)} ·{' '}
@@ -205,7 +206,7 @@ export default function ReportsPage() {
           {selected && (
             <div
               style={{
-                backgroundColor: '#1f2228',
+                backgroundColor: color.bg,
                 padding: '32px 36px',
                 minHeight: '400px',
               }}
@@ -222,12 +223,12 @@ export default function ReportsPage() {
                   disabled={!content}
                   style={{
                     background: 'transparent',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    color: 'rgba(255,255,255,0.75)',
-                    fontFamily: 'var(--font-geist-mono)',
+                    border: `1px solid ${color.borderStrong}`,
+                    color: color.fgSecondary,
+                    fontFamily: font.mono,
                     fontSize: '11px',
                     letterSpacing: '0.8px',
-                    textTransform: 'uppercase',
+                    textTransform: 'uppercase' as const,
                     padding: '6px 14px',
                     cursor: content ? 'pointer' : 'not-allowed',
                     opacity: content ? 1 : 0.4,
@@ -239,9 +240,9 @@ export default function ReportsPage() {
               {contentLoading ? (
                 <span
                   style={{
-                    fontFamily: 'var(--font-geist-mono)',
+                    fontFamily: font.mono,
                     fontSize: '12px',
-                    color: 'rgba(255,255,255,0.3)',
+                    color: color.fgGhost,
                   }}
                 >
                   Loading...
@@ -261,14 +262,14 @@ export default function ReportsPage() {
 
 function LoadingSkeleton() {
   return (
-    <div style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+    <div style={{ border: `1px solid ${color.border}` }}>
       {[0, 1, 2].map((i) => (
         <div
           key={i}
           style={{
             height: '60px',
-            borderBottom: '1px solid rgba(255,255,255,0.05)',
-            backgroundColor: 'rgba(255,255,255,0.02)',
+            borderBottom: `1px solid ${color.surfaceHover}`,
+            backgroundColor: color.surface,
           }}
         />
       ))}

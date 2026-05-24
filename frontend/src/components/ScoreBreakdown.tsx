@@ -1,11 +1,11 @@
 'use client';
-import { SCORING_DIMENSIONS } from '@/lib/tokens';
+import { color, font, SCORING_DIMENSIONS } from '@/lib/tokens';
 import { A4Scores } from '@/lib/types';
 
 function barColor(score: number): string {
-  if (score >= 8) return 'rgba(74,222,128,0.85)';
-  if (score >= 5) return 'rgba(251,191,36,0.85)';
-  return 'rgba(255,80,80,0.85)';
+  if (score >= 8) return color.success;
+  if (score >= 5) return color.warning;
+  return color.error;
 }
 
 export default function ScoreBreakdown({ scores }: { scores: A4Scores }) {
@@ -19,8 +19,8 @@ export default function ScoreBreakdown({ scores }: { scores: A4Scores }) {
   return (
     <div>
       <div style={{
-        fontFamily: 'var(--font-inter)', fontSize: '11px', color: 'rgba(255,255,255,0.4)',
-        textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '14px',
+        fontFamily: font.body, fontSize: '11px', color: color.fgMuted,
+        textTransform: 'uppercase' as const, letterSpacing: '1px', marginBottom: '14px',
       }}>
         SCORE BREAKDOWN
       </div>
@@ -35,8 +35,8 @@ export default function ScoreBreakdown({ scores }: { scores: A4Scores }) {
             <div key={dim.key} style={{ display: 'contents' }}>
               <div
                 style={{
-                  fontFamily: 'var(--font-geist-mono)', fontSize: '10px',
-                  color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase',
+                  fontFamily: font.mono, fontSize: '10px',
+                  color: color.fgMuted, textTransform: 'uppercase' as const,
                   letterSpacing: '0.5px', whiteSpace: 'nowrap',
                 }}
                 title={entry?.rationale || dim.description}
@@ -44,7 +44,7 @@ export default function ScoreBreakdown({ scores }: { scores: A4Scores }) {
                 {dim.label}
               </div>
               <div style={{
-                height: '6px', background: 'rgba(255,255,255,0.06)',
+                height: '6px', background: color.surfaceHover,
                 position: 'relative', overflow: 'hidden',
               }}>
                 <div style={{
@@ -54,8 +54,8 @@ export default function ScoreBreakdown({ scores }: { scores: A4Scores }) {
                 }} />
               </div>
               <div style={{
-                fontFamily: 'var(--font-geist-mono)', fontSize: '12px',
-                color: barColor(value), textAlign: 'right',
+                fontFamily: font.mono, fontSize: '12px',
+                color: barColor(value), textAlign: 'right' as const,
               }}>
                 {value}
               </div>
@@ -65,8 +65,8 @@ export default function ScoreBreakdown({ scores }: { scores: A4Scores }) {
       </div>
       {lowest.score <= 4 && (
         <div style={{
-          marginTop: '12px', fontFamily: 'var(--font-geist-mono)', fontSize: '10px',
-          color: 'rgba(255,80,80,0.7)', letterSpacing: '0.5px',
+          marginTop: '12px', fontFamily: font.mono, fontSize: '10px',
+          color: color.errorMuted, letterSpacing: '0.5px',
         }}>
           ⚠ {lowest.label.toUpperCase()} IS DRAGGING THE SCORE ({lowest.score}/10)
         </div>

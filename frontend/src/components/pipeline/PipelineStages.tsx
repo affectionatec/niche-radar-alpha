@@ -45,11 +45,11 @@ function SkipIcon() {
 // ---------------------------------------------------------------------------
 
 const STATUS_COLORS: Record<PhaseStatus, { bg: string; border: string; text: string }> = {
-  pending: { bg: 'transparent', border: 'rgba(255,255,255,0.15)', text: 'rgba(255,255,255,0.25)' },
-  running: { bg: 'rgba(255,255,255,0.08)', border: 'rgba(255,255,255,0.5)', text: '#ffffff' },
-  done: { bg: 'rgba(255,255,255,0.12)', border: 'rgba(255,255,255,0.4)', text: '#ffffff' },
-  failed: { bg: 'rgba(255,80,80,0.12)', border: 'rgba(255,80,80,0.5)', text: 'rgba(255,80,80,0.9)' },
-  skipped: { bg: 'transparent', border: 'rgba(255,255,255,0.1)', text: 'rgba(255,255,255,0.25)' },
+  pending: { bg: 'transparent', border: color.fgGhost, text: color.fgGhost },
+  running: { bg: color.surfaceActive, border: color.borderFocus, text: color.fg },
+  done: { bg: color.surfaceSelected, border: color.fgMuted, text: color.fg },
+  failed: { bg: 'rgba(255,80,80,0.12)', border: color.errorMuted, text: color.error },
+  skipped: { bg: 'transparent', border: color.border, text: color.fgGhost },
 };
 
 const STATUS_LABEL: Record<PhaseStatus, string> = {
@@ -182,7 +182,7 @@ function PhaseCard({ phase }: { phase: PhaseState }) {
         fontSize: fontSize.base,
         letterSpacing: '1px',
         textTransform: 'uppercase',
-        color: isActive ? '#ffffff' : isDone ? color.fgSecondary : isFailed ? color.error : color.fgGhost,
+        color: isActive ? color.fg : isDone ? color.fgSecondary : isFailed ? color.error : color.fgGhost,
         textAlign: 'center',
         transition: 'color 0.3s',
         fontWeight: isActive ? 600 : 400,
@@ -272,7 +272,7 @@ function RunAllStepCard({ step }: { step: RunAllStep }) {
         fontSize: fontSize.md,
         letterSpacing: '1px',
         textTransform: 'uppercase',
-        color: isActive ? '#ffffff' : isDone ? color.fgSecondary : isFailed ? color.error : color.fgGhost,
+        color: isActive ? color.fg : isDone ? color.fgSecondary : isFailed ? color.error : color.fgGhost,
         transition: 'color 0.3s',
         fontWeight: isActive ? 600 : 400,
       }}>

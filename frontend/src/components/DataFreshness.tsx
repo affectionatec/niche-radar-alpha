@@ -2,18 +2,19 @@
 
 import { SourceFreshness, FreshnessSummary } from '@/lib/types';
 import { ALL_SOURCES, sourceIcon, sourceFreshnessRule, sourceLabel } from '@/lib/tokens';
+import { color as c, font, fontSize, spacing } from '@/lib/tokens';
 
 interface DataFreshnessProps {
   freshness: FreshnessSummary;
 }
 
 function freshnessColor(ageHours: number | null, ruleHours: number): string {
-  if (ageHours === null) return 'rgba(255,255,255,0.15)';
+  if (ageHours === null) return c.fgGhost;
   const ratio = ageHours / ruleHours;
-  if (ratio <= 0.5) return 'rgba(74,222,128,0.8)';
-  if (ratio <= 1.0) return 'rgba(74,222,128,0.5)';
-  if (ratio <= 2.0) return 'rgba(251,191,36,0.7)';
-  return 'rgba(255,80,80,0.7)';
+  if (ratio <= 0.5) return c.success;
+  if (ratio <= 1.0) return c.successMuted;
+  if (ratio <= 2.0) return c.warning;
+  return c.error;
 }
 
 function freshnessLabel(ageHours: number | null): string {
@@ -72,12 +73,12 @@ export default function DataFreshness({ freshness }: DataFreshnessProps) {
   }
 
   const overallColor = expiredCount > 0
-    ? 'rgba(255,80,80,0.8)'
+    ? c.error
     : staleCount > 0
-      ? 'rgba(251,191,36,0.8)'
+      ? c.warning
       : noDataCount === totalSources
-        ? 'rgba(255,255,255,0.3)'
-        : 'rgba(74,222,128,0.8)';
+        ? c.fgGhost
+        : c.success;
 
   const overallLabel = expiredCount > 0
     ? `${expiredCount} EXPIRED`
@@ -89,23 +90,23 @@ export default function DataFreshness({ freshness }: DataFreshnessProps) {
 
   return (
     <div style={{
-      border: '1px solid rgba(255,255,255,0.08)',
+      border: `1px solid ${c.surfaceActive}`,
     }}>
       {/* Header */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '16px 24px',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        padding: `${spacing.lg} ${spacing['2xl']}`,
+        borderBottom: `1px solid ${c.surfaceHover}`,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
           <span style={{
-            fontFamily: 'var(--font-geist-mono)',
-            fontSize: '10px',
+            fontFamily: font.mono,
+            fontSize: fontSize.sm,
             letterSpacing: '1px',
-            color: 'rgba(255,255,255,0.35)',
-            textTransform: 'uppercase',
+            color: c.fgDisabled,
+            textTransform: 'uppercase' as const,
           }}>
             Analysis Window · {freshness.analysis_window_days} Days
           </span>
@@ -113,7 +114,7 @@ export default function DataFreshness({ freshness }: DataFreshnessProps) {
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
+          gap: spacing.sm,
         }}>
           <div style={{
             width: '6px',
@@ -122,11 +123,11 @@ export default function DataFreshness({ freshness }: DataFreshnessProps) {
             background: overallColor,
           }} />
           <span style={{
-            fontFamily: 'var(--font-geist-mono)',
-            fontSize: '10px',
+            fontFamily: font.mono,
+            fontSize: fontSize.sm,
             letterSpacing: '0.8px',
             color: overallColor,
-            textTransform: 'uppercase',
+            textTransform: 'uppercase' as const,
           }}>
             {overallLabel}
           </span>
@@ -134,16 +135,15 @@ export default function DataFreshness({ freshness }: DataFreshnessProps) {
       </div>
 
       {/* Source rows */}
-      <div style={{ padding: '8px 0' }}>
+      <div style={{ padding: `${spacing.sm} 0` }}>
         {allSources.map((src) => {
           const ruleKey = sourceFreshnessRule[src];
           const ruleHours = rules[ruleKey] ?? 72;
           const data = sourceMap[src];
           const age = data?.newest_age_hours ?? null;
           const items = data?.items ?? 0;
-          const color = freshnessColor(age, ruleHours);
+          const fColor = freshnessColor(age, ruleHours);
           const label = freshnessLabel(age);
-          const status = freshnessStatus(age, ruleHours);
           const pct = barPercent(age, ruleHours);
           const icon = sourceIcon[src] ?? '·';
 
@@ -152,27 +152,27 @@ export default function DataFreshness({ freshness }: DataFreshnessProps) {
               display: 'grid',
               gridTemplateColumns: '140px 1fr 90px 80px 60px',
               alignItems: 'center',
-              padding: '10px 24px',
-              gap: '16px',
-              borderBottom: '1px solid rgba(255,255,255,0.03)',
+              padding: `${spacing.md} ${spacing['2xl']}`,
+              gap: spacing.lg,
+              borderBottom: `1px solid ${c.surface}`,
             }}>
               {/* Source name */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
                 <span style={{
-                  fontFamily: 'var(--font-geist-mono)',
-                  fontSize: '12px',
-                  color: 'rgba(255,255,255,0.3)',
+                  fontFamily: font.mono,
+                  fontSize: fontSize.md,
+                  color: c.fgGhost,
                   width: '14px',
-                  textAlign: 'center',
+                  textAlign: 'center' as const,
                 }}>
                   {icon}
                 </span>
                 <span style={{
-                  fontFamily: 'var(--font-geist-mono)',
-                  fontSize: '11px',
+                  fontFamily: font.mono,
+                  fontSize: fontSize.base,
                   letterSpacing: '0.8px',
-                  textTransform: 'uppercase',
-                  color: 'rgba(255,255,255,0.7)',
+                  textTransform: 'uppercase' as const,
+                  color: c.fgSecondary,
                 }}>
                   {sourceLabel[src] || src.replace(/_/g, ' ')}
                 </span>
@@ -181,14 +181,14 @@ export default function DataFreshness({ freshness }: DataFreshnessProps) {
               {/* Freshness bar */}
               <div style={{
                 height: '4px',
-                background: 'rgba(255,255,255,0.04)',
+                background: c.surface,
                 borderRadius: '2px',
                 overflow: 'hidden',
               }}>
                 <div style={{
                   width: `${pct}%`,
                   height: '100%',
-                  background: color,
+                  background: fColor,
                   borderRadius: '2px',
                   transition: 'width 0.5s ease, background 0.5s ease',
                 }} />
@@ -196,32 +196,32 @@ export default function DataFreshness({ freshness }: DataFreshnessProps) {
 
               {/* Age label */}
               <span style={{
-                fontFamily: 'var(--font-geist-mono)',
-                fontSize: '11px',
-                color,
-                textAlign: 'right',
+                fontFamily: font.mono,
+                fontSize: fontSize.base,
+                color: fColor,
+                textAlign: 'right' as const,
               }}>
                 {label}
               </span>
 
-              {/* Status badge */}
+              {/* Rule threshold */}
               <span style={{
-                fontFamily: 'var(--font-geist-mono)',
-                fontSize: '9px',
+                fontFamily: font.mono,
+                fontSize: fontSize.xs,
                 letterSpacing: '0.8px',
-                color,
-                textAlign: 'center',
-                textTransform: 'uppercase',
+                color: fColor,
+                textAlign: 'center' as const,
+                textTransform: 'uppercase' as const,
               }}>
                 ≤{ruleHours}h
               </span>
 
               {/* Item count */}
               <span style={{
-                fontFamily: 'var(--font-geist-mono)',
-                fontSize: '11px',
-                color: 'rgba(255,255,255,0.3)',
-                textAlign: 'right',
+                fontFamily: font.mono,
+                fontSize: fontSize.base,
+                color: c.fgGhost,
+                textAlign: 'right' as const,
               }}>
                 {items > 0 ? items.toLocaleString() : '—'}
               </span>
@@ -233,23 +233,23 @@ export default function DataFreshness({ freshness }: DataFreshnessProps) {
       {/* Footer legend */}
       <div style={{
         display: 'flex',
-        gap: '20px',
-        padding: '10px 24px',
-        borderTop: '1px solid rgba(255,255,255,0.04)',
+        gap: spacing.xl,
+        padding: `${spacing.md} ${spacing['2xl']}`,
+        borderTop: `1px solid ${c.surface}`,
       }}>
         {[
-          { label: 'FRESH', color: 'rgba(74,222,128,0.7)' },
-          { label: 'STALE', color: 'rgba(251,191,36,0.7)' },
-          { label: 'EXPIRED', color: 'rgba(255,80,80,0.7)' },
-        ].map(({ label: l, color: c }) => (
+          { label: 'FRESH', lc: c.success },
+          { label: 'STALE', lc: c.warning },
+          { label: 'EXPIRED', lc: c.error },
+        ].map(({ label: l, lc }) => (
           <div key={l} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '8px', height: '3px', background: c, borderRadius: '1px' }} />
+            <div style={{ width: '8px', height: '3px', background: lc, borderRadius: '1px' }} />
             <span style={{
-              fontFamily: 'var(--font-geist-mono)',
-              fontSize: '9px',
+              fontFamily: font.mono,
+              fontSize: fontSize.xs,
               letterSpacing: '0.8px',
-              color: 'rgba(255,255,255,0.25)',
-              textTransform: 'uppercase',
+              color: c.fgGhost,
+              textTransform: 'uppercase' as const,
             }}>
               {l}
             </span>
