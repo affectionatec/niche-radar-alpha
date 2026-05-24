@@ -69,6 +69,8 @@ class XiaohongshuCollector(BaseCollector):
                 return True, "TikHub Xiaohongshu API reachable"
             if resp.status_code == 401:
                 return False, "TikHub API key invalid (401)"
+            if resp.status_code == 402:
+                return False, "TikHub account has insufficient credits — top up at tikhub.io"
             return False, f"TikHub returned HTTP {resp.status_code}"
         except Exception as exc:
             return False, str(exc)
@@ -109,6 +111,8 @@ class XiaohongshuCollector(BaseCollector):
                             )
                             if resp.status_code == 429:
                                 raise CollectorUnavailableError("TikHub rate limit hit")
+                            if resp.status_code == 402:
+                                raise CollectorUnavailableError("TikHub account has insufficient credits — top up at tikhub.io")
                             if resp.status_code != 200:
                                 raise CollectorUnavailableError(f"TikHub returned {resp.status_code}")
                             data = resp.json()
