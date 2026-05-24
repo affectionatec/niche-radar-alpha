@@ -156,18 +156,22 @@ export default function SystemHealth({ sources, recentJobs }: SystemHealthProps)
                     display: 'flex', alignItems: 'center', gap: '6px',
                     borderTop: `1px solid rgba(255,255,255,0.04)`,
                     paddingTop: '8px',
+                    minWidth: 0,
                   }}>
-                    <span style={{ fontSize: fontSize.sm }}>{reliability.icon}</span>
+                    <span style={{ fontSize: fontSize.sm, flexShrink: 0 }}>{reliability.icon}</span>
                     <span style={{
                       fontFamily: font.mono, fontSize: fontSize.xs,
                       letterSpacing: '0.5px', color: reliability.color,
                       textTransform: 'uppercase' as const,
+                      whiteSpace: 'nowrap' as const, flexShrink: 0,
                     }}>
                       {reliability.label}
                     </span>
                     <span style={{
                       fontFamily: font.body, fontSize: fontSize.xs,
                       color: color.fgGhost, marginLeft: 'auto',
+                      overflow: 'hidden', textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap' as const, minWidth: 0,
                     }}>
                       {reliability.note}
                     </span>
