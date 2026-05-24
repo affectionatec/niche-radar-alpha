@@ -5,7 +5,7 @@ import Link from 'next/link';
 import useSWR from 'swr';
 import { endpoints, fetcher, postSettings, postSettingsTest, fetchProviderModels, fetchScoringWeights, saveScoringWeights } from '@/lib/api';
 import { LLMSettings, SourceStatus } from '@/lib/types';
-import { color, font, fontSize, spacing, button as btnStyle, LLM_PROVIDERS, LLMProvider, SCORING_DIMENSIONS, sourceLabel } from '@/lib/tokens';
+import { color, font, fontSize, spacing, button as btnStyle, LLM_PROVIDERS, LLMProvider, SCORING_DIMENSIONS, sourceLabel, CN_SOURCES } from '@/lib/tokens';
 
 function resolveProvider(backendProvider: string, baseUrl: string): LLMProvider {
   // Try to match a specific provider by base URL first
@@ -552,8 +552,6 @@ const SOURCE_DESCRIPTIONS: Record<string, string> = {
   weibo: 'Trending complaints & viral pain-points',
   douyin: 'Short video product pain-points (TikHub)',
 };
-
-const CN_SOURCES = new Set(['xiaohongshu', 'bilibili', 'zhihu', 'weibo', 'douyin']);
 
 function DataSourcesSection() {
   const { data: sources, isLoading } = useSWR<SourceStatus[]>(

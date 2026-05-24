@@ -198,6 +198,8 @@ export const ALL_SOURCES = [
 
 export type SourceSlug = typeof ALL_SOURCES[number];
 
+export const CN_SOURCES = new Set<string>(['xiaohongshu', 'bilibili', 'zhihu', 'weibo', 'douyin']);
+
 export const sourceLabel: Record<string, string> = {
   reddit: 'Reddit',
   hn: 'Hacker News',

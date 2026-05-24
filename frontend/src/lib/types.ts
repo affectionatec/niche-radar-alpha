@@ -61,6 +61,8 @@ export interface NicheScore {
   momentum_label?: 'growing' | 'stable' | 'declining' | null;
   momentum_ratio?: number | null;
   is_shortlisted?: boolean;
+  sources?: string[];
+  region?: 'global' | 'chinese' | 'mixed' | 'unknown';
 }
 
 export interface WebValidation {

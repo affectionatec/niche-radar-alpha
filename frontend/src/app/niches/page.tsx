@@ -4,7 +4,7 @@ import Link from 'next/link';
 import useSWR from 'swr';
 import { endpoints, fetcher } from '@/lib/api';
 import { NicheScore } from '@/lib/types';
-import { color, font } from '@/lib/tokens';
+import { color, font, CN_SOURCES, sourceIcon } from '@/lib/tokens';
 
 type SortKey = 'llm_score' | 'keyword' | 'build_complexity' | 'occurrence_count' | 'last_seen';
 
@@ -48,6 +48,7 @@ export default function NichesPage() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [filter, setFilter] = useState('');
   const [trendFilter, setTrendFilter] = useState<string>('any');
+  const [regionFilter, setRegionFilter] = useState<string>('all');
   const [minScore, setMinScore] = useState<string>('');
 
   const { data: niches, error, isLoading } =
@@ -66,6 +67,13 @@ export default function NichesPage() {
           !(n.target_audience || '').toLowerCase().includes(f)) return false;
     }
     if (trendFilter !== 'any' && n.momentum_label !== trendFilter) return false;
+    if (regionFilter !== 'all') {
+      const srcs = n.sources || [];
+      const hasCn = srcs.some(s => CN_SOURCES.has(s));
+      const hasGlobal = srcs.some(s => !CN_SOURCES.has(s));
+      if (regionFilter === 'chinese' && !hasCn) return false;
+      if (regionFilter === 'global' && !hasGlobal) return false;
+    }
     if (minScore && n.llm_score < Number(minScore)) return false;
     return true;
   });
@@ -155,14 +163,32 @@ export default function NichesPage() {
             </button>
           ))}
         </div>
+        {/* Region filter */}
+        <div style={{ display: 'flex', gap: '4px', borderLeft: `1px solid ${color.borderStrong}`, paddingLeft: '12px' }}>
+          {([
+            { key: 'all', label: 'ALL REGIONS' },
+            { key: 'global', label: '🌐 GLOBAL' },
+            { key: 'chinese', label: '🇨🇳 CHINESE' },
+          ] as const).map(r => (
+            <button key={r.key} onClick={() => setRegionFilter(r.key)} style={{
+              background: regionFilter === r.key ? color.surfaceSelected : 'transparent',
+              border: `1px solid ${color.borderStrong}`,
+              color: regionFilter === r.key ? color.fg : color.fgMuted,
+              fontFamily: font.mono, fontSize: '10px', letterSpacing: '0.5px',
+              padding: '7px 12px', cursor: 'pointer', textTransform: 'uppercase' as const,
+            }}>
+              {r.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {isLoading ? <LoadingSkeleton /> : sorted.length === 0 ? (
         <div style={{ border: `1px solid ${color.surfaceActive}`, padding: '48px', textAlign: 'center' as const, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
           <span style={{ fontFamily: font.body, fontSize: '13px', color: color.fgGhost }}>
-            {filter || trendFilter !== 'any' || minScore ? 'No opportunities match the current filters.' : 'No opportunities yet.'}
+            {filter || trendFilter !== 'any' || regionFilter !== 'all' || minScore ? 'No opportunities match the current filters.' : 'No opportunities yet.'}
           </span>
-          {!filter && trendFilter === 'any' && !minScore && (
+          {!filter && trendFilter === 'any' && regionFilter === 'all' && !minScore && (
             <Link href="/pipeline" style={{ fontFamily: font.mono, fontSize: '11px', color: color.fgSecondary, textDecoration: 'none', border: `1px solid ${color.borderStrong}`, padding: '8px 16px', letterSpacing: '0.8px', textTransform: 'uppercase' as const }}>
               RUN PIPELINE →
             </Link>
@@ -207,6 +233,20 @@ export default function NichesPage() {
                 <div style={{ fontFamily: font.mono, fontSize: '10px', color: color.fgDisabled, textTransform: 'uppercase' as const, letterSpacing: '0.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {n.keyword}{n.target_audience ? ` · ${n.target_audience}` : ''}
                 </div>
+                {n.sources && n.sources.length > 0 && (
+                  <div style={{ display: 'flex', gap: '4px', marginTop: '3px', flexWrap: 'wrap' }}>
+                    {n.sources.map(s => (
+                      <span key={s} style={{
+                        fontFamily: font.mono, fontSize: '9px', letterSpacing: '0.3px',
+                        color: CN_SOURCES.has(s) ? color.warning : color.fgMuted,
+                        border: `1px solid ${CN_SOURCES.has(s) ? color.warning + '44' : color.borderStrong}`,
+                        padding: '1px 5px', whiteSpace: 'nowrap',
+                      }}>
+                        {sourceIcon[s] || '·'} {s}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               <span style={{ fontFamily: font.mono, fontSize: '14px', color: color.fg }}>
                 {n.llm_score.toFixed(0)}

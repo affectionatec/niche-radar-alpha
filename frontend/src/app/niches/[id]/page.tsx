@@ -4,7 +4,7 @@ import useSWR from 'swr';
 import Link from 'next/link';
 import { endpoints, fetcher, toggleShortlist, validateNiche } from '@/lib/api';
 import { NicheDetail } from '@/lib/types';
-import { color as c, font } from '@/lib/tokens';
+import { color as c, font, CN_SOURCES, sourceIcon } from '@/lib/tokens';
 import ScoreBreakdown from '@/components/ScoreBreakdown';
 import VerdictChain from '@/components/VerdictChain';
 
@@ -298,31 +298,56 @@ export default function NichePage({ params }: { params: { id: string } }) {
           <div style={{ border: `1px solid ${c.border}`, padding: '32px', textAlign: 'center' as const, fontFamily: font.body, fontSize: '13px', color: c.fgGhost }}>
             No linked source items.
           </div>
-        ) : (
-          <div style={{ border: `1px solid ${c.border}`, display: 'flex', flexDirection: 'column' }}>
-            {items.map((item, i) => (
-              <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '80px 1fr 60px', gap: '16px', alignItems: 'center', padding: '14px 20px', borderBottom: i < items.length - 1 ? `1px solid ${c.surfaceHover}` : 'none', backgroundColor: c.surface }}>
-                <span style={{ fontFamily: font.mono, fontSize: '10px', color: c.fgDisabled, textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>
-                  {item.source}
-                </span>
-                <div>
-                  {item.url ? (
-                    <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ fontFamily: font.body, fontSize: '13px', color: c.fg, textDecoration: 'none', display: 'block' }}>
-                      {item.title ?? item.source_id}
-                    </a>
-                  ) : (
-                    <span style={{ fontFamily: font.body, fontSize: '13px', color: c.fg, display: 'block' }}>
-                      {item.title ?? item.source_id}
-                    </span>
+        ) : (() => {
+          const globalItems = items.filter(it => !CN_SOURCES.has(it.source));
+          const cnItems = items.filter(it => CN_SOURCES.has(it.source));
+          const sections = [
+            ...(globalItems.length > 0 ? [{ label: '🌐 GLOBAL', items: globalItems }] : []),
+            ...(cnItems.length > 0 ? [{ label: '🇨🇳 CHINESE', items: cnItems }] : []),
+          ];
+          // If only one region, skip section headers
+          const showHeaders = sections.length > 1;
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: showHeaders ? '16px' : '0' }}>
+              {sections.map(section => (
+                <div key={section.label}>
+                  {showHeaders && (
+                    <div style={{ fontFamily: font.mono, fontSize: '10px', color: c.fgMuted, letterSpacing: '0.8px', textTransform: 'uppercase' as const, marginBottom: '8px' }}>
+                      {section.label} ({section.items.length})
+                    </div>
                   )}
+                  <div style={{ border: `1px solid ${c.border}`, display: 'flex', flexDirection: 'column' }}>
+                    {section.items.map((item, i) => (
+                      <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 60px', gap: '16px', alignItems: 'center', padding: '14px 20px', borderBottom: i < section.items.length - 1 ? `1px solid ${c.surfaceHover}` : 'none', backgroundColor: c.surface }}>
+                        <span style={{
+                          fontFamily: font.mono, fontSize: '10px',
+                          color: CN_SOURCES.has(item.source) ? c.warning : c.fgDisabled,
+                          textTransform: 'uppercase' as const, letterSpacing: '0.5px',
+                        }}>
+                          {sourceIcon[item.source] || '·'} {item.source}
+                        </span>
+                        <div>
+                          {item.url ? (
+                            <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ fontFamily: font.body, fontSize: '13px', color: c.fg, textDecoration: 'none', display: 'block' }}>
+                              {item.title ?? item.source_id}
+                            </a>
+                          ) : (
+                            <span style={{ fontFamily: font.body, fontSize: '13px', color: c.fg, display: 'block' }}>
+                              {item.title ?? item.source_id}
+                            </span>
+                          )}
+                        </div>
+                        <span style={{ fontFamily: font.mono, fontSize: '13px', color: c.fgMuted, textAlign: 'right' as const }}>
+                          {item.score ?? 0}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <span style={{ fontFamily: font.mono, fontSize: '13px', color: c.fgMuted, textAlign: 'right' as const }}>
-                  {item.score ?? 0}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

@@ -77,9 +77,13 @@ def _tier(score: float) -> str:
     return "archive"
 
 
+CN_SOURCES = {"xiaohongshu", "bilibili", "zhihu", "weibo", "douyin"}
+
+
 @app.get("/api/niches")
 def list_niches(
     source: Optional[str] = None,
+    region: Optional[str] = None,        # all | global | chinese
     min_score: Optional[float] = None,
     max_score: Optional[float] = None,
     monetization: Optional[str] = None,  # any | yes | no
@@ -94,18 +98,36 @@ def list_niches(
         for n in niches:
             n["tier"] = _tier(n["llm_score"])
 
+        # Enrich each niche with its contributing sources
+        niche_ids = [n["id"] for n in niches]
+        source_map: dict[str, list[str]] = {nid: [] for nid in niche_ids}
+        if niche_ids:
+            placeholders = ",".join("?" * len(niche_ids))
+            rows = db.execute(
+                f"SELECT nil.niche_id, ri.source FROM niche_item_links nil "
+                f"JOIN raw_items ri ON nil.raw_item_id = ri.id "
+                f"WHERE nil.niche_id IN ({placeholders}) GROUP BY nil.niche_id, ri.source",
+                niche_ids,
+            ).fetchall()
+            for nid, src in rows:
+                source_map.setdefault(nid, []).append(src)
+        for n in niches:
+            srcs = sorted(set(source_map.get(n["id"], [])))
+            n["sources"] = srcs
+            has_cn = any(s in CN_SOURCES for s in srcs)
+            has_global = any(s not in CN_SOURCES for s in srcs)
+            n["region"] = "chinese" if has_cn and not has_global else "global" if has_global and not has_cn else "mixed" if has_cn and has_global else "unknown"
+
+        # Region filter
+        if region and region != "all":
+            if region == "chinese":
+                niches = [n for n in niches if n["region"] in ("chinese", "mixed")]
+            elif region == "global":
+                niches = [n for n in niches if n["region"] in ("global", "mixed")]
+
         # Apply filters
         if source:
-            # Filter niches that have at least one linked item from this source
-            linked_sources = {}
-            for n in niches:
-                nid = n["id"]
-                row = db.execute(
-                    "SELECT COUNT(*) FROM niche_item_links nil JOIN raw_items ri ON nil.raw_item_id=ri.id WHERE nil.niche_id=? AND ri.source=?",
-                    (nid, source),
-                ).fetchone()
-                linked_sources[nid] = (row[0] or 0) > 0
-            niches = [n for n in niches if linked_sources.get(n["id"])]
+            niches = [n for n in niches if source in n.get("sources", [])]
 
         if min_score is not None:
             niches = [n for n in niches if (n.get("llm_score") or 0) >= min_score]

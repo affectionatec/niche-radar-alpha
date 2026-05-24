@@ -4,7 +4,7 @@ import Link from 'next/link';
 import useSWR from 'swr';
 import { endpoints, fetcher } from '@/lib/api';
 import { SourceStatus } from '@/lib/types';
-import { color as c, font, fontSize, spacing, sourceLabel } from '@/lib/tokens';
+import { color as c, font, fontSize, spacing, sourceLabel, CN_SOURCES } from '@/lib/tokens';
 
 const SOURCE_DESCRIPTIONS: Record<string, string> = {
   reddit: 'Pain-point posts from targeted subreddits via search queries',
@@ -25,8 +25,6 @@ const SOURCE_DESCRIPTIONS: Record<string, string> = {
   weibo: 'Trending complaints & viral pain-points (cookie-based)',
   douyin: 'Short video product pain-points via TikHub API',
 };
-
-const CN_SOURCES = new Set(['xiaohongshu', 'bilibili', 'zhihu', 'weibo', 'douyin']);
 
 type FilterTab = 'all' | 'global' | 'chinese';
 
