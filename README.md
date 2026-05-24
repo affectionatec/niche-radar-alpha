@@ -139,15 +139,21 @@ Visit **http://localhost:3000**. If no LLM key is configured yet, you'll be redi
 
 ## Dashboard
 
+<!-- TODO: Add screenshots when the instance is running -->
+<!-- Screenshots: Home page, Niches list, Niche Detail with score breakdown -->
+
 | Page | What it does |
 |------|-------------|
 | **Home** | System health across all 12 sources, data freshness, collection stats |
 | **Niches** | Sortable table of scored candidates with LLM score, verdict, momentum |
-| **Niche Detail** | Full scoring breakdown, raw items, web validation, generated PRD |
+| **Niche Detail** | Full scoring breakdown per dimension, raw items, web validation, generated PRD |
 | **Shortlist** | User-curated starred opportunities |
 | **Pipeline** | Visual stage-by-stage workflow, agent activity feed, run history |
 | **Reports** | Browse generated Markdown analysis reports |
-| **Settings** | LLM provider config (8 providers, live model refresh), data source credentials |
+| **Settings** | LLM provider config (8 providers, live model refresh), scoring weights, data source credentials |
+
+> [!TIP]
+> See [sample reports](docs/sample-reports/) for examples of pipeline output — including a 🟢 GO verdict with full PRD and a 🔴 NO-GO verdict with detailed rationale.
 
 ## Data Sources
 
