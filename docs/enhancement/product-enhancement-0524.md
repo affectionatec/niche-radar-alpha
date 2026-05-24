@@ -642,7 +642,7 @@ Ordered by ROI (return on investment):
 
 ### Weeks 4–6: Monetization Exploration
 
-- [x] **P2.1** — Launch weekly digest email (Path B monetization)
+- [ ] **P2.1** — Launch weekly digest email (Path B monetization) *(deferred — removed in alpha)*
 - [x] **P2.3** — Ship 2–3 prompt packs
 - [x] **P2.2** — Build golden set + eval pipeline
 

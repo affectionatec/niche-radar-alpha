@@ -243,7 +243,6 @@ niche-radar-alpha/
 ├── docs/                           # Extended documentation
 │   ├── ARCHITECTURE.md             # System design, module map, clustering strategy
 │   ├── AGENTS.md                   # Agent design philosophy + prompt documentation
-│   ├── MONETIZATION.md             # Monetization strategies + deployment guide
 │   ├── PRODUCT.md                  # Problem statement & features
 │   ├── DESIGN.md                   # UI/UX design system
 │   ├── spec.md                     # Full MVP specification
@@ -363,6 +362,5 @@ pytest -v
 | [AGENTS.md](docs/AGENTS.md) | Agent design philosophy, prompts, failure cases |
 | [PRODUCT.md](docs/PRODUCT.md) | Problem statement, users, features, non-goals |
 | [DESIGN.md](docs/DESIGN.md) | UI/UX design system (xAI-inspired dark theme) |
-| [MONETIZATION.md](docs/MONETIZATION.md) | Monetization strategies and deployment guide |
 | [spec.md](docs/spec.md) | Full MVP specification |
 | [Sample Reports](docs/sample-reports/) | Example pipeline output (GO + NO-GO verdicts) |
