@@ -52,6 +52,7 @@ export const endpoints = {
   jobLogs: (id: string) => `/api/pipeline/jobs/${id}/logs`,
   settings: '/api/settings',
   settingsModels: '/api/settings/models',
+  scoringWeights: '/api/settings/scoring-weights',
   sources: '/api/sources',
   source: (slug: string) => `/api/sources/${slug}`,
   sourceTest: (slug: string) => `/api/sources/${slug}/test`,
@@ -73,6 +74,21 @@ export async function postSourceTest(slug: string): Promise<{ ok: boolean; messa
   const res = await fetch(`/api/sources/${slug}/test`, { method: 'POST' });
   if (!res.ok) throw new Error(`Source test failed: ${res.status}`);
   return res.json() as Promise<{ ok: boolean; message: string }>;
+}
+
+export async function fetchScoringWeights(): Promise<Record<string, number>> {
+  const res = await fetch(endpoints.scoringWeights);
+  if (!res.ok) throw new Error('Failed to fetch scoring weights');
+  return res.json();
+}
+
+export async function saveScoringWeights(weights: Record<string, number>): Promise<void> {
+  const res = await fetch(endpoints.scoringWeights, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(weights),
+  });
+  if (!res.ok) throw new Error('Failed to save scoring weights');
 }
 
 export async function toggleShortlist(nicheId: string, starred: boolean): Promise<void> {

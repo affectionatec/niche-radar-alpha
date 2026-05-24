@@ -669,3 +669,32 @@ def set_web_validation(db: sqlite3.Connection, analysis_id: str, validation_json
         (validation_json, analysis_id),
     )
     db.commit()
+
+
+# ============================================================================
+# Scoring weights
+# ============================================================================
+
+
+def get_scoring_weights(db: sqlite3.Connection) -> dict[str, float]:
+    """Return custom scoring weights from app_settings, or defaults."""
+    from niche_radar.agents.scorer import WEIGHTS
+
+    row = db.execute(
+        "SELECT value FROM app_settings WHERE key='scoring_weights'"
+    ).fetchone()
+    if row and row[0]:
+        try:
+            return json.loads(row[0])
+        except (json.JSONDecodeError, TypeError):
+            pass
+    return dict(WEIGHTS)
+
+
+def set_scoring_weights(db: sqlite3.Connection, weights: dict[str, float]) -> None:
+    """Persist custom scoring weights to app_settings."""
+    db.execute(
+        "INSERT OR REPLACE INTO app_settings (key, value) VALUES ('scoring_weights', ?)",
+        (json.dumps(weights),),
+    )
+    db.commit()

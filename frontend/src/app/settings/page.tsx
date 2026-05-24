@@ -3,9 +3,9 @@ import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import useSWR from 'swr';
-import { endpoints, fetcher, postSettings, postSettingsTest, fetchProviderModels } from '@/lib/api';
+import { endpoints, fetcher, postSettings, postSettingsTest, fetchProviderModels, fetchScoringWeights, saveScoringWeights } from '@/lib/api';
 import { LLMSettings } from '@/lib/types';
-import { color, font, fontSize, button as btnStyle, LLM_PROVIDERS, LLMProvider } from '@/lib/tokens';
+import { color, font, fontSize, button as btnStyle, LLM_PROVIDERS, LLMProvider, SCORING_DIMENSIONS } from '@/lib/tokens';
 
 function resolveProvider(backendProvider: string, baseUrl: string): LLMProvider {
   // Try to match a specific provider by base URL first
@@ -356,6 +356,121 @@ function SettingsContent() {
             </span>
           )}
         </div>
+      </div>
+
+      {/* ── SCORING WEIGHTS SECTION ──────────────────────────────────── */}
+      <ScoringWeightsSection />
+    </div>
+  );
+}
+
+function ScoringWeightsSection() {
+  const [weights, setWeights] = useState<Record<string, number>>({});
+  const [loaded, setLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    fetchScoringWeights().then(w => { setWeights(w); setLoaded(true); }).catch(() => {
+      const defaults: Record<string, number> = {};
+      SCORING_DIMENSIONS.forEach(d => { defaults[d.key] = d.defaultWeight; });
+      setWeights(defaults);
+      setLoaded(true);
+    });
+  }, []);
+
+  function updateWeight(key: string, value: number) {
+    setWeights(prev => ({ ...prev, [key]: Math.round(value * 10) / 10 }));
+    setSaved(false);
+  }
+
+  function resetDefaults() {
+    const defaults: Record<string, number> = {};
+    SCORING_DIMENSIONS.forEach(d => { defaults[d.key] = d.defaultWeight; });
+    setWeights(defaults);
+    setSaved(false);
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await saveScoringWeights(weights);
+      setSaved(true);
+    } catch {
+      // silent
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!loaded) return null;
+
+  return (
+    <div style={{ marginTop: '48px', borderTop: `1px solid ${color.border}`, paddingTop: '40px' }}>
+      <div style={{
+        fontFamily: font.mono, fontSize: fontSize.base, color: color.fgDisabled,
+        textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '8px',
+      }}>
+        SCORING WEIGHTS
+      </div>
+      <p style={{
+        fontFamily: font.body, fontSize: fontSize.md, color: color.fgGhost,
+        marginBottom: '24px', lineHeight: 1.6,
+      }}>
+        Adjust how each dimension contributes to the final opportunity score (0–100).
+        Higher weight = more influence on the total.
+      </p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {SCORING_DIMENSIONS.map(dim => (
+          <div key={dim.key} style={{
+            display: 'grid', gridTemplateColumns: '150px 1fr 48px',
+            gap: '12px', alignItems: 'center',
+          }}>
+            <div title={dim.description} style={{
+              fontFamily: font.mono, fontSize: '10px', color: color.fgMuted,
+              textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap',
+              cursor: 'help',
+            }}>
+              {dim.label}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="range"
+                min="0.5"
+                max="3.0"
+                step="0.1"
+                value={weights[dim.key] ?? dim.defaultWeight}
+                onChange={e => updateWeight(dim.key, parseFloat(e.target.value))}
+                style={{
+                  width: '100%', height: '4px', appearance: 'none',
+                  background: color.surface, outline: 'none',
+                  accentColor: color.fg,
+                }}
+              />
+            </div>
+            <div style={{
+              fontFamily: font.mono, fontSize: fontSize.md, color: color.fgSecondary,
+              textAlign: 'right',
+            }}>
+              {(weights[dim.key] ?? dim.defaultWeight).toFixed(1)}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '20px', flexWrap: 'wrap' }}>
+        <button onClick={handleSave} disabled={saving} style={{ ...btnStyle.primary, opacity: saving ? 0.5 : 1, cursor: saving ? 'not-allowed' : 'pointer' }}>
+          {saving ? 'SAVING...' : 'SAVE WEIGHTS'}
+        </button>
+        <button onClick={resetDefaults} style={{ ...btnStyle.secondary, cursor: 'pointer' }}>
+          RESET DEFAULTS
+        </button>
+        {saved && (
+          <span style={{ fontFamily: font.mono, fontSize: fontSize.base, color: color.fgMuted, letterSpacing: '0.5px' }}>
+            SAVED
+          </span>
+        )}
       </div>
     </div>
   );

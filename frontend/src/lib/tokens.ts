@@ -338,3 +338,19 @@ export const LLM_PROVIDERS: LLMProvider[] = [
     needsApiKey: true,
   },
 ];
+
+// ─── SCORING DIMENSIONS ────────────────────────────────────────────────
+export const SCORING_DIMENSIONS: {
+  key: string;
+  label: string;
+  description: string;
+  defaultWeight: number;
+}[] = [
+  { key: 'problem_clarity', label: 'Problem Clarity', description: 'How clearly defined the user pain is', defaultWeight: 1.0 },
+  { key: 'market_size', label: 'Market Size', description: 'TAM/SAM estimation from market signals', defaultWeight: 1.5 },
+  { key: 'willingness_to_pay', label: 'Willingness to Pay', description: 'Evidence of users paying for similar solutions', defaultWeight: 2.0 },
+  { key: 'competition_gap', label: 'Competition Gap', description: 'How underserved the niche currently is', defaultWeight: 1.5 },
+  { key: 'technical_feasibility', label: 'Technical Feasibility', description: 'Complexity to build an MVP', defaultWeight: 1.0 },
+  { key: 'distribution_clarity', label: 'Distribution Clarity', description: 'How easy to reach the target audience', defaultWeight: 1.5 },
+  { key: 'trend_momentum', label: 'Trend Momentum', description: 'Growth trajectory of the problem space', defaultWeight: 1.0 },
+];

@@ -78,6 +78,32 @@ export interface NicheAnalysis {
   go_no_go_rationale: string | null;
   prd: Record<string, unknown> | null;
   brief: Record<string, unknown> | null;
+  a4_scores: A4Scores | null;
+}
+
+export interface A4DimensionScore {
+  score: number | null;
+  rationale: string | null;
+}
+
+export interface A4Scores {
+  problem_clarity: A4DimensionScore | null;
+  market_size: A4DimensionScore | null;
+  willingness_to_pay: A4DimensionScore | null;
+  competition_gap: A4DimensionScore | null;
+  technical_feasibility: A4DimensionScore | null;
+  distribution_clarity: A4DimensionScore | null;
+  trend_momentum: A4DimensionScore | null;
+}
+
+export interface ScoringWeights {
+  problem_clarity: number;
+  market_size: number;
+  willingness_to_pay: number;
+  competition_gap: number;
+  technical_feasibility: number;
+  distribution_clarity: number;
+  trend_momentum: number;
 }
 
 export interface SourceCredentialField {

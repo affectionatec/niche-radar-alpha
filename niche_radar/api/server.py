@@ -161,13 +161,17 @@ def get_niche(niche_id: str):
         # Latest analysis row for web_validation + verdict details
         analysis_row = db.execute(
             "SELECT verdict, opportunity_score, weighted_score, tier, feasibility_score, "
-            "web_validation, a6_result, a7_result, a8_result "
+            "web_validation, a6_result, a7_result, a8_result, a4_result "
             "FROM niche_analyses WHERE niche_id=? ORDER BY analyzed_at DESC LIMIT 1",
             (niche_id,),
         ).fetchone()
         niche["analysis"] = None
         if analysis_row:
             import json as _json
+            a4_raw = _json.loads(analysis_row[9]) if analysis_row[9] else None
+            a4_scores = None
+            if isinstance(a4_raw, dict):
+                a4_scores = a4_raw.get("scores", a4_raw)
             niche["analysis"] = {
                 "verdict": analysis_row[0],
                 "opportunity_score": analysis_row[1],
@@ -178,6 +182,7 @@ def get_niche(niche_id: str):
                 "go_no_go_rationale": (_json.loads(analysis_row[6]) or {}).get("full_rationale") if analysis_row[6] else None,
                 "prd": _json.loads(analysis_row[7]) if analysis_row[7] else None,
                 "brief": _json.loads(analysis_row[8]) if analysis_row[8] else None,
+                "a4_scores": a4_scores,
             }
         return {"niche": niche, "items": items}
     finally:
@@ -408,6 +413,39 @@ def list_provider_models():
         return {"models": model_ids, "source": "api"}
     except Exception as exc:
         return {"models": [], "source": "error", "error": str(exc)}
+    finally:
+        db.close()
+
+
+# ── Scoring weights ──────────────────────────────────────────────────────────
+
+
+@app.get("/api/settings/scoring-weights")
+def get_scoring_weights_api():
+    db = _db()
+    try:
+        return repository.get_scoring_weights(db)
+    finally:
+        db.close()
+
+
+class ScoringWeightsBody(BaseModel):
+    problem_clarity: float = 1.0
+    market_size: float = 1.5
+    willingness_to_pay: float = 2.0
+    competition_gap: float = 1.5
+    technical_feasibility: float = 1.0
+    distribution_clarity: float = 1.5
+    trend_momentum: float = 1.0
+
+
+@app.put("/api/settings/scoring-weights")
+def set_scoring_weights_api(body: ScoringWeightsBody):
+    db = _db()
+    try:
+        weights = body.model_dump()
+        repository.set_scoring_weights(db, weights)
+        return {"status": "ok", "weights": weights}
     finally:
         db.close()
 

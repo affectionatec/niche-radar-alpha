@@ -73,6 +73,22 @@ flowchart TD
 | **A7** PRD Writer | Generates a product requirements document (GO only) |
 | **A8** Brief Creator | Produces a concise founder briefing |
 
+### Opportunity Scoring Dimensions
+
+Each niche is scored across 7 dimensions (1–10 each), combined into a weighted 0–100 score:
+
+| Dimension | Default Weight | What It Measures |
+|-----------|---------------|------------------|
+| Problem Clarity | 1.0 | How clearly defined and specific the user pain is |
+| Market Size | 1.5 | TAM/SAM estimation from market signals |
+| Willingness to Pay | 2.0 | Evidence of users paying for similar solutions |
+| Competition Gap | 1.5 | How underserved the niche currently is |
+| Technical Feasibility | 1.0 | Complexity to build an MVP |
+| Distribution Clarity | 1.5 | How easy it is to reach the target audience |
+| Trend Momentum | 1.0 | Growth trajectory of the problem space |
+
+Weights are customizable from **Settings → Scoring Weights** in the dashboard.
+
 ## Quick Start
 
 ### Prerequisites

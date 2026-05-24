@@ -4,6 +4,7 @@ import useSWR from 'swr';
 import Link from 'next/link';
 import { endpoints, fetcher, toggleShortlist, validateNiche } from '@/lib/api';
 import { NicheDetail } from '@/lib/types';
+import ScoreBreakdown from '@/components/ScoreBreakdown';
 
 const COMPLEXITY_LABEL: Record<number, string> = {
   1: 'WEEKEND BUILD', 2: '2-3 DAY BUILD', 3: '~1 WEEK BUILD', 4: '1-2 WEEK BUILD', 5: '2+ WEEK BUILD',
@@ -124,6 +125,13 @@ export default function NichePage({ params }: { params: { id: string } }) {
           )}
         </div>
       </div>
+
+      {/* Score dimension breakdown */}
+      {analysis?.a4_scores && (
+        <div style={{ marginBottom: '40px', padding: '24px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
+          <ScoreBreakdown scores={analysis.a4_scores} />
+        </div>
+      )}
 
       {/* Quick-glance badges */}
       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '40px' }}>
