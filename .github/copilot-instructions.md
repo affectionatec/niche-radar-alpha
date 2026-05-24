@@ -34,7 +34,7 @@ For non-trivial changes:
 - For bug fixes, include a reproducible check (test or equivalent) that proves the fix.
 
 ## Documentation Discipline
-- Keep `README.md`, `ARCHITECTURE.md`, `PRODUCT.md`, and `CONTEXT.md` consistent with major changes.
+- Keep `README.md`, `docs/ARCHITECTURE.md`, `docs/PRODUCT.md`, and `CONTEXT.md` consistent with major changes.
 - Create an ADR in `docs/adr/NNNN-title.md` only when the decision is:
   1. Hard to reverse
   2. Surprising without context

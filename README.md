@@ -28,6 +28,40 @@ Niche Radar monitors **12 public platforms**, runs an **8-agent LLM analysis pip
 
 ### The 8-Agent Pipeline
 
+```mermaid
+flowchart TD
+    subgraph A["Phase A — per item"]
+        A1["A1 · Signal Filter\nReal pain or noise?"]
+        A2["A2 · Pain Extractor\nWHO · WHAT · WHY"]
+        A1 -->|pass| A2
+    end
+
+    A2 -->|pain points| CLU
+
+    CLU["Clustering\nJaccard + LLM refinement"]
+
+    subgraph C["Phase C — per cluster"]
+        A3["A3 · Market Researcher\nCompetitors · pricing · gap"]
+        A4["A4 · Opportunity Scorer\n7 dimensions · 0–100"]
+        A5["A5 · Feasibility Analyst\nBuild complexity · stack"]
+        A6["A6 · Go/No-Go Judge\nGO · NO-GO · PIVOT"]
+        A7["A7 · PRD Writer\nProduct requirements doc"]
+        A8["A8 · Brief Creator\nFounder briefing"]
+        A3 --> A4 --> A5 --> A6
+        A6 -->|GO| A7 --> A8
+        A6 -->|NO-GO / PIVOT| A8
+    end
+
+    CLU --> A3
+    A8 -->|scored niches| DB[(SQLite / PostgreSQL)]
+```
+
+<details>
+<summary>Full-color pipeline diagram (SVG)</summary>
+
+![8-Agent Pipeline](docs/images/8_agent_pipeline.svg)
+</details>
+
 | Agent | Role |
 |-------|------|
 | **A1** Signal Filter | Drops noise, keeps genuine pain signals |
@@ -36,10 +70,8 @@ Niche Radar monitors **12 public platforms**, runs an **8-agent LLM analysis pip
 | **A4** Opportunity Scorer | Scores across 7 dimensions (0–100) |
 | **A5** Feasibility Analyst | Estimates build complexity and stack |
 | **A6** Go/No-Go Judge | Issues GO, NO-GO, or PIVOT verdict |
-| **A7** PRD Writer | Generates a product requirements document |
+| **A7** PRD Writer | Generates a product requirements document (GO only) |
 | **A8** Brief Creator | Produces a concise founder briefing |
-
-Items are clustered between A2 and A3 using Jaccard similarity + LLM refinement.
 
 ## Quick Start
 
@@ -164,10 +196,11 @@ niche-radar-alpha/
 ├── docker-compose.yml              # Primary deployment
 ├── Dockerfile                      # Backend container
 ├── .env.example                    # Env var template
+├── CONTEXT.md                      # Domain glossary
 ├── niche_radar/                    # Python backend
 │   ├── collectors/                 # 12 data source collectors
 │   ├── agents/                     # 8-agent LLM pipeline
-│   │   ├── pipeline.py             #   Orchestration
+│   │   ├── pipeline.py             #   Phase A–D orchestration
 │   │   ├── models.py               #   A1–A8 Pydantic I/O
 │   │   ├── prompts.py              #   Agent system prompts
 │   │   └── clustering.py           #   Jaccard + LLM clustering
@@ -178,9 +211,15 @@ niche-radar-alpha/
 ├── frontend/                       # Next.js dashboard
 │   ├── Dockerfile                  # Frontend container
 │   └── src/
-│       ├── app/                    # Page routes
+│       ├── app/                    # Page routes (10 pages)
 │       ├── components/             # Shared UI components
 │       └── lib/                    # API client, types, design tokens
+├── docs/                           # Extended documentation
+│   ├── ARCHITECTURE.md             # System design & module map
+│   ├── PRODUCT.md                  # Problem statement & features
+│   ├── DESIGN.md                   # UI/UX design system
+│   ├── spec.md                     # Full MVP specification
+│   └── images/                     # Diagrams and assets
 └── tests/                          # pytest suite
 ```
 
@@ -246,7 +285,7 @@ pytest -v
 | Document | Description |
 |----------|-------------|
 | [CONTEXT.md](CONTEXT.md) | Domain glossary — canonical terms used in the codebase |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | System design, module map, Mermaid diagrams |
-| [PRODUCT.md](PRODUCT.md) | Problem statement, users, features, non-goals |
-| [DESIGN.md](DESIGN.md) | UI/UX design system (xAI-inspired dark theme) |
-| [spec.md](spec.md) | Full MVP specification |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, module map, Mermaid diagrams |
+| [PRODUCT.md](docs/PRODUCT.md) | Problem statement, users, features, non-goals |
+| [DESIGN.md](docs/DESIGN.md) | UI/UX design system (xAI-inspired dark theme) |
+| [spec.md](docs/spec.md) | Full MVP specification |
