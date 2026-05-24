@@ -58,9 +58,11 @@ class DouyinCollector(BaseCollector):
         if not api_key:
             return False, "TikHub API key not configured"
         try:
-            resp = httpx.get(
-                f"{TIKHUB_BASE}/api/v1/douyin/web/search_video",
-                params={"keyword": "test", "offset": "0", "count": "1", "sort_type": "0"},
+            resp = httpx.post(
+                f"{TIKHUB_BASE}/api/v1/douyin/search/fetch_video_search_v2",
+                json={"keyword": "test", "cursor": 0, "sort_type": "0",
+                      "publish_time": "0", "filter_duration": "0",
+                      "content_type": "1", "search_id": "", "backtrace": ""},
                 headers={"Authorization": f"Bearer {api_key}"},
                 timeout=15,
             )
@@ -100,13 +102,17 @@ class DouyinCollector(BaseCollector):
                 try:
                     for attempt in retryer:
                         with attempt:
-                            resp = httpx.get(
-                                f"{TIKHUB_BASE}/api/v1/douyin/web/search_video",
-                                params={
+                            resp = httpx.post(
+                                f"{TIKHUB_BASE}/api/v1/douyin/search/fetch_video_search_v2",
+                                json={
                                     "keyword": query,
-                                    "offset": "0",
-                                    "count": "20",
-                                    "sort_type": "0",
+                                    "cursor": 0,
+                                    "sort_type": "2",
+                                    "publish_time": "7",
+                                    "filter_duration": "0",
+                                    "content_type": "0",
+                                    "search_id": "",
+                                    "backtrace": "",
                                 },
                                 headers=headers,
                                 timeout=20,
@@ -117,12 +123,22 @@ class DouyinCollector(BaseCollector):
                                 raise CollectorUnavailableError(f"TikHub returned {resp.status_code}")
                             data = resp.json()
 
-                    video_list = (
-                        data.get("data", {}).get("data", []) or
-                        data.get("data", {}).get("aweme_list", []) or
-                        data.get("data", []) or
-                        []
-                    )
+                    video_list = []
+                    raw_data = data.get("data", {})
+                    # V2 format: business_data[].data.aweme_info
+                    if isinstance(raw_data, dict) and "business_data" in raw_data:
+                        for item in raw_data["business_data"]:
+                            aweme = (item.get("data") or {}).get("aweme_info")
+                            if aweme:
+                                video_list.append(aweme)
+                    # Fallback: older response shapes
+                    if not video_list:
+                        video_list = (
+                            raw_data.get("data", []) if isinstance(raw_data, dict) else
+                            raw_data if isinstance(raw_data, list) else []
+                        )
+                        if not video_list and isinstance(raw_data, dict):
+                            video_list = raw_data.get("aweme_list", [])
                     for video in video_list[:20]:
                         aweme_id = str(video.get("aweme_id") or video.get("id") or "")
                         if not aweme_id:

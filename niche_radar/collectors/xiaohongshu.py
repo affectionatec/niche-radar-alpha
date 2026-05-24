@@ -60,8 +60,8 @@ class XiaohongshuCollector(BaseCollector):
             return False, "TikHub API key not configured"
         try:
             resp = httpx.get(
-                f"{TIKHUB_BASE}/api/v1/xiaohongshu/web/search_note",
-                params={"keyword": "test", "page": "1", "sort": "general"},
+                f"{TIKHUB_BASE}/api/v1/xiaohongshu/app_v2/search_notes",
+                params={"keyword": "test", "page": "1", "sort_type": "general"},
                 headers={"Authorization": f"Bearer {api_key}"},
                 timeout=15,
             )
@@ -102,8 +102,8 @@ class XiaohongshuCollector(BaseCollector):
                     for attempt in retryer:
                         with attempt:
                             resp = httpx.get(
-                                f"{TIKHUB_BASE}/api/v1/xiaohongshu/web/search_note",
-                                params={"keyword": query, "page": "1", "sort": "general"},
+                                f"{TIKHUB_BASE}/api/v1/xiaohongshu/app_v2/search_notes",
+                                params={"keyword": query, "page": "1", "sort_type": "time_descending"},
                                 headers=headers,
                                 timeout=20,
                             )
