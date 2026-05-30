@@ -3,17 +3,26 @@ from __future__ import annotations
 
 import structlog
 
+from niche_radar.api.jobs import job_manager
+
 logger = structlog.get_logger()
 
 
 def _collect_job(settings) -> None:
     from niche_radar.collectors import run_collectors
-    from niche_radar.storage.database import get_db
 
-    db = get_db(settings.database_url)
-    results = run_collectors(sources=None, settings=settings, dry_run=False)
-    total = sum(r.items_collected for r in results)
-    logger.info("scheduled_collection_complete", total_items=total)
+    job = job_manager.create("collect")
+    job_manager.set_status(job.id, "running")
+    try:
+        results = run_collectors(sources=None, settings=settings, dry_run=False)
+        total = sum(r.items_collected for r in results)
+        job_manager.append_log(job.id, f"Collected {total} items from {len(results)} sources")
+        job_manager.set_status(job.id, "done")
+        logger.info("scheduled_collection_complete", total_items=total, job_id=job.id)
+    except Exception as exc:
+        job_manager.append_log(job.id, f"Error: {exc}")
+        job_manager.set_status(job.id, "failed")
+        logger.error("scheduled_collection_failed", error=str(exc), job_id=job.id)
 
 
 def _analyze_job(settings) -> None:
@@ -21,10 +30,20 @@ def _analyze_job(settings) -> None:
     from niche_radar.reports.generator import generate_report
     from niche_radar.storage.database import get_db
 
-    db = get_db(settings.database_url)
-    count = run_analysis(db=db, settings=settings, dry_run=False)
-    generate_report(db=db, settings=settings)
-    logger.info("scheduled_analysis_complete", niches=count)
+    job = job_manager.create("analyze")
+    job_manager.set_status(job.id, "running")
+    try:
+        db = get_db(settings.database_url)
+        count = run_analysis(db=db, settings=settings, dry_run=False)
+        job_manager.append_log(job.id, f"Analyzed {count} niches")
+        generate_report(db=db, settings=settings)
+        job_manager.append_log(job.id, "Report generated")
+        job_manager.set_status(job.id, "done")
+        logger.info("scheduled_analysis_complete", niches=count, job_id=job.id)
+    except Exception as exc:
+        job_manager.append_log(job.id, f"Error: {exc}")
+        job_manager.set_status(job.id, "failed")
+        logger.error("scheduled_analysis_failed", error=str(exc), job_id=job.id)
 
 
 def _cleanup_job(settings) -> None:
