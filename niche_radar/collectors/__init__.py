@@ -24,6 +24,7 @@ ALL_SOURCES = [
     "indie_hackers", "app_store", "play_store",
     # last30days integration — credential-gated, skipped until configured
     "bluesky",
+    "tiktok", "instagram", "threads",
 ]
 
 
@@ -68,6 +69,15 @@ def _get_collector(source: str):
     elif source == "bluesky":
         from niche_radar.collectors.bluesky import BlueskyCollector
         return BlueskyCollector()
+    elif source == "tiktok":
+        from niche_radar.collectors.tiktok import TikTokCollector
+        return TikTokCollector()
+    elif source == "instagram":
+        from niche_radar.collectors.instagram import InstagramCollector
+        return InstagramCollector()
+    elif source == "threads":
+        from niche_radar.collectors.threads import ThreadsCollector
+        return ThreadsCollector()
     else:
         raise ValueError(f"Unknown source: {source}")
 
