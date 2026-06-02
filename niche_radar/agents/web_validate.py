@@ -26,6 +26,11 @@ from dataclasses import dataclass, field
 
 import structlog
 
+# SearchResult now lives in web_search (shared with the API backends); re-export
+# it here so existing imports (`from ...web_validate import SearchResult`) keep
+# working. DDG remains the keyless terminal fallback in the searcher chain.
+from niche_radar.agents.web_search import SearchResult, get_searcher
+
 logger = structlog.get_logger()
 
 DDG_HTML = "https://html.duckduckgo.com/html/"
@@ -47,13 +52,6 @@ _HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; NicheRadar/0.1; research bot)",
     "Accept": "text/html",
 }
-
-
-@dataclass
-class SearchResult:
-    title: str
-    url: str
-    snippet: str
 
 
 @dataclass
@@ -134,7 +132,8 @@ def validate_opportunity(
         f"{keyword_str} g2 reviews",
         f"{keyword_str} indiehackers revenue",
     ]
-    searcher = DDGSearcher()
+    # Pluggable chain: Brave/Serper (if their API keys are set) → DDG fallback.
+    searcher = get_searcher(ddg_fallback=DDGSearcher())
     all_results: list[SearchResult] = []
     evidence: list[dict] = []
 

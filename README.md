@@ -18,12 +18,12 @@
 
 ## Overview
 
-Niche Radar monitors **12 public platforms**, runs an **8-agent LLM analysis pipeline**, and delivers scored niche candidates through a web dashboard — so you don't have to manually scan Reddit, HN, Twitter, and YouTube for product ideas every day.
+Niche Radar monitors **16 public platforms**, runs an **8-agent LLM analysis pipeline**, and delivers scored niche candidates through a web dashboard — so you don't have to manually scan Reddit, HN, Twitter, and YouTube for product ideas every day.
 
 **The pipeline in one line:**
 
 ```
-12 Sources → Collect (4h cycle) → 8-Agent LLM Pipeline (6h cycle) → Scored Niches → Dashboard
+16 Sources → Collect (4h cycle) → 8-Agent LLM Pipeline (6h cycle) → Scored Niches → Dashboard
 ```
 
 ### The 8-Agent Pipeline
@@ -144,7 +144,7 @@ Visit **http://localhost:3000**. If no LLM key is configured yet, you'll be redi
 
 | Page | What it does |
 |------|-------------|
-| **Home** | System health across all 12 sources, data freshness, collection stats |
+| **Home** | System health across all 16 sources, data freshness, collection stats |
 | **Niches** | Sortable table of scored candidates with LLM score, verdict, momentum |
 | **Niche Detail** | Full scoring breakdown per dimension, agent reasoning chain (A4→A5→A6), web validation, generated PRD |
 | **Shortlist** | User-curated starred opportunities |
@@ -160,21 +160,28 @@ Visit **http://localhost:3000**. If no LLM key is configured yet, you'll be redi
 
 | Source | Method | Credentials | Reliability |
 |--------|--------|-------------|-------------|
-| Reddit | PRAW (official API) | Client ID + Secret ([free](https://www.reddit.com/prefs/apps)) | 🟢 Stable |
+| Reddit | PRAW (official API) + keyless public-JSON fallback | Client ID + Secret ([free](https://www.reddit.com/prefs/apps)), or none | 🟢 Stable |
 | Hacker News | Firebase + Algolia API | None | 🟢 Stable |
 | GitHub Trending | REST API | None (optional PAT) | 🟢 Stable |
 | YouTube | Data API v3 | None | 🟢 Stable |
 | Stack Overflow | Official API v2.3 | None | 🟢 Stable |
+| Twitter / X | Multi-backend chain: xAI → Xquik → cookie GraphQL | Any one of: xAI key, Xquik key, or cookies | 🟢 Stable (API key) · 🔴 cookie fallback |
+| Bluesky | AT Protocol search | App password ([free](https://bsky.app/settings/app-passwords)) | 🟢 Stable |
+| TikTok | ScrapeCreators API | ScrapeCreators key | 🟢 Stable |
+| Instagram | ScrapeCreators API | ScrapeCreators key | 🟢 Stable |
+| Threads | ScrapeCreators API | ScrapeCreators key | 🟢 Stable |
 | Google Trends | pytrends (unofficial) | None | 🟡 Fragile |
 | Product Hunt | GraphQL API | None | 🟡 Fragile |
 | App Store | iTunes API / scraping | None | 🟡 Fragile |
 | Play Store | google-play-scraper | None | 🟡 Fragile |
 | G2 Reviews | HTML scraping | None | 🟠 Brittle |
 | Indie Hackers | HTML scraping | None | 🟠 Brittle |
-| Twitter / X | GraphQL + cookie auth | Cookie auth | 🔴 Very Brittle |
 
 > [!TIP]
-> Most sources work out of the box with zero credentials. All source credentials can be managed from **Settings → Data Sources** in the dashboard.
+> Most sources work out of the box with zero credentials. All source credentials can be managed from **Settings → Data Sources** in the dashboard. One ScrapeCreators key unlocks TikTok, Instagram, and Threads together.
+
+> [!NOTE]
+> **X/Twitter is now resilient.** Capture runs through an ordered fallback chain — set an **xAI** or **Xquik** API key for a stable, cookie-free path; the legacy cookie-scraping backend is only used as a last resort. See [the integration plan](docs/integrations/last30days-integration-plan.md).
 
 ## LLM Providers
 
@@ -202,7 +209,7 @@ Visit **http://localhost:3000**. If no LLM key is configured yet, you'll be redi
 │  │  Next.js 14       │     │    FastAPI + Uvicorn    │  │
 │  │  React 18, SWR    │     │    APScheduler          │  │
 │  └──────────────────┘     │    8-Agent Pipeline      │  │
-│                            │    12 Collectors         │  │
+│                            │    16 Collectors         │  │
 │                            └──────────┬──────────┘   │
 │                                       │               │
 │                            ┌──────────▼──────────┐   │
@@ -221,7 +228,7 @@ niche-radar-alpha/
 ├── .env.example                    # Env var template
 ├── CONTEXT.md                      # Domain glossary
 ├── niche_radar/                    # Python backend
-│   ├── collectors/                 # 12 data source collectors
+│   ├── collectors/                 # 16 data source collectors
 │   ├── agents/                     # 8-agent LLM pipeline
 │   │   ├── pipeline.py             #   Phase A–D orchestration
 │   │   ├── models.py               #   A1–A8 Pydantic I/O

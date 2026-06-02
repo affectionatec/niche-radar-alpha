@@ -19,6 +19,9 @@ class CollectorResult:
     items_collected: int
     error_message: str | None = None
     duration_seconds: float = 0.0
+    # Optional diagnostics (e.g. per-backend outcomes for multi-backend
+    # sources). Not persisted as raw-item data; surfaced for observability.
+    metadata: dict | None = None
 
 
 class CollectorUnavailableError(Exception):
@@ -46,6 +49,17 @@ class BaseCollector(ABC):
     ) -> CollectorResult:
         """Fetch data from the source and return a CollectorResult."""
         ...
+
+    @classmethod
+    def is_available(cls, db: sqlite3.Connection | None, settings) -> bool:
+        """Whether this source can run given current credentials / dependencies.
+
+        The collection runner skips (rather than fails) sources that report
+        unavailable, so credential-gated sources stay silent until configured.
+        Defaults to True — sources that always work (keyless, or that degrade
+        gracefully inside ``collect``) need not override this.
+        """
+        return True
 
     @classmethod
     def test_connection(

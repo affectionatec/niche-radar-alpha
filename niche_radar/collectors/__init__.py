@@ -22,6 +22,9 @@ ALL_SOURCES = [
     "product_hunt", "stack_overflow", "twitter", "g2_reviews",
     # Phase 4 — P2 new sources
     "indie_hackers", "app_store", "play_store",
+    # last30days integration — credential-gated, skipped until configured
+    "bluesky",
+    "tiktok", "instagram", "threads",
 ]
 
 
@@ -63,6 +66,18 @@ def _get_collector(source: str):
     elif source == "play_store":
         from niche_radar.collectors.play_store import PlayStoreCollector
         return PlayStoreCollector()
+    elif source == "bluesky":
+        from niche_radar.collectors.bluesky import BlueskyCollector
+        return BlueskyCollector()
+    elif source == "tiktok":
+        from niche_radar.collectors.tiktok import TikTokCollector
+        return TikTokCollector()
+    elif source == "instagram":
+        from niche_radar.collectors.instagram import InstagramCollector
+        return InstagramCollector()
+    elif source == "threads":
+        from niche_radar.collectors.threads import ThreadsCollector
+        return ThreadsCollector()
     else:
         raise ValueError(f"Unknown source: {source}")
 
@@ -78,11 +93,26 @@ def run_collectors(
     results: list[CollectorResult] = []
 
     for source in sources:
+        try:
+            collector = _get_collector(source)
+        except Exception as exc:
+            logger.error("collector_unknown", source=source, error=str(exc))
+            continue
+
+        # Skip credential-gated sources that aren't configured — silently, so
+        # they don't litter the dashboard with failed runs until set up.
+        if not dry_run:
+            try:
+                if not type(collector).is_available(db, settings):
+                    logger.debug("collector_skipped_unavailable", source=source)
+                    continue
+            except Exception as exc:
+                logger.warning("collector_availability_check_failed", source=source, error=str(exc))
+
         run_id = insert_collection_run(db, source)
         start = time.time()
 
         try:
-            collector = _get_collector(source)
             result = collector.collect(settings=settings, dry_run=dry_run, db=db)
             result.run_id = run_id
 

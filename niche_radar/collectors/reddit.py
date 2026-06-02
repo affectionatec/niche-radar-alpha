@@ -11,11 +11,8 @@ from typing import ClassVar
 import structlog
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 
-from niche_radar.collectors.base import (
-    BaseCollector,
-    CollectorResult,
-    CollectorUnavailableError,
-)
+from niche_radar.collectors import reddit_public
+from niche_radar.collectors.base import BaseCollector, CollectorResult
 from niche_radar.storage.repository import get_source_credential
 
 logger = structlog.get_logger()
@@ -93,68 +90,94 @@ class RedditCollector(BaseCollector):
             client_secret = get_source_credential(db, "reddit", "client_secret", settings.reddit_client_secret) if db else settings.reddit_client_secret
             user_agent = (get_source_credential(db, "reddit", "user_agent", None) if db else None) or settings.reddit_user_agent
 
-            if not client_id or not client_secret:
-                raise CollectorUnavailableError("Reddit credentials not configured")
-
-            # Load configurable lists (DB first, then defaults)
+            # Load configurable lists (DB first, then defaults) — shared by both
+            # the PRAW path and the keyless public-JSON fallback.
             raw_subs = (get_source_credential(db, "reddit", "subreddits", None) if db else None)
             subreddits: list[str] = json.loads(raw_subs) if raw_subs else DEFAULT_SUBREDDITS
 
             raw_queries = (get_source_credential(db, "reddit", "search_queries", None) if db else None)
             search_queries: list[str] = json.loads(raw_queries) if raw_queries else DEFAULT_SEARCH_QUERIES
 
-            import praw
-
-            retryer = Retrying(
-                stop=stop_after_attempt(max(1, int(settings.max_retries or 1))),
-                wait=wait_exponential(multiplier=1, exp_base=max(2, int(settings.retry_backoff_base or 2)), min=1, max=30),
-                reraise=True,
-            )
-            reddit = praw.Reddit(client_id=client_id, client_secret=client_secret, user_agent=user_agent)
             cutoff = datetime.now(timezone.utc) - timedelta(hours=settings.freshness_reddit_hours)
-            subreddit_str = "+".join(subreddits)  # multi-sub search
+
+            # No API credentials → keyless public JSON search still works.
+            if not client_id or not client_secret:
+                pub_items, pub_errors = reddit_public.search_public(subreddits, search_queries, cutoff)
+                pub_status = "completed" if pub_items else ("failed" if pub_errors else "partial")
+                return CollectorResult(
+                    source=self.source_name, items=pub_items, run_id="",
+                    status=pub_status, items_collected=len(pub_items),
+                    error_message="; ".join(pub_errors) or None,
+                    duration_seconds=time.perf_counter() - start,
+                )
+
             items: dict[str, dict] = {}
             errors: list[str] = []
 
-            for query in search_queries:
-                try:
-                    for attempt in retryer:
-                        with attempt:
-                            submissions = list(
-                                reddit.subreddit(subreddit_str).search(
-                                    query, sort="new", time_filter="week", limit=100
+            # The whole PRAW interaction (client construction included) is
+            # guarded so any failure degrades to the keyless public fallback
+            # below rather than failing the entire Reddit source.
+            try:
+                import praw
+
+                retryer = Retrying(
+                    stop=stop_after_attempt(max(1, int(settings.max_retries or 1))),
+                    wait=wait_exponential(multiplier=1, exp_base=max(2, int(settings.retry_backoff_base or 2)), min=1, max=30),
+                    reraise=True,
+                )
+                reddit = praw.Reddit(client_id=client_id, client_secret=client_secret, user_agent=user_agent)
+                subreddit_str = "+".join(subreddits)  # multi-sub search
+
+                for query in search_queries:
+                    try:
+                        for attempt in retryer:
+                            with attempt:
+                                submissions = list(
+                                    reddit.subreddit(subreddit_str).search(
+                                        query, sort="new", time_filter="week", limit=100
+                                    )
                                 )
-                            )
-                    for submission in submissions:
-                        if submission.id in items:
-                            # Already collected from a prior query — append this query as a match
-                            items[submission.id]["metadata"]["matched_queries"].append(query)
-                            continue
-                        created_at = datetime.fromtimestamp(submission.created_utc, tz=timezone.utc)
-                        if created_at < cutoff:
-                            continue
-                        items[submission.id] = {
-                            "source_id": str(submission.id),
-                            "title": submission.title,
-                            "body": submission.selftext or None,
-                            "url": f"https://www.reddit.com{submission.permalink}",
-                            "score": int(submission.score or 0),
-                            "comment_count": int(submission.num_comments or 0),
-                            "posted_at": created_at.isoformat(),
-                            "metadata": {
-                                "subreddit": submission.subreddit.display_name,
-                                "author": str(submission.author) if submission.author else None,
-                                "post_flair": submission.link_flair_text,
-                                "external_url": submission.url,
-                                "matched_queries": [query],
-                                "has_pain_point_signal": True,
-                            },
-                        }
-                except Exception as exc:
-                    logger.warning("reddit_query_failed", query=query, error=str(exc))
-                    errors.append(f"query '{query}': {exc}")
+                        for submission in submissions:
+                            if submission.id in items:
+                                # Already collected from a prior query — append this query as a match
+                                items[submission.id]["metadata"]["matched_queries"].append(query)
+                                continue
+                            created_at = datetime.fromtimestamp(submission.created_utc, tz=timezone.utc)
+                            if created_at < cutoff:
+                                continue
+                            items[submission.id] = {
+                                "source_id": str(submission.id),
+                                "title": submission.title,
+                                "body": submission.selftext or None,
+                                "url": f"https://www.reddit.com{submission.permalink}",
+                                "score": int(submission.score or 0),
+                                "comment_count": int(submission.num_comments or 0),
+                                "posted_at": created_at.isoformat(),
+                                "metadata": {
+                                    "subreddit": submission.subreddit.display_name,
+                                    "author": str(submission.author) if submission.author else None,
+                                    "post_flair": submission.link_flair_text,
+                                    "external_url": submission.url,
+                                    "matched_queries": [query],
+                                    "has_pain_point_signal": True,
+                                },
+                            }
+                    except Exception as exc:
+                        logger.warning("reddit_query_failed", query=query, error=str(exc))
+                        errors.append(f"query '{query}': {exc}")
+            except Exception as exc:
+                logger.warning("reddit_praw_unavailable", error=str(exc))
+                errors.append(f"praw: {exc}")
 
             collected = list(items.values())
+
+            # PRAW produced nothing and errored → fall back to public JSON search.
+            if not collected and errors:
+                pub_items, _ = reddit_public.search_public(subreddits, search_queries, cutoff)
+                if pub_items:
+                    collected = pub_items
+                    errors.append("PRAW returned no items; used public-json fallback")
+
             status = "completed" if not errors else "partial" if collected else "failed"
             return CollectorResult(
                 source=self.source_name,
