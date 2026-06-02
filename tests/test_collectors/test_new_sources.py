@@ -72,66 +72,49 @@ class TestStackOverflowCollector:
 # ── Twitter ────────────────────────────────────────────────────────────────────
 
 class TestTwitterCollector:
-    def test_test_connection_succeeds_with_valid_auth(self):
-        """Mocked GraphQL returns 200 → test_connection succeeds."""
-        from niche_radar.collectors.twitter import _test_graphql_auth
+    def test_test_connection_reports_cookie_backend(self, settings, tmp_path):
+        """With only cookies set, test_connection reports the graphql_cookie backend."""
+        from niche_radar.collectors.twitter import TwitterCollector
+        from niche_radar.storage.database import get_db
+        from niche_radar.storage.repository import set_source_credential
+        db = get_db(f"sqlite:///{tmp_path / 'test.db'}")
+        set_source_credential(db, "twitter", "ct0", "fake-ct0")
+        set_source_credential(db, "twitter", "auth_token", "fake-auth")
 
-        ok_resp = MagicMock()
-        ok_resp.status_code = 200
-        ok_resp.text = '{"data":{}}'
-
-        with (
-            patch("niche_radar.collectors.twitter._resolve_query_id", return_value="mock-qid"),
-            patch("niche_radar.collectors.twitter._generate_transaction_id", return_value="mock-tid"),
-            patch("requests.get", return_value=ok_resp) as mock_get,
-        ):
-            ok, message = _test_graphql_auth("fake-ct0", "fake-auth", None)
-
+        ok, message = TwitterCollector.test_connection(db, settings)
         assert ok is True
-        assert "Cookie auth OK" in message
-        called_url = mock_get.call_args.args[0]
-        assert called_url.startswith("https://x.com/")
-        assert "graphql" in called_url and "SearchTimeline" in called_url
+        assert "graphql_cookie" in message
 
-    def test_test_connection_reports_401_for_expired_auth(self):
-        """Expired auth_token → clear error message."""
-        from niche_radar.collectors.twitter import _test_graphql_auth
-
-        resp = MagicMock()
-        resp.status_code = 401
-        resp.text = "Unauthorized"
-
-        with (
-            patch("niche_radar.collectors.twitter._resolve_query_id", return_value="mock-qid"),
-            patch("niche_radar.collectors.twitter._generate_transaction_id", return_value="mock-tid"),
-            patch("requests.get", return_value=resp),
-        ):
-            ok, message = _test_graphql_auth("fake-ct0", "fake-auth", None)
-
+    def test_test_connection_fails_without_any_backend(self, settings, tmp_path):
+        """No credentials at all → test_connection reports no backend."""
+        from niche_radar.collectors.twitter import TwitterCollector
+        from niche_radar.storage.database import get_db
+        db = get_db(f"sqlite:///{tmp_path / 'test.db'}")
+        ok, message = TwitterCollector.test_connection(db, settings)
         assert ok is False
-        assert "expired" in message.lower()
+        assert "No X backend" in message
 
     def test_collect_missing_cookies_returns_failed(self, settings, tmp_path):
-        """No credentials configured → CollectorUnavailableError → failed result."""
+        """No credentials configured → no backend available → failed result."""
         from niche_radar.collectors.twitter import TwitterCollector
         from niche_radar.storage.database import get_db
         db = get_db(f"sqlite:///{tmp_path / 'test.db'}")
 
-        try:
-            result = TwitterCollector().collect(settings=settings, db=db)
-            assert result.status == "failed"
-        except Exception:
-            pass  # CollectorUnavailableError propagated is also acceptable
+        result = TwitterCollector().collect(settings=settings, db=db)
+        assert result.status == "failed"
 
     def test_collect_with_cookies_calls_graphql_endpoint(self, settings, tmp_path):
-        """When ct0+auth_token set, collector hits the GraphQL SearchTimeline endpoint."""
+        """When ct0+auth_token set (and no API key), collector hits SearchTimeline."""
         from niche_radar.collectors.twitter import TwitterCollector
+        from niche_radar.collectors.x_backends.graphql_cookie import GraphQLCookieBackend
         from niche_radar.storage.database import get_db
         from niche_radar.storage.repository import set_source_credential
         from datetime import datetime, timezone, timedelta as td
         db = get_db(f"sqlite:///{tmp_path / 'test.db'}")
         set_source_credential(db, "twitter", "ct0", "fake-ct0")
         set_source_credential(db, "twitter", "auth_token", "fake-auth")
+        # Single query keeps the test fast (avoids per-query pacing sleeps).
+        set_source_credential(db, "twitter", "search_queries", '["I wish there was"]')
         recent_ts = (datetime.now(timezone.utc) - td(hours=1)).strftime("%a %b %d %H:%M:%S +0000 %Y")
 
         fake_response = {
@@ -177,9 +160,9 @@ class TestTwitterCollector:
         mock_resp.json.return_value = fake_response
 
         with (
-            patch("niche_radar.collectors.twitter._resolve_query_id", return_value="mock-qid"),
-            patch("niche_radar.collectors.twitter._generate_transaction_id", return_value="mock-tid"),
-            patch("requests.get", return_value=mock_resp) as mock_get,
+            patch.object(GraphQLCookieBackend, "_resolve_query_id", return_value="mock-qid"),
+            patch.object(GraphQLCookieBackend, "_transaction_id", return_value="mock-tid"),
+            patch("niche_radar.collectors.x_backends.graphql_cookie.requests.get", return_value=mock_resp) as mock_get,
         ):
             result = TwitterCollector().collect(settings=settings, db=db)
 
@@ -188,11 +171,11 @@ class TestTwitterCollector:
         assert "graphql" in called_url and "SearchTimeline" in called_url
         assert result.items_collected > 0
         assert result.items[0]["source_id"] == "99999"
-        assert result.items[0]["metadata"]["auth_mode"] == "cookie_graphql"
+        assert result.items[0]["metadata"]["auth_mode"] == "graphql_cookie"
 
     def test_parse_tweets_handles_visibility_wrapper(self):
         """TweetWithVisibilityResults wrapper should be unwrapped correctly."""
-        from niche_radar.collectors.twitter import _parse_tweets
+        from niche_radar.collectors.x_backends.graphql_cookie import _parse_tweets
         response = {
             "data": {
                 "search_by_raw_query": {
@@ -236,9 +219,9 @@ class TestTwitterCollector:
         }
         tweets = _parse_tweets(response)
         assert len(tweets) == 1
-        assert tweets[0]["id"] == "12345"
-        assert tweets[0]["author"] == "wrappeduser"
-        assert tweets[0]["text"] == "wrapped tweet text"
+        assert tweets[0].id == "12345"
+        assert tweets[0].author == "wrappeduser"
+        assert tweets[0].text == "wrapped tweet text"
 
     def test_collect_dry_run(self, settings):
         from niche_radar.collectors.twitter import TwitterCollector

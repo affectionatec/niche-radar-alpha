@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     # YouTube
     youtube_api_key: str = ""
 
+    # X / Twitter capture backends (any one enables X; see TwitterCollector)
+    xai_api_key: str = ""
+    xquik_api_key: str = ""
+    # max item age for X items dropped at collection time (hours)
+    freshness_twitter_hours: int = 48
+
     # Database
     database_url: str = "sqlite:///data/niche_radar.db"
 
