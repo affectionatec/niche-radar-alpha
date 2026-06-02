@@ -22,6 +22,8 @@ ALL_SOURCES = [
     "product_hunt", "stack_overflow", "twitter", "g2_reviews",
     # Phase 4 — P2 new sources
     "indie_hackers", "app_store", "play_store",
+    # last30days integration — credential-gated, skipped until configured
+    "bluesky",
 ]
 
 
@@ -63,6 +65,9 @@ def _get_collector(source: str):
     elif source == "play_store":
         from niche_radar.collectors.play_store import PlayStoreCollector
         return PlayStoreCollector()
+    elif source == "bluesky":
+        from niche_radar.collectors.bluesky import BlueskyCollector
+        return BlueskyCollector()
     else:
         raise ValueError(f"Unknown source: {source}")
 
