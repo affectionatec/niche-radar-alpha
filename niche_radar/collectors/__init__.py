@@ -78,11 +78,26 @@ def run_collectors(
     results: list[CollectorResult] = []
 
     for source in sources:
+        try:
+            collector = _get_collector(source)
+        except Exception as exc:
+            logger.error("collector_unknown", source=source, error=str(exc))
+            continue
+
+        # Skip credential-gated sources that aren't configured — silently, so
+        # they don't litter the dashboard with failed runs until set up.
+        if not dry_run:
+            try:
+                if not type(collector).is_available(db, settings):
+                    logger.debug("collector_skipped_unavailable", source=source)
+                    continue
+            except Exception as exc:
+                logger.warning("collector_availability_check_failed", source=source, error=str(exc))
+
         run_id = insert_collection_run(db, source)
         start = time.time()
 
         try:
-            collector = _get_collector(source)
             result = collector.collect(settings=settings, dry_run=dry_run, db=db)
             result.run_id = run_id
 
