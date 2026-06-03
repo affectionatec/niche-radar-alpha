@@ -158,6 +158,44 @@ CREATE TABLE IF NOT EXISTS pipeline_runs (
 );
 CREATE INDEX IF NOT EXISTS idx_pipeline_runs_started ON pipeline_runs(started_at);
 CREATE INDEX IF NOT EXISTS idx_pipeline_runs_hash    ON pipeline_runs(prompt_hash);
+
+CREATE TABLE IF NOT EXISTS entities (
+    id              TEXT PRIMARY KEY,
+    type            TEXT NOT NULL CHECK(type IN ('company','product','technology','person','category')),
+    canonical_name  TEXT NOT NULL,
+    aliases         JSON DEFAULT '[]',
+    first_seen      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_seen       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    mention_count   INTEGER DEFAULT 0,
+    source_diversity INTEGER DEFAULT 0,
+    velocity_score  REAL DEFAULT 0.0
+);
+CREATE INDEX IF NOT EXISTS idx_entities_type ON entities(type);
+CREATE INDEX IF NOT EXISTS idx_entities_name ON entities(canonical_name);
+CREATE INDEX IF NOT EXISTS idx_entities_velocity ON entities(velocity_score DESC);
+CREATE INDEX IF NOT EXISTS idx_entities_mentions ON entities(mention_count DESC);
+
+CREATE TABLE IF NOT EXISTS entity_mentions (
+    entity_id       TEXT REFERENCES entities(id) ON DELETE CASCADE,
+    raw_item_id     TEXT REFERENCES raw_items(id) ON DELETE CASCADE,
+    sentiment       TEXT CHECK(sentiment IN ('positive','negative','neutral')),
+    relevance       REAL DEFAULT 1.0 CHECK(relevance >= 0.0 AND relevance <= 1.0),
+    extracted_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (entity_id, raw_item_id)
+);
+CREATE INDEX IF NOT EXISTS idx_entity_mentions_item ON entity_mentions(raw_item_id);
+CREATE INDEX IF NOT EXISTS idx_entity_mentions_extracted ON entity_mentions(extracted_at);
+
+CREATE TABLE IF NOT EXISTS entity_velocity (
+    entity_id       TEXT REFERENCES entities(id) ON DELETE CASCADE,
+    week_start      DATE NOT NULL,
+    mention_count   INTEGER DEFAULT 0,
+    source_count    INTEGER DEFAULT 0,
+    velocity_label  TEXT CHECK(velocity_label IN ('surging','growing','stable','declining')),
+    velocity_score  REAL DEFAULT 0.0,
+    PRIMARY KEY (entity_id, week_start)
+);
+CREATE INDEX IF NOT EXISTS idx_entity_velocity_week ON entity_velocity(week_start);
 """
 
 
