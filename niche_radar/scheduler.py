@@ -64,6 +64,78 @@ def _weekly_digest_job(settings) -> None:
     logger.info("weekly_digest_generated", path=str(path))
 
 
+def _entity_extraction_job(settings) -> None:
+    """Extract entities from recently collected raw items that haven't been processed yet."""
+    from niche_radar.entities.service import EntityService
+    from niche_radar.storage.database import get_db
+
+    if not settings.llm_api_key:
+        logger.info("entity_extraction_skipped_no_llm_key")
+        return
+
+    db = get_db(settings.database_url)
+    try:
+        # Build a lightweight LLM client from settings
+        if settings.llm_provider == "anthropic":
+            from niche_radar.llm.anthropic_client import AnthropicClient
+            llm = AnthropicClient(api_key=settings.llm_api_key, model=settings.llm_model)
+        else:
+            from niche_radar.llm.openai_compat import OpenAICompatClient
+            llm = OpenAICompatClient(
+                api_key=settings.llm_api_key,
+                model=settings.llm_model,
+                base_url=settings.llm_base_url or None,
+            )
+
+        service = EntityService(
+            llm=llm,
+            db=db,
+            sample_rate=getattr(settings, "entity_extraction_sample_rate", 0.2),
+        )
+
+        # Find raw items that haven't been extracted yet
+        rows = db.execute(
+            "SELECT ri.id FROM raw_items ri "
+            "WHERE NOT EXISTS ("
+            "  SELECT 1 FROM entity_mentions em WHERE em.raw_item_id = ri.id"
+            ") "
+            "ORDER BY ri.collected_at DESC LIMIT 500"
+        ).fetchall()
+
+        processed = 0
+        extracted_total = 0
+        for row in rows:
+            try:
+                entity_ids = service.process_item(row["id"])
+                if entity_ids:
+                    extracted_total += len(entity_ids)
+                processed += 1
+            except Exception:
+                logger.exception("entity_extraction_item_failed", item_id=row["id"])
+
+        logger.info(
+            "entity_extraction_complete",
+            items_processed=processed,
+            entities_extracted=extracted_total,
+        )
+    finally:
+        db.close()
+
+
+def _entity_velocity_job(settings) -> None:
+    """Weekly: compute week-over-week velocity for all tracked entities."""
+    from niche_radar.entities.repository import compute_entity_velocity
+    from niche_radar.storage.database import get_db
+
+    db = get_db(settings.database_url)
+    try:
+        before = db.execute("SELECT COUNT(*) FROM entities").fetchone()[0]
+        compute_entity_velocity(db)
+        logger.info("entity_velocity_computed", entity_count=before)
+    finally:
+        db.close()
+
+
 def start_scheduler(settings) -> None:
     """Start BackgroundScheduler + uvicorn API server."""
     import uvicorn
@@ -105,6 +177,24 @@ def start_scheduler(settings) -> None:
         args=[settings],
         id="weekly_digest",
         name="Weekly Opportunity Digest",
+    )
+    scheduler.add_job(
+        _entity_extraction_job,
+        "interval",
+        hours=max(1, settings.collection_interval_hours),
+        args=[settings],
+        id="entity_extraction",
+        name="Entity Extraction",
+    )
+    scheduler.add_job(
+        _entity_velocity_job,
+        "cron",
+        day_of_week="mon",
+        hour=3,
+        minute=0,
+        args=[settings],
+        id="entity_velocity",
+        name="Entity Velocity Computation",
     )
 
     scheduler.start()

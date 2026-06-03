@@ -2,18 +2,7 @@
 from __future__ import annotations
 
 import os
-import tempfile
 
-_TEST_DB_DIR = tempfile.mkdtemp(prefix="niche-radar-test-entities-")
-os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DB_DIR}/test.db"
-os.environ["REPORT_OUTPUT_DIR"] = _TEST_DB_DIR
-
-from fastapi.testclient import TestClient
-
-import niche_radar.config
-niche_radar.config._settings = None
-
-from niche_radar.api.server import app
 from niche_radar.entities.repository import (
     upsert_entity,
     link_mention,
@@ -21,22 +10,20 @@ from niche_radar.entities.repository import (
 )
 from niche_radar.storage.database import get_db
 
-client = TestClient(app)
-
 
 def _db():
-    return get_db(f"sqlite:///{_TEST_DB_DIR}/test.db")
+    return get_db(os.environ["DATABASE_URL"])
 
 
 class TestEntityEndpoints:
-    def test_get_entities_empty(self):
+    def test_get_entities_empty(self, client):
         response = client.get("/api/entities")
         assert response.status_code == 200
         data = response.json()
         assert data["items"] == []
         assert data["total"] == 0
 
-    def test_get_entities_with_data(self):
+    def test_get_entities_with_data(self, client):
         db = _db()
         upsert_entity(db, canonical_name="Notion", entity_type="product")
         upsert_entity(db, canonical_name="Stripe", entity_type="company")
@@ -48,7 +35,7 @@ class TestEntityEndpoints:
         assert data["total"] == 2
         assert len(data["items"]) == 2
 
-    def test_get_entities_filter_by_type(self):
+    def test_get_entities_filter_by_type(self, client):
         db = _db()
         upsert_entity(db, canonical_name="Notion", entity_type="product")
         upsert_entity(db, canonical_name="Stripe", entity_type="company")
@@ -60,7 +47,7 @@ class TestEntityEndpoints:
         assert data["total"] == 1
         assert data["items"][0]["canonical_name"] == "Notion"
 
-    def test_get_entities_pagination(self):
+    def test_get_entities_pagination(self, client):
         db = _db()
         for i in range(5):
             upsert_entity(db, canonical_name=f"PagEntity{i}", entity_type="company")
@@ -71,7 +58,7 @@ class TestEntityEndpoints:
         assert len(data["items"]) == 2
         assert data["total"] >= 5
 
-    def test_get_entity_detail(self):
+    def test_get_entity_detail(self, client):
         db = _db()
         eid = upsert_entity(db, canonical_name="Notion", entity_type="product",
                             aliases=["Notion.so"])
@@ -92,11 +79,11 @@ class TestEntityEndpoints:
         assert "Notion.so" in data["aliases"]
         assert len(data["recent_mentions"]) >= 1
 
-    def test_get_entity_detail_not_found(self):
+    def test_get_entity_detail_not_found(self, client):
         response = client.get("/api/entities/nonexistent-id")
         assert response.status_code == 404
 
-    def test_get_trending_entities(self):
+    def test_get_trending_entities(self, client):
         db = _db()
         e1 = upsert_entity(db, canonical_name="Hot Topic", entity_type="technology")
         e2 = upsert_entity(db, canonical_name="Cold Topic", entity_type="technology")
@@ -114,7 +101,7 @@ class TestEntityEndpoints:
         assert len(data) >= 1
         assert data[0]["canonical_name"] == "Hot Topic"
 
-    def test_get_entity_mentions(self):
+    def test_get_entity_mentions(self, client):
         db = _db()
         eid = upsert_entity(db, canonical_name="TestCo", entity_type="company")
         db.execute(
@@ -132,10 +119,10 @@ class TestEntityEndpoints:
         assert len(data["items"]) == 1
         assert data["items"][0]["source"] == "reddit"
 
-    def test_invalid_type_returns_422(self):
+    def test_invalid_type_returns_422(self, client):
         response = client.get("/api/entities?type=invalid")
         assert response.status_code == 422
 
-    def test_invalid_trending_type_returns_422(self):
+    def test_invalid_trending_type_returns_422(self, client):
         response = client.get("/api/entities/trending?type=invalid")
         assert response.status_code == 422
