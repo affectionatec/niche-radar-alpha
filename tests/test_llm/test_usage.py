@@ -67,6 +67,9 @@ def test_flush_usage_persists_to_db(tmp_path: Path):
             prompt_tokens INTEGER DEFAULT 0,
             completion_tokens INTEGER DEFAULT 0,
             total_tokens INTEGER DEFAULT 0,
+            cached_tokens INTEGER DEFAULT 0,
+            cache_write_tokens INTEGER DEFAULT 0,
+            niche_candidate_id TEXT,
             created_at TEXT DEFAULT (datetime('now'))
         )
     """)
