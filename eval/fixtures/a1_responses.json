@@ -1,0 +1,32 @@
+{
+  "golden_001": {
+    "is_valid_signal": true,
+    "confidence": 0.92,
+    "signal_type": "pain_point",
+    "reasoning": "Specific user persona (designer), quantifiable time waste (3 hours/week), cross-tool friction (Slack, email, Figma). Clear product opportunity."
+  },
+  "golden_002": {
+    "is_valid_signal": false,
+    "confidence": 0.05,
+    "signal_type": "noise",
+    "reasoning": "Casual observation about weather and a dog. No complaint, no unmet need, no product-relevant signal."
+  },
+  "golden_003": {
+    "is_valid_signal": true,
+    "confidence": 0.88,
+    "signal_type": "pain_point",
+    "reasoning": "Explicit unmet need in health tracking, willingness to pay ($20/month), specific features requested (sleep, diet, medication correlation)."
+  },
+  "golden_004": {
+    "is_valid_signal": false,
+    "confidence": 0.15,
+    "signal_type": "complaint",
+    "reasoning": "General frustration with Google Search AI changes. No specific user need, no willingness to pay, no actionable product gap stated."
+  },
+  "golden_005": {
+    "is_valid_signal": true,
+    "confidence": 0.90,
+    "signal_type": "pain_point",
+    "reasoning": "Specific profession (DevOps engineer), clear manual process (15 SaaS status pages), quantifiable pain (every morning). Monitoring aggregator opportunity."
+  }
+}
