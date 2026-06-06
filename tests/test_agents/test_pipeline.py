@@ -118,7 +118,6 @@ def test_pipeline_skips_when_no_items(db, settings, fake_llm):
     assert client.calls == []
 
 
-@pytest.mark.skip(reason="pre-existing: run_pipeline returns 0 items — needs investigation")
 def test_pipeline_a1_rejects_all_items_no_clusters(
     db, settings, fake_llm, canned_a1_reject,
 ):
@@ -140,7 +139,6 @@ def test_pipeline_a1_rejects_all_items_no_clusters(
     ).fetchone()[0] == 0
 
 
-@pytest.mark.skip(reason="pre-existing: run_pipeline returns 0 items — needs investigation")
 def test_pipeline_full_go_path_persists_niche_and_analysis(
     db, settings, fake_llm,
     canned_a1_pass, canned_a2, canned_a3, canned_a4, canned_a5,
@@ -181,7 +179,6 @@ def test_pipeline_full_go_path_persists_niche_and_analysis(
     assert tuple(arow) == ("GO", 47, "warm", 8)
 
 
-@pytest.mark.skip(reason="pre-existing: run_pipeline returns 0 items — needs investigation")
 def test_pipeline_nogo_skips_a7_still_persists(
     db, settings, fake_llm,
     canned_a1_pass, canned_a2, canned_a3, canned_a4, canned_a5,
@@ -203,7 +200,6 @@ def test_pipeline_nogo_skips_a7_still_persists(
     assert row[1] is None  # A7 must not have produced output
 
 
-@pytest.mark.skip(reason="pre-existing: run_pipeline returns 0 items — needs investigation")
 def test_pipeline_idempotent_on_rerun(
     db, settings, fake_llm,
     canned_a1_pass, canned_a2, canned_a3, canned_a4, canned_a5,
@@ -233,7 +229,6 @@ def test_pipeline_idempotent_on_rerun(
     assert db.execute("SELECT COUNT(*) FROM niche_candidates").fetchone()[0] == 1
 
 
-@pytest.mark.skip(reason="pre-existing: aborted value mismatch — needs investigation")
 def test_pipeline_budget_abort(db, settings, fake_llm, canned_a1_pass, canned_a2):
     _seed_raw_item(db, "x", "title", "body")
     client = fake_llm({"a1": canned_a1_pass, "a2": canned_a2})
