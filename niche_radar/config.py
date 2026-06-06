@@ -54,6 +54,9 @@ class Settings(BaseSettings):
     # Niches whose last_seen falls outside this window are auto-archived.
     analysis_window_days: int = 7
 
+    # Entity intelligence
+    entity_extraction_sample_rate: float = 0.2
+
     # Reports
     report_output_dir: Path = Path("./reports")
 
