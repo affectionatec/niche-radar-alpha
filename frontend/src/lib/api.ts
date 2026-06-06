@@ -1,44 +1,11 @@
-export async function fetcher<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`API ${res.status}: ${url}`);
-  return res.json() as Promise<T>;
-}
+/**
+ * API module — domain helpers and endpoint registry.
+ * All network calls go through the shared client in ./client.ts.
+ */
+export { fetchJson, fetcher } from './client';
+import { fetchJson, mutateJson } from './client';
 
-export async function postPipeline(
-  step: string,
-  params?: Record<string, string>,
-): Promise<{ job_id: string; status: string }> {
-  const url = new URL(`/api/pipeline/${step}`, window.location.origin);
-  if (params) {
-    for (const [k, v] of Object.entries(params)) {
-      url.searchParams.set(k, v);
-    }
-  }
-  const res = await fetch(url.toString(), { method: 'POST' });
-  if (!res.ok) throw new Error(`Pipeline ${step} failed: ${res.status}`);
-  return res.json() as Promise<{ job_id: string; status: string }>;
-}
-
-export async function postSettings(body: Record<string, string>): Promise<void> {
-  const res = await fetch('/api/settings', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`Settings update failed: ${res.status}`);
-}
-
-export async function postSettingsTest(): Promise<{ ok: boolean; message: string }> {
-  const res = await fetch('/api/settings/test', { method: 'POST' });
-  if (!res.ok) throw new Error(`Test request failed: ${res.status}`);
-  return res.json() as Promise<{ ok: boolean; message: string }>;
-}
-
-export async function fetchProviderModels(): Promise<{ models: string[]; source: string; error?: string }> {
-  const res = await fetch('/api/settings/models');
-  if (!res.ok) throw new Error(`Model fetch failed: ${res.status}`);
-  return res.json() as Promise<{ models: string[]; source: string; error?: string }>;
-}
+// ── Endpoint registry ────────────────────────────────────────────────────
 
 export const endpoints = {
   status: '/api/status',
@@ -67,51 +34,66 @@ export const endpoints = {
     `/api/entities/${id}/mentions?limit=${limit}&offset=${page * limit}`,
 };
 
+// ── Pipeline ─────────────────────────────────────────────────────────────
+
+export async function postPipeline(
+  step: string,
+  params?: Record<string, string>,
+): Promise<{ job_id: string; status: string }> {
+  const url = new URL(`/api/pipeline/${step}`, window.location.origin);
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      url.searchParams.set(k, v);
+    }
+  }
+  return mutateJson(url.toString(), 'POST');
+}
+
+// ── Settings ─────────────────────────────────────────────────────────────
+
+export async function postSettings(body: Record<string, string>): Promise<void> {
+  await mutateJson('/api/settings', 'POST', body);
+}
+
+export async function postSettingsTest(): Promise<{ ok: boolean; message: string }> {
+  return mutateJson('/api/settings/test', 'POST');
+}
+
+export async function fetchProviderModels(): Promise<{ models: string[]; source: string; error?: string }> {
+  return fetchJson('/api/settings/models');
+}
+
+export async function fetchScoringWeights(): Promise<Record<string, number>> {
+  return fetchJson(endpoints.scoringWeights);
+}
+
+export async function saveScoringWeights(weights: Record<string, number>): Promise<void> {
+  await mutateJson(endpoints.scoringWeights, 'PUT', weights);
+}
+
+// ── Sources ──────────────────────────────────────────────────────────────
+
 export async function postSourceCredentials(
   slug: string,
   credentials: Record<string, string | null>,
 ): Promise<void> {
-  const res = await fetch(`/api/sources/${slug}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ credentials }),
-  });
-  if (!res.ok) throw new Error(`Source update failed: ${res.status}`);
+  await mutateJson(`/api/sources/${slug}`, 'POST', { credentials });
 }
 
 export async function postSourceTest(slug: string): Promise<{ ok: boolean; message: string }> {
-  const res = await fetch(`/api/sources/${slug}/test`, { method: 'POST' });
-  if (!res.ok) throw new Error(`Source test failed: ${res.status}`);
-  return res.json() as Promise<{ ok: boolean; message: string }>;
+  return mutateJson(`/api/sources/${slug}/test`, 'POST');
 }
 
-export async function fetchScoringWeights(): Promise<Record<string, number>> {
-  const res = await fetch(endpoints.scoringWeights);
-  if (!res.ok) throw new Error('Failed to fetch scoring weights');
-  return res.json();
-}
-
-export async function saveScoringWeights(weights: Record<string, number>): Promise<void> {
-  const res = await fetch(endpoints.scoringWeights, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(weights),
-  });
-  if (!res.ok) throw new Error('Failed to save scoring weights');
-}
+// ── Niches ───────────────────────────────────────────────────────────────
 
 export async function toggleShortlist(nicheId: string, starred: boolean): Promise<void> {
-  const method = starred ? 'DELETE' : 'POST';
-  const res = await fetch(`/api/niches/${nicheId}/shortlist`, {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    body: starred ? undefined : JSON.stringify({ note: '' }),
-  });
-  if (!res.ok) throw new Error(`Shortlist toggle failed: ${res.status}`);
+  if (starred) {
+    await mutateJson(`/api/niches/${nicheId}/shortlist`, 'DELETE');
+  } else {
+    await mutateJson(`/api/niches/${nicheId}/shortlist`, 'POST', { note: '' });
+  }
 }
 
 export async function validateNiche(nicheId: string): Promise<{ verdict: string; evidence: unknown[] }> {
-  const res = await fetch(`/api/niches/${nicheId}/validate`, { method: 'POST' });
-  if (!res.ok) throw new Error(`Validate failed: ${res.status}`);
-  return res.json();
+  return mutateJson(`/api/niches/${nicheId}/validate`, 'POST');
 }
