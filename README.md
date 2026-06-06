@@ -9,6 +9,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white)
 ![Status](https://img.shields.io/badge/Status-Alpha-orange?style=flat-square)
+![CI](https://github.com/affectionatec/niche-radar-alpha/actions/workflows/ci.yml/badge.svg)
 
 [Overview](#overview) • [Quick Start](#quick-start) • [Dashboard](#dashboard) • [Data Sources](#data-sources) • [LLM Providers](#llm-providers) • [Architecture](#architecture) • [Development](#development)
 
