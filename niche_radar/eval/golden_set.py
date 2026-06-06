@@ -25,9 +25,10 @@ Golden file format (JSON):
 from __future__ import annotations
 
 import json
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import IO, Any
 
 DEFAULT_GOLDEN_PATH = Path("eval/golden_set.json")
 
@@ -166,3 +167,30 @@ def evaluate_against_golden(
             summary.failed += 1
 
     return summary
+
+
+def print_summary(summary: EvalSummary, file: IO | None = None) -> None:
+    """Print a human-readable evaluation summary."""
+    out = file or sys.stdout
+    print(f"\n{'='*60}", file=out)
+    print(f"Golden Set Evaluation Results", file=out)
+    print(f"{'='*60}", file=out)
+    print(f"Total items:  {summary.total}", file=out)
+    print(f"Passed:       {summary.passed}", file=out)
+    print(f"Failed:       {summary.failed}", file=out)
+    print(f"Accuracy:     {summary.accuracy:.1%}", file=out)
+    print(file=out)
+
+    for check_name, counts in summary.by_check.items():
+        if counts["total"] == 0:
+            continue
+        rate = counts["passed"] / counts["total"]
+        print(f"  {check_name}: {counts['passed']}/{counts['total']} ({rate:.1%})", file=out)
+
+    if summary.failed > 0:
+        print(f"\nFailures:", file=out)
+        for r in summary.results:
+            if not r.passed:
+                for check, ok in r.checks.items():
+                    if not ok:
+                        print(f"  [{r.item_id}] {check}: {r.details[check]}", file=out)
