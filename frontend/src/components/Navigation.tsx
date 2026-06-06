@@ -7,6 +7,7 @@ import { color, font, fontSize } from '@/lib/tokens';
 const NAV_LINKS = [
   { href: '/pipeline', label: 'PIPELINE' },
   { href: '/niches', label: 'OPPORTUNITIES' },
+  { href: '/entities', label: 'ENTITIES' },
   { href: '/shortlist', label: 'SHORTLIST' },
   { href: '/reports', label: 'REPORTS' },
   { href: '/cost', label: 'COST' },

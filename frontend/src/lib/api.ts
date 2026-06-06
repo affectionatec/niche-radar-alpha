@@ -60,6 +60,11 @@ export const endpoints = {
   pipelineRuns: '/api/pipeline/runs',
   pipelineRun: (id: string) => `/api/pipeline/runs/${id}`,
   promptPacks: '/api/prompt-packs',
+  entities: '/api/entities',
+  entitiesTrending: '/api/entities/trending',
+  entity: (id: string) => `/api/entities/${id}`,
+  entityMentions: (id: string, page: number = 0, limit: number = 50) =>
+    `/api/entities/${id}/mentions?limit=${limit}&offset=${page * limit}`,
 };
 
 export async function postSourceCredentials(
