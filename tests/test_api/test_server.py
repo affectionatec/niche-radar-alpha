@@ -81,7 +81,7 @@ def test_get_job_logs_missing_returns_404():
 def test_get_report_missing_returns_404(tmp_path, monkeypatch):
     from niche_radar.config import Settings
     monkeypatch.setattr(
-        "niche_radar.config.get_settings",
+        "niche_radar.api.routes.reports.get_settings",
         lambda: Settings(report_output_dir=str(tmp_path)),
     )
     resp = client.get("/api/reports/nonexistent.md")
@@ -93,7 +93,7 @@ def test_get_report_content_returns_text(tmp_path, monkeypatch):
     report_file = tmp_path / "test_report.md"
     report_file.write_text("# Test Report\nSome content")
     monkeypatch.setattr(
-        "niche_radar.config.get_settings",
+        "niche_radar.api.routes.reports.get_settings",
         lambda: Settings(report_output_dir=str(tmp_path)),
     )
     resp = client.get("/api/reports/test_report.md")
@@ -104,7 +104,7 @@ def test_get_report_content_returns_text(tmp_path, monkeypatch):
 def test_get_report_path_traversal_rejected(tmp_path, monkeypatch):
     from niche_radar.config import Settings
     monkeypatch.setattr(
-        "niche_radar.config.get_settings",
+        "niche_radar.api.routes.reports.get_settings",
         lambda: Settings(report_output_dir=str(tmp_path)),
     )
     resp = client.get("/api/reports/../../etc/passwd")
