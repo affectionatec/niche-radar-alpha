@@ -267,7 +267,15 @@ def _migrate(conn: sqlite3.Connection) -> None:
     """)
     conn.commit()
 
-    # One-shot: when upgrading from the old "niche" analyzer to the AI-tool-opportunity
+    # v5 (P4 cost observability): new columns on llm_usage.
+    usage_cols = {r[1] for r in conn.execute("PRAGMA table_info(llm_usage)").fetchall()}
+    if "cached_tokens" not in usage_cols:
+        conn.execute("ALTER TABLE llm_usage ADD COLUMN cached_tokens INTEGER NOT NULL DEFAULT 0")
+    if "cache_write_tokens" not in usage_cols:
+        conn.execute("ALTER TABLE llm_usage ADD COLUMN cache_write_tokens INTEGER NOT NULL DEFAULT 0")
+    if "niche_candidate_id" not in usage_cols:
+        conn.execute("ALTER TABLE llm_usage ADD COLUMN niche_candidate_id TEXT")
+    conn.commit()
     # analyzer, the existing candidates lack tool_concept/audience/etc. and raw_items are
     # already linked (so analyze would skip them). Wipe analysis state so the next run
     # produces fresh opportunities. Gated by a marker so it never runs twice.
@@ -299,6 +307,7 @@ def get_db(database_url: str) -> sqlite3.Connection:
     conn = sqlite3.connect(str(path))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
     conn.execute("PRAGMA foreign_keys=ON")
     conn.executescript(_SCHEMA)
     _migrate(conn)

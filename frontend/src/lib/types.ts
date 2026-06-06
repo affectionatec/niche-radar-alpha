@@ -182,3 +182,43 @@ export interface LLMSettings {
   llm_base_url: string;
   llm_api_key_set: boolean;
 }
+
+// ── Entity Intelligence ─────────────────────────────────────────────────
+
+export interface Entity {
+  id: string;
+  type: 'company' | 'product' | 'technology' | 'person' | 'category';
+  canonical_name: string;
+  aliases: string[];
+  first_seen: string;
+  last_seen: string;
+  mention_count: number;
+  source_diversity: number;
+  velocity_score: number;
+}
+
+export interface EntityListResponse {
+  items: Entity[];
+  total: number;
+}
+
+export interface EntityMention {
+  entity_id: string;
+  raw_item_id: string;
+  sentiment: 'positive' | 'negative' | 'neutral';
+  relevance: number;
+  extracted_at: string;
+  title?: string;
+  source?: string;
+  url?: string;
+}
+
+export interface EntityMentionListResponse {
+  items: EntityMention[];
+  total: number;
+}
+
+export interface EntityDetail extends Entity {
+  mentions?: EntityMention[];
+  velocity_history?: { week_start: string; mention_count: number; velocity: string; score: number }[];
+}
