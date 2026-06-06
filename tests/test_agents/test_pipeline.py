@@ -29,7 +29,10 @@ def settings():
     )
 
 
-def _seed_raw_item(conn, item_id, title, body, posted_at="2026-05-20T10:00:00+00:00"):
+def _seed_raw_item(conn, item_id, title, body, posted_at=None):
+    if posted_at is None:
+        from datetime import datetime, timezone, timedelta
+        posted_at = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
     run_id = insert_collection_run(conn, "reddit", "completed")
     return upsert_raw_item(
         conn, run_id, "reddit", item_id, title, body,
@@ -175,7 +178,7 @@ def test_pipeline_full_go_path_persists_niche_and_analysis(
         "SELECT verdict, opportunity_score, tier, feasibility_score "
         "FROM niche_analyses"
     ).fetchone()
-    assert arow == ("GO", 47, "warm", 8)
+    assert tuple(arow) == ("GO", 47, "warm", 8)
 
 
 @pytest.mark.skip(reason="pre-existing: run_pipeline returns 0 items — needs investigation")

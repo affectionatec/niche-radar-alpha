@@ -85,12 +85,17 @@ def test_list_recent_respects_limit():
 
 @pytest.mark.skip(reason="pre-existing: JobManager.get() checks in-memory _active first, eviction test needs refactor")
 def test_max_jobs_evicts_oldest():
-    mgr = JobManager(max_jobs=3)
-    ids = [mgr.create("collect").id for _ in range(4)]
-    assert mgr.get(ids[0]) is None
-    assert mgr.get(ids[1]) is not None
-    assert mgr.get(ids[2]) is not None
-    assert mgr.get(ids[3]) is not None
+    mgr = JobManager()
+    orig_max = JobManager._MAX_JOBS
+    JobManager._MAX_JOBS = 3
+    try:
+        ids = [mgr.create("collect").id for _ in range(4)]
+        assert mgr.get(ids[0]) is None
+        assert mgr.get(ids[1]) is not None
+        assert mgr.get(ids[2]) is not None
+        assert mgr.get(ids[3]) is not None
+    finally:
+        JobManager._MAX_JOBS = orig_max
 
 
 def test_set_status_unknown_id_is_noop():

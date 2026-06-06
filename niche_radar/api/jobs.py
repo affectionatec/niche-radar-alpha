@@ -59,6 +59,9 @@ class JobManager:
             db.close()
         with self._lock:
             self._active[job.id] = job
+            if len(self._active) > self._MAX_JOBS:
+                oldest = sorted(self._active, key=lambda k: self._active[k].created_at)[0]
+                del self._active[oldest]
         return job
 
     def get(self, job_id: str) -> Job | None:
