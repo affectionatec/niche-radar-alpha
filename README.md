@@ -1,6 +1,6 @@
 <div align="center">
 
-# Niche Radar
+# Niche Radar Alpha
 
 *Automated trend-intelligence pipeline for discovering product opportunities*
 
