@@ -249,11 +249,12 @@ niche-radar-alpha/
 ├── prompt_packs/                   # YAML-based prompt override packs
 ├── eval/                           # Golden set data for pipeline evaluation
 ├── docs/                           # Extended documentation
+│   ├── prd.md · spec/ · adr/ · plans/ · status.md  # agentic-engineering doc chain
 │   ├── ARCHITECTURE.md             # System design, module map, clustering strategy
-│   ├── AGENTS.md                   # Agent design philosophy + prompt documentation
+│   ├── agent-pipeline.md           # Agent design philosophy + prompt documentation
 │   ├── PRODUCT.md                  # Problem statement & features
 │   ├── DESIGN.md                   # UI/UX design system
-│   ├── spec.md                     # Full MVP specification
+│   ├── spec.md                     # Original MVP spec (being decomposed into spec/)
 │   └── images/                     # Diagrams and assets
 └── tests/                          # pytest suite
 ```
@@ -365,9 +366,11 @@ pytest -v
 
 | Document | Description |
 |----------|-------------|
+| [AGENTS.md](AGENTS.md) | **Single source of truth** — how we work; entry to the doc chain |
+| [docs/prd.md](docs/prd.md) · [spec/](docs/spec/) · [adr/](docs/adr/) · [plans/](docs/plans/) · [status.md](docs/status.md) | Documentation chain (PRD → SPEC → ADR → IMPL PLAN → STATUS → VERIFICATION) |
 | [CONTEXT.md](CONTEXT.md) | Domain glossary — canonical terms used in the codebase |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, module map, clustering strategy |
-| [AGENTS.md](docs/AGENTS.md) | Agent design philosophy, prompts, failure cases |
+| [agent-pipeline.md](docs/agent-pipeline.md) | Agent design philosophy, prompts, failure cases |
 | [PRODUCT.md](docs/PRODUCT.md) | Problem statement, users, features, non-goals |
 | [DESIGN.md](docs/DESIGN.md) | UI/UX design system (xAI-inspired dark theme) |
 | [spec.md](docs/spec.md) | Full MVP specification |
