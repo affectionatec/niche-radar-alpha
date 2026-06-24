@@ -7,5 +7,6 @@ paths any source can compose into its :class:`MultiBackendCollector` chain.
 from __future__ import annotations
 
 from niche_radar.collectors.backends.jina import JinaReaderBackend
+from niche_radar.collectors.backends.ytdlp import YtDlpBackend
 
-__all__ = ["JinaReaderBackend"]
+__all__ = ["JinaReaderBackend", "YtDlpBackend"]

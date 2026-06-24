@@ -1,4 +1,14 @@
-"""YouTube data collector."""
+"""YouTube data collector — a resilient multi-backend source (ADR-002).
+
+Capture walks an ordered chain:
+
+    1. yt_dlp           — keyless, transcript-bearing capture via the yt-dlp CLI
+                          (full description + auto-caption transcript, no Data
+                          API quota). Used whenever the ``yt-dlp`` binary exists.
+    2. youtube_api_scrape — Data API v3 (if a key is set) with a scrapetube
+                          fallback. The original capture path, kept as fallback
+                          for environments without yt-dlp.
+"""
 
 from __future__ import annotations
 
@@ -11,11 +21,10 @@ from typing import ClassVar
 import structlog
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 
-from niche_radar.collectors.base import (
-    BaseCollector,
-    CollectorResult,
-    CollectorUnavailableError,
-)
+from niche_radar.collectors.backends import YtDlpBackend
+from niche_radar.collectors.backends.ytdlp import ytdlp_available
+from niche_radar.collectors.base import CollectorUnavailableError
+from niche_radar.collectors.multi_backend import MultiBackendCollector, SourceBackend
 from niche_radar.storage.repository import get_source_credential
 
 logger = structlog.get_logger()
@@ -49,128 +58,101 @@ def _to_int(text: str | None) -> int | None:
     return int(digits) if digits else None
 
 
-class YouTubeCollector(BaseCollector):
-    source_name = "youtube"
+class YouTubeApiScrapeBackend(SourceBackend):
+    """Fallback path — YouTube Data API v3 (if keyed) with a scrapetube fallback."""
 
-    CREDENTIAL_SCHEMA: ClassVar[list[dict]] = [
-        {"key": "api_key", "label": "YouTube Data API v3 Key (optional)", "secret": True, "optional": True, "help": "From console.cloud.google.com — improves reliability over scraping"},
-    ]
+    name = "youtube_api_scrape"
 
-    @classmethod
-    def test_connection(cls, db: sqlite3.Connection, settings) -> tuple[bool, str]:
-        import requests
-        api_key = get_source_credential(db, "youtube", "api_key", settings.youtube_api_key)
-        if api_key:
-            resp = requests.get(
-                "https://www.googleapis.com/youtube/v3/videos",
-                params={"part": "id", "chart": "mostPopular", "maxResults": 1, "key": api_key},
-                timeout=10,
-            )
-            if resp.status_code == 200:
-                return True, "YouTube API key valid"
-            return False, f"YouTube API returned {resp.status_code}: {resp.text[:100]}"
-        # Fall back to testing scrapetube availability
+    def is_available(self, settings, db: sqlite3.Connection | None) -> bool:
         try:
+            api_key = (
+                get_source_credential(db, "youtube", "api_key", settings.youtube_api_key)
+                if db else settings.youtube_api_key
+            )
+            if api_key:
+                return True
             import scrapetube  # noqa: F401
-            return True, "scrapetube available (no API key)"
-        except ImportError:
-            return False, "No YouTube API key set and scrapetube not installed"
 
-    def collect(self, settings, dry_run: bool = False, db: sqlite3.Connection | None = None) -> CollectorResult:
-        start = time.perf_counter()
-        if dry_run:
-            return CollectorResult(self.source_name, [], "", "completed", 0)
+            return True
+        except Exception:
+            return False
+
+    def fetch(self, settings, db: sqlite3.Connection | None) -> list[dict]:
+        import requests
 
         try:
-            import requests
+            import scrapetube
+        except Exception:
+            scrapetube = None
+        youtube_api_key = (
+            get_source_credential(db, "youtube", "api_key", settings.youtube_api_key)
+            if db else settings.youtube_api_key
+        )
+        if scrapetube is None and not youtube_api_key:
+            raise CollectorUnavailableError(
+                "scrapetube is not installed and no YouTube API key is configured"
+            )
 
+        retryer = Retrying(
+            stop=stop_after_attempt(max(1, int(settings.max_retries or 1))),
+            wait=wait_exponential(
+                multiplier=1,
+                exp_base=max(2, int(settings.retry_backoff_base or 2)),
+                min=1,
+                max=30,
+            ),
+            reraise=True,
+        )
+        items: dict[str, dict] = {}
+        errors: list[str] = []
+        window_hours = settings.freshness_youtube_hours
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=window_hours)
+        published_after_iso = cutoff.strftime("%Y-%m-%dT%H:%M:%SZ")
+        dropped_stale = 0
+
+        for query in SEED_KEYWORDS:
             try:
-                import scrapetube
-            except Exception:
-                scrapetube = None
-            youtube_api_key = get_source_credential(db, "youtube", "api_key", settings.youtube_api_key) if db else settings.youtube_api_key
-            if scrapetube is None and not youtube_api_key:
-                raise CollectorUnavailableError("scrapetube is not installed and no YouTube API key is configured")
+                for attempt in retryer:
+                    with attempt:
+                        if scrapetube is None:
+                            raise CollectorUnavailableError("scrapetube unavailable")
+                        videos = list(scrapetube.get_search(query, limit=10))
+                used_api = False
+            except Exception as exc:
+                if not youtube_api_key:
+                    logger.warning("youtube_search_failed", query=query, error=str(exc))
+                    errors.append(f"{query}: {exc}")
+                    continue
+                logger.warning("youtube_scrapetube_failed", query=query, error=str(exc))
+                for attempt in retryer:
+                    with attempt:
+                        videos = self._search_api(
+                            requests, youtube_api_key, query, published_after_iso,
+                        )
+                used_api = True
 
-            retryer = Retrying(
-                stop=stop_after_attempt(max(1, int(settings.max_retries or 1))),
-                wait=wait_exponential(
-                    multiplier=1,
-                    exp_base=max(2, int(settings.retry_backoff_base or 2)),
-                    min=1,
-                    max=30,
-                ),
-                reraise=True,
-            )
-            items: dict[str, dict] = {}
-            errors: list[str] = []
-            window_hours = settings.freshness_youtube_hours
-            cutoff = datetime.now(timezone.utc) - timedelta(hours=window_hours)
-            published_after_iso = cutoff.strftime("%Y-%m-%dT%H:%M:%SZ")
-            dropped_stale = 0
+            for video in videos[:10]:
+                item = self._normalize_video(video, query, used_api)
+                if not item:
+                    continue
+                if not self._is_fresh(item, used_api, cutoff):
+                    dropped_stale += 1
+                    continue
+                existing = items.get(item["source_id"])
+                if existing:
+                    queries = existing["metadata"].setdefault("queries", [])
+                    if query not in queries:
+                        queries.append(query)
+                else:
+                    items[item["source_id"]] = item
+            time.sleep(1)
 
-            for query in SEED_KEYWORDS:
-                try:
-                    for attempt in retryer:
-                        with attempt:
-                            if scrapetube is None:
-                                raise CollectorUnavailableError("scrapetube unavailable")
-                            videos = list(scrapetube.get_search(query, limit=10))
-                    used_api = False
-                except Exception as exc:
-                    if not youtube_api_key:
-                        logger.warning("youtube_search_failed", query=query, error=str(exc))
-                        errors.append(f"{query}: {exc}")
-                        continue
-                    logger.warning("youtube_scrapetube_failed", query=query, error=str(exc))
-                    for attempt in retryer:
-                        with attempt:
-                            videos = self._search_api(
-                                requests, youtube_api_key, query, published_after_iso,
-                            )
-                    used_api = True
-
-                for video in videos[:10]:
-                    item = self._normalize_video(video, query, used_api)
-                    if not item:
-                        continue
-                    # Freshness gate — drop videos older than the window
-                    if not self._is_fresh(item, used_api, cutoff):
-                        dropped_stale += 1
-                        continue
-                    existing = items.get(item["source_id"])
-                    if existing:
-                        queries = existing["metadata"].setdefault("queries", [])
-                        if query not in queries:
-                            queries.append(query)
-                    else:
-                        items[item["source_id"]] = item
-                time.sleep(1)
-
-            collected = list(items.values())
-            if dropped_stale:
-                logger.info("youtube_stale_dropped", count=dropped_stale, window_hours=window_hours)
-            status = "completed" if not errors else "partial" if collected else "failed"
-            return CollectorResult(
-                source=self.source_name,
-                items=collected,
-                run_id="",
-                status=status,
-                items_collected=len(collected),
-                error_message="; ".join(errors) or None,
-                duration_seconds=time.perf_counter() - start,
-            )
-        except Exception as exc:
-            logger.exception("youtube_collect_failed", error=str(exc))
-            return CollectorResult(
-                source=self.source_name,
-                items=[],
-                run_id="",
-                status="failed",
-                items_collected=0,
-                error_message=str(exc),
-                duration_seconds=time.perf_counter() - start,
-            )
+        if dropped_stale:
+            logger.info("youtube_stale_dropped", count=dropped_stale, window_hours=window_hours)
+        collected = list(items.values())
+        if not collected and errors:
+            raise CollectorUnavailableError("; ".join(errors))
+        return collected
 
     def _search_api(
         self, requests_module, api_key: str, query: str, published_after: str | None = None,
@@ -206,7 +188,6 @@ class YouTubeCollector(BaseCollector):
         view_text = _text(video.get("viewCountText")) if not used_api else None
         published = _text(video.get("publishedTimeText")) if not used_api else snippet.get("publishedAt")
 
-        # API returns ISO timestamps; scrapetube returns "2 days ago" — parse both.
         posted_at = None
         if used_api and published:
             posted_at = published
@@ -243,9 +224,43 @@ class YouTubeCollector(BaseCollector):
                 return dt >= cutoff
             except (ValueError, TypeError):
                 return False
-        # Scrapetube returns relative phrases — parse them
         published = (item.get("metadata") or {}).get("published") or ""
         return _relative_age_within(published, cutoff)
+
+
+class YouTubeCollector(MultiBackendCollector):
+    source_name = "youtube"
+
+    CREDENTIAL_SCHEMA: ClassVar[list[dict]] = [
+        {"key": "api_key", "label": "YouTube Data API v3 Key (optional)", "secret": True, "optional": True,
+         "help": "From console.cloud.google.com. Only used as a fallback — when yt-dlp is installed it is preferred (keyless, captures transcripts)."},
+    ]
+
+    def build_backends(self) -> list[SourceBackend]:
+        return [YtDlpBackend(SEED_KEYWORDS), YouTubeApiScrapeBackend()]
+
+    @classmethod
+    def test_connection(cls, db: sqlite3.Connection, settings) -> tuple[bool, str]:
+        if ytdlp_available():
+            return True, "✓ YouTube capture will use yt-dlp (keyless, transcripts)"
+        import requests
+
+        api_key = get_source_credential(db, "youtube", "api_key", settings.youtube_api_key)
+        if api_key:
+            resp = requests.get(
+                "https://www.googleapis.com/youtube/v3/videos",
+                params={"part": "id", "chart": "mostPopular", "maxResults": 1, "key": api_key},
+                timeout=10,
+            )
+            if resp.status_code == 200:
+                return True, "YouTube API key valid (yt-dlp not installed)"
+            return False, f"YouTube API returned {resp.status_code}: {resp.text[:100]}"
+        try:
+            import scrapetube  # noqa: F401
+
+            return True, "scrapetube available (no API key; install yt-dlp for transcripts)"
+        except ImportError:
+            return False, "No yt-dlp, no YouTube API key, and scrapetube not installed"
 
 
 _RELATIVE_PATTERN = re.compile(

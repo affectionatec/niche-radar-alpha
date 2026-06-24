@@ -20,6 +20,36 @@ The canonical commands a verifier runs (from `AGENTS.md` §6 / `docs/spec/collec
 
 ---
 
+## 2026-06-24 — M1-T3: yt-dlp YouTube backend — VERDICT: ⏳ AWAITING REVIEW (producer self-check)
+
+> Producer self-check, not an independent verdict. (M1-T1/T2 above were merged via PR #11 — the repo owner reviewed and merged, satisfying the human gate.)
+
+**Diff:** branch `claude/practical-carson-ufbuen` (new commit, on top of merged main) · **Files:** `niche_radar/collectors/backends/ytdlp.py`, `niche_radar/collectors/backends/__init__.py`, `niche_radar/collectors/youtube.py`, `tests/test_collectors/test_youtube.py`, `requirements.txt`, `pyproject.toml`, `docs/adr/ADR-005-*`, `docs/adr/README.md`
+**Test ratchet:** baseline 384 → now 397 (✅ holds, +13)
+**Scope:** `collectors/` + dependency manifests + ADR/docs (yt-dlp dependency recorded in ADR-005)
+
+**Producer self-check commands:**
+
+| Command | Exit | Key output |
+|---------|------|-----------|
+| `pytest -q` | 0 | 397 passed (one unrelated network test, `test_api/test_sources.py::test_test_source_endpoint_exists`, flaked once under the sandbox proxy and passed on rerun — it catches its own exceptions; environmental, not a regression) |
+| `python -m niche_radar.eval.runner` | 0 | runs; accuracy unchanged (offline-no-LLM artifact, unaffected by collectors) |
+| `yt-dlp --version` | 0 | 2026.06.09 (binary on PATH after `pip install`) |
+
+**Done condition (for a verifier — IMPL PLAN M1-T3 / `docs/spec/collectors.md` §3.2,§6):**
+
+| # | Criterion | Verify via | Expected evidence |
+|---|-----------|------------|-------------------|
+| 1 | `is_available()` False when `yt-dlp` absent; never raises | `pytest tests/test_collectors/test_youtube.py -k available` | pass (mocks `shutil.which`) |
+| 2 | A mocked yt-dlp payload incl. transcript → raw item with transcript in `body` | `pytest tests/test_collectors/test_youtube.py -k transcript or enriches` | pass; `has_transcript` True |
+| 3 | yt-dlp preferred when present; falls through to Data-API/scrape when absent | `pytest tests/test_collectors/test_youtube.py -k uses_ytdlp or falls_through` | pass; `active_backend` flips correctly |
+| 4 | No live network/CLI in tests | run offline | suite passes with egress blocked |
+| 5 | Full suite ratchet + eval | `pytest` ; `python -m niche_radar.eval.runner` | 397 pass; eval exit 0 |
+
+**Round:** 1 (producer) — review pending.
+
+---
+
 ## 2026-06-24 — M1-T1 + M1-T2: Jina Reader resilient fallback — VERDICT: ⏳ AWAITING INDEPENDENT VERIFICATION
 
 > This is the **producer self-check**, not an independent verdict. Per the maker-checker gate, a verifier with fresh context must re-run the done condition and append a PASS/FAIL below before STATUS moves these tasks to ✅. They sit at 🔍 until then.
