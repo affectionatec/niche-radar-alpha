@@ -16,6 +16,7 @@ haxor>=1.2,<2.0
 requests>=2.31,<3.0
 beautifulsoup4>=4.12,<5.0
 scrapetube>=2.5,<3.0
+yt-dlp>=2024.1  # keyless YouTube capture + auto-caption transcripts (ADR-005)
 
 # LLM providers
 openai>=1.0,<2.0

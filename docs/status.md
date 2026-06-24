@@ -2,9 +2,9 @@
 
 > **Single source of truth for "where we are."** Read at the start of every session; update at the end. The stable build plan is `docs/plans/implementation-plan.md`; **this file tracks live progress** against it.
 
-- **Current phase:** Agent-Reach capability port — M1 keystone (Jina Reader fallback) built, awaiting verification. 🔍
-- **Next up:** M1-T3 (yt-dlp YouTube backend), then M2 (extra tiers for Reddit/Twitter).
-- **Code status:** 384 tests pass (baseline 371 → 384, +13). Eval runner exits 0. Lint: n/a (none configured). Verified locally in a clean venv (`pip install -e ".[dev]"` after `pip install -U setuptools wheel`).
+- **Current phase:** Agent-Reach capability port — **M1 complete and merged** (Jina keystone PR #11; yt-dlp YouTube PR #12, independent verifier PASS). Starting M2. 🟡
+- **Next up:** M2-T1 (Reddit `rdt-cli`/OpenCLI backend tier), then M2-T2 (Twitter `twitter-cli` tier).
+- **Code status:** 397 tests pass (baseline 384 → 397, +13). Eval runner exits 0. M1-T3 independently verified PASS (see `docs/verification-log.md`, 2026-06-24).
 
 ## In-Flight Checkpoint
 
@@ -18,18 +18,18 @@ Plan & contracts: `docs/plans/implementation-plan.md`. Legend: ⬜ not started �
 
 | Module | Status | Notes / next action |
 | ------ | :----: | ------------------- |
-| Doc-chain migration (AGENTS.md + PRD/SPEC/ADR/PLAN/STATUS/VERIFY) | 🔍 | Built; PR #11 (draft). Doc-only; human-gated. |
-| M1-T1 Jina Reader backend | 🔍 | Built. `_jina.py` + `backends/jina.py`; 13 new tests. 384/384 pass. Awaiting independent verification. Spec: `docs/spec/collectors.md` §3.3 |
-| M1-T2 Harden G2 + Indie Hackers | 🔍 | Built. Both → `MultiBackendCollector` (direct → Jina fallback). Existing g2/IH tests still green. Awaiting independent verification. |
-| M1-T3 yt-dlp YouTube backend | ⬜ | Next code task. Spec: `docs/spec/collectors.md` §3.2, §6 |
-| M2 Extra tiers (Reddit, Twitter, GitHub) | ⬜ | After M1 |
+| Doc-chain migration (AGENTS.md + PRD/SPEC/ADR/PLAN/STATUS/VERIFY) | ✅ | Merged to main (PR #11), human-gated. |
+| M1-T1 Jina Reader backend | ✅ | Merged (PR #11). `_jina.py` + `backends/jina.py`. |
+| M1-T2 Harden G2 + Indie Hackers | ✅ | Merged (PR #11). `direct_scrape → jina_reader`. |
+| M1-T3 yt-dlp YouTube backend | ✅ | **Verified PASS** (`docs/verification-log.md`, 2026-06-24) + merged (PR #12). `backends/ytdlp.py` + `youtube.py` → `MultiBackendCollector` (`yt_dlp → youtube_api_scrape`); ADR-005. |
+| M2 Extra tiers (Reddit, Twitter, GitHub) | 🟡 | M2-T1 (Reddit) starting. |
 | M3 New channels (V2EX, Xueqiu, Exa, Bilibili, 小宇宙) | ⬜ | Keyless/native first |
 | M4 Cookie/ToS channels (小红书, LinkedIn) | ⬜ | Last; per-channel ADR required |
 
 ## Decisions
 
 Locked in `docs/adr/`. **Do not relitigate** — raise changes with the user.
-- ADR-001 SQLite default · ADR-002 multi-backend fallback · ADR-003 eight-agent pipeline · ADR-004 adopt agentic-engineering chain.
+- ADR-001 SQLite default · ADR-002 multi-backend fallback · ADR-003 eight-agent pipeline · ADR-004 adopt agentic-engineering chain · ADR-005 yt-dlp YouTube backend.
 
 ## Open Items (non-blocking)
 
@@ -41,6 +41,8 @@ Locked in `docs/adr/`. **Do not relitigate** — raise changes with the user.
 ## Session Handoff Log
 
 Newest first.
+
+- **2026-06-24** — **Built M1-T3: yt-dlp YouTube backend (transcripts, keyless).** New `niche_radar/collectors/backends/ytdlp.py` (`YtDlpBackend` + mockable seams `ytdlp_available` / `search_videos` / `fetch_transcript` / `vtt_to_text` / `normalize_video`). Refactored `niche_radar/collectors/youtube.py` from `BaseCollector` to `MultiBackendCollector` with chain `yt_dlp → youtube_api_scrape`: the existing Data-API/scrapetube path is preserved verbatim inside `YouTubeApiScrapeBackend` (fallback), and yt-dlp is preferred when its binary is present — captures the full description + auto-caption transcript folded into the item body, keyless (no Data-API quota). Transcript enrichment is bounded (`max_transcripts` cap) and fail-soft. Added `yt-dlp` to `requirements.txt` + `pyproject.toml` (Dockerfile installs via pip → binary on PATH; no apt step) and recorded **ADR-005** (new dependency, per AGENTS.md §5). **Verified (producer self-check):** `pytest` 397/397 (baseline 384 → 397, +13 in `tests/test_collectors/test_youtube.py`); `python -m niche_radar.eval.runner` exits 0; scope = `collectors/` + deps + ADR/docs. One unrelated network test flaked once under the sandbox proxy and passed on rerun (not a regression; it catches its own exceptions). **Caveats:** ⚠️ awaiting review in a new PR (M1 keystone already merged via PR #11); ⚠️ real transcript fetch needs the `yt-dlp` binary + network — gated by `is_available()`, so its absence degrades to the Data-API/scrapetube backend. **What the next session should do:** per the user's pacing choice, pause after this PR; when resumed, start M2 (Reddit `rdt-cli`/OpenCLI tier, then Twitter `twitter-cli` tier) per `docs/plans/implementation-plan.md`.
 
 - **2026-06-24** — **Built M1 keystone of the Agent-Reach port: Jina Reader resilient fallback (M1-T1 + M1-T2).** New `niche_radar/collectors/_jina.py` (opt-in Jina Reader helper: `read_url` via `_http.request(raw=True)`, `is_enabled` gate, `page_to_items` document normalizer) and `niche_radar/collectors/backends/jina.py` (`JinaReaderBackend` — composed per source with a urls-fn + parse-fn, no subclass explosion). Converted `g2_reviews.py` and `indie_hackers.py` from `BaseCollector` to `MultiBackendCollector`: chain is `direct_scrape` → `jina_reader`, so when the Cloudflare-blockable HTML scrape fails the source falls through to r.jina.ai (captures the readable page as one document item). **Key design:** the Jina fallback is *opt-in* (per-source `jina_fallback`/`jina_api_key` cred or `JINA_READER_ENABLED` env) — keeps unattended runs and the test-suite from surprise outbound calls, and keeps the existing `test_cloudflare_block_returns_partial_not_crash` fully offline. **Verified (producer self-check):** `pytest` 384/384 (baseline 371 → 384, +13 new in `tests/test_collectors/test_jina_backend.py`); `python -m niche_radar.eval.runner` exits 0; scope clean (only `collectors/` + the new test). **Caveats:** ⚠️ awaiting independent verification (producer cannot self-grade ✅ — see `docs/verification-log.md`); ⚠️ landing on the same branch as the doc-chain commit (session is single-branch), so it joins PR #11 as a second commit. **What the next session should do:** after verification, start M1-T3 (yt-dlp YouTube backend) per `docs/plans/implementation-plan.md` — adds transcript capture + drops the Data API quota dependency; remember to add `yt-dlp` to the Dockerfile and gate it behind `is_available()`.
 
