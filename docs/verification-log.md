@@ -20,6 +20,41 @@ The canonical commands a verifier runs (from `AGENTS.md` §6 / `docs/spec/collec
 
 ---
 
+## 2026-06-24 — M1-T3: yt-dlp YouTube backend — VERDICT: PASS
+
+> Verifier context: fresh sub-agent (independent, did not write the code) · Diff: `d304393..817b4aa` (branch `claude/practical-carson-ufbuen`)
+
+**Test ratchet:** baseline 384 → now 397 (✅ holds, +13). No test deleted, skipped, weakened, or xfail'd in the diff (`git diff d304393..817b4aa -- tests/` shows only additions; `grep "def test_"` = 397).
+
+**Scope:** clean. Diff touches `niche_radar/collectors/backends/{__init__,ytdlp}.py`, `niche_radar/collectors/youtube.py`, `tests/test_collectors/test_youtube.py`, `requirements.txt`, `pyproject.toml`, `docs/{adr/ADR-005-*,adr/README.md,status.md,verification-log.md}` — all within the allowed set. The impl-plan declared-files list names `Dockerfile (add yt-dlp)`; the Dockerfile was NOT edited. This is a defensible, documented choice (not drift): yt-dlp is a pip console-script, and the existing `Dockerfile` already runs `pip install -r requirements.txt` (lines 5–14), which now includes the `yt-dlp` line. ADR-005 explicitly records this ("the existing Dockerfile `pip install` already provisions it; no apt step"). Spec §6 requires the binary be declared in the Dockerfile + an ADR — satisfied transitively via requirements.txt + ADR-005.
+
+**Commands executed:**
+
+| Command | Exit | Key output |
+|---------|------|-----------|
+| `python3 -m pytest -q` | 0 | `397 passed in 56.62s` (re-run; both runs 397). Known network-flake `test_api/test_sources.py::test_test_source_endpoint_exists` passed (not reported as failure). |
+| `python3 -m pytest tests/test_collectors/test_youtube.py -q` | 0 | `13 passed in 0.02s` (the 13 new tests) |
+| `python3 -m niche_radar.eval.runner` | 0 | exit 0; golden cases report `got=None` — the pre-existing offline-no-LLM artifact noted in prior verdicts, unaffected by this collectors change |
+
+**Per-criterion (IMPL PLAN M1-T3 / producer done-condition table / spec §3.2,§3.3,§6):**
+
+| # | Criterion | Verdict | Evidence |
+|---|-----------|---------|----------|
+| 1 | `is_available()` False when `yt-dlp` absent; never raises | PASS | `test_ytdlp_available_false_when_binary_absent`, `test_ytdlp_available_true_when_binary_present`, `test_available_never_raises` (mock `shutil.which`, incl. one that raises OSError → swallowed) all pass |
+| 2 | Mocked yt-dlp payload incl. transcript → raw item with transcript in `body` | PASS | `test_normalize_folds_transcript_into_body`, `test_vtt_to_text_strips_and_dedupes`, `test_fetch_maps_videos_and_enriches_transcripts` pass; `has_transcript` True, `"Transcript:\n..."` in body |
+| 3 | yt-dlp preferred when present; falls through to API/scrape when absent | PASS | `test_youtube_uses_ytdlp_when_available` → `active_backend == "yt_dlp"`; `test_youtube_falls_through_to_legacy_when_no_ytdlp` → `active_backend == "youtube_api_scrape"` |
+| 4 | No live network/CLI in tests | PASS | suite ran with sandboxed egress; all CLI seams (`ytdlp_available`, `search_videos`, `fetch_transcript`) mocked; `__init__` does no network (cheap-construct, spec §3.3) |
+| 5 | Full suite ratchet + eval | PASS | `pytest` 397 pass exit 0 (≥384); `eval.runner` exit 0 |
+| 6 | Dockerfile installs yt-dlp; absence degrades, no crash | PASS | yt-dlp in `requirements.txt`/`pyproject.toml`; Dockerfile pip-installs requirements (lines 5–14); fallthrough proven by criterion 3. Documented in ADR-005. |
+
+**Corroborating:** CI on PR #12 `test` job reported green (cited by dispatcher; local run is the primary verdict).
+
+**Failure detail:** none.
+
+**Round:** 1 (first independent verdict) — PASS.
+
+---
+
 ## 2026-06-24 — M1-T3: yt-dlp YouTube backend — VERDICT: ⏳ AWAITING REVIEW (producer self-check)
 
 > Producer self-check, not an independent verdict. (M1-T1/T2 above were merged via PR #11 — the repo owner reviewed and merged, satisfying the human gate.)

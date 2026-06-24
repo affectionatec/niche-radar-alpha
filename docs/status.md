@@ -2,9 +2,9 @@
 
 > **Single source of truth for "where we are."** Read at the start of every session; update at the end. The stable build plan is `docs/plans/implementation-plan.md`; **this file tracks live progress** against it.
 
-- **Current phase:** Agent-Reach capability port — M1 keystone (Jina) merged via PR #11; **yt-dlp YouTube backend (M1-T3) built, in review.** 🔍
-- **Next up:** M2 (extra capture tiers for Reddit/Twitter), then M3 new channels.
-- **Code status:** 397 tests pass (baseline 384 → 397, +13). Eval runner exits 0. Verified in a clean venv with `yt-dlp` installed. (One unrelated network-dependent test — `test_api/test_sources.py::test_test_source_endpoint_exists` — flaked once under the proxy-blocked sandbox and passed on rerun; it catches its own exceptions, so it's environmental, not a regression.)
+- **Current phase:** Agent-Reach capability port — **M1 complete and merged** (Jina keystone PR #11; yt-dlp YouTube PR #12, independent verifier PASS). Starting M2. 🟡
+- **Next up:** M2-T1 (Reddit `rdt-cli`/OpenCLI backend tier), then M2-T2 (Twitter `twitter-cli` tier).
+- **Code status:** 397 tests pass (baseline 384 → 397, +13). Eval runner exits 0. M1-T3 independently verified PASS (see `docs/verification-log.md`, 2026-06-24).
 
 ## In-Flight Checkpoint
 
@@ -21,8 +21,8 @@ Plan & contracts: `docs/plans/implementation-plan.md`. Legend: ⬜ not started �
 | Doc-chain migration (AGENTS.md + PRD/SPEC/ADR/PLAN/STATUS/VERIFY) | ✅ | Merged to main (PR #11), human-gated. |
 | M1-T1 Jina Reader backend | ✅ | Merged (PR #11). `_jina.py` + `backends/jina.py`. |
 | M1-T2 Harden G2 + Indie Hackers | ✅ | Merged (PR #11). `direct_scrape → jina_reader`. |
-| M1-T3 yt-dlp YouTube backend | 🔍 | Built. `backends/ytdlp.py` + `youtube.py` → `MultiBackendCollector` (`yt_dlp → youtube_api_scrape`); +13 tests; 397/397; ADR-005. Awaiting review (new PR). Spec: `docs/spec/collectors.md` §3.2, §6 |
-| M2 Extra tiers (Reddit, Twitter, GitHub) | ⬜ | After M1 |
+| M1-T3 yt-dlp YouTube backend | ✅ | **Verified PASS** (`docs/verification-log.md`, 2026-06-24) + merged (PR #12). `backends/ytdlp.py` + `youtube.py` → `MultiBackendCollector` (`yt_dlp → youtube_api_scrape`); ADR-005. |
+| M2 Extra tiers (Reddit, Twitter, GitHub) | 🟡 | M2-T1 (Reddit) starting. |
 | M3 New channels (V2EX, Xueqiu, Exa, Bilibili, 小宇宙) | ⬜ | Keyless/native first |
 | M4 Cookie/ToS channels (小红书, LinkedIn) | ⬜ | Last; per-channel ADR required |
 
