@@ -20,6 +20,34 @@ The canonical commands a verifier runs (from `AGENTS.md` §6 / `docs/spec/collec
 
 ---
 
+## 2026-06-25 — M2-T1: Reddit multi-backend + Jina tier — VERDICT: ⏳ AWAITING VERIFICATION (producer self-check)
+
+> Producer self-check, not an independent verdict.
+
+**Diff:** branch `claude/practical-carson-ufbuen` (new commit on merged main `7b56b0e`) · **Files:** `niche_radar/collectors/reddit.py`, `tests/test_collectors/test_reddit_jina.py`, `docs/adr/ADR-006-*`, `docs/adr/README.md`, `docs/status.md`, `docs/verification-log.md`
+**Test ratchet:** baseline 397 → now 401 (✅ holds, +4)
+**Scope:** `collectors/reddit.py` refactor + new test + ADR-006/docs
+
+| Command | Exit | Key output |
+|---------|------|-----------|
+| `python3 -m pytest -q` | 0 | 401 passed |
+| `python3 -m niche_radar.eval.runner` | 0 | runs; offline-no-LLM artifact unchanged |
+
+**Done condition (for a verifier):**
+
+| # | Criterion | Verify via | Expected |
+|---|-----------|------------|----------|
+| 1 | PRAW wins when creds present | `pytest tests/test_collectors/test_reddit_jina.py -k praw_wins` | `active_backend=="praw"` |
+| 2 | No creds → public_json | `pytest tests/test_collectors/test_reddit_jina.py -k public_json` | `active_backend=="public_json"` |
+| 3 | public 403 + Jina enabled → jina_reader | `pytest tests/test_collectors/test_reddit_jina.py -k jina_when_public_blocked` | `active_backend=="jina_reader"` |
+| 4 | Jina off by default → no outbound call | `pytest tests/test_collectors/test_reddit_jina.py -k off_by_default` | pass |
+| 5 | Existing Reddit tests unchanged | `pytest tests/test_collectors/test_reddit_search.py tests/test_collectors/test_reddit_public.py` | all pass |
+| 6 | Full suite + eval | `pytest` ; `python3 -m niche_radar.eval.runner` | 401 pass; exit 0 |
+
+**Round:** 1 (producer) — independent verdict pending.
+
+---
+
 ## 2026-06-24 — M1-T3: yt-dlp YouTube backend — VERDICT: PASS
 
 > Verifier context: fresh sub-agent (independent, did not write the code) · Diff: `d304393..817b4aa` (branch `claude/practical-carson-ufbuen`)
