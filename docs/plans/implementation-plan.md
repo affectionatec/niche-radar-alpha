@@ -100,20 +100,22 @@ M1 → (M2 ∥ M3) → M4. Minimum: ~1 session per task.
 
 ---
 
-#### M2-T1: Reddit `rdt-cli`/OpenCLI backend tier
+#### M2-T1: Reddit multi-backend + Jina relay tier ✅ DONE (PR #13, verifier PASS 2026-06-25)
+
+> **What changed (ADR-006):** the original `rdt-cli`/OpenCLI recipe was superseded. CI showed Reddit's public-JSON gets HTTP 403 from datacenter IPs; OpenCLI is desktop-only and a CLI on the same IP is 403'd too — a relay with different egress is what defeats the 403. So this reused the M1-verified `JinaReaderBackend` instead.
 
 | Field | Value |
 |-------|-------|
-| **Builds** | `RedditCliBackend` appended behind PRAW + keyless public-JSON |
-| **Depends on** | M1-T1 (backend conventions) |
-| **Files** | `niche_radar/collectors/reddit.py`, `niche_radar/collectors/backends/reddit_cli.py`, `tests/test_collectors/test_reddit.py` |
-| **Spec ref** | `docs/spec/collectors.md` §3.2 |
+| **Builds** | `RedditCollector` → `MultiBackendCollector` chain `praw → public_json → jina_reader` (`RedditPrawBackend`, `RedditPublicJsonBackend`, composed `JinaReaderBackend`) |
+| **Depends on** | M1 (JinaReaderBackend) |
+| **Files** | `niche_radar/collectors/reddit.py`, `tests/test_collectors/test_reddit_jina.py`, `docs/adr/ADR-006-*` |
+| **Spec ref** | `docs/spec/collectors.md` §3.2 · ADR-006 |
 | **Size** | M |
 
-**Acceptance criteria:**
-- [ ] CLI backend used only when PRAW + public-JSON are unavailable/empty — verify: `pytest tests/ -k "reddit and order"` exit 0
-- [ ] CLI invocation mocked; no live calls — verify: offline run, exit 0
-- [ ] Ratchet + eval green; verifier PASS
+**Acceptance criteria (met):**
+- [x] PRAW wins when creds present; falls through public_json → jina on block — `pytest tests/test_collectors/test_reddit_jina.py` (4/4)
+- [x] Jina tier opt-in; no live calls in tests — offline, mocked
+- [x] Existing Reddit tests unchanged + green; 401/401 + eval 0; **independent verifier PASS**
 
 ---
 

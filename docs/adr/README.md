@@ -9,5 +9,6 @@ Append-only log of consequential decisions. **Never edit an accepted ADR** — s
 | [ADR-003](ADR-003-eight-agent-pipeline.md) | Eight focused LLM agents over a monolithic prompt | Accepted |
 | [ADR-004](ADR-004-adopt-agentic-engineering-doc-chain.md) | Adopt the agentic-engineering documentation chain | Accepted |
 | [ADR-005](ADR-005-yt-dlp-youtube-transcripts.md) | yt-dlp as the preferred YouTube backend (transcripts, keyless) | Accepted |
+| [ADR-006](ADR-006-reddit-multi-backend-jina-tier.md) | Reddit multi-backend with a Jina relay tier (not rdt-cli/OpenCLI) | Accepted |
 
 > Adding an ADR: copy the template from the `architecture-decision-record` skill, number sequentially (numbers are never reused), frame the title as a question, and record it at the moment of decision.

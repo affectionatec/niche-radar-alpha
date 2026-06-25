@@ -2,9 +2,9 @@
 
 > **Single source of truth for "where we are."** Read at the start of every session; update at the end. The stable build plan is `docs/plans/implementation-plan.md`; **this file tracks live progress** against it.
 
-- **Current phase:** Agent-Reach capability port — **M1 complete and merged** (Jina keystone PR #11; yt-dlp YouTube PR #12, independent verifier PASS). Starting M2. 🟡
-- **Next up:** M2-T1 (Reddit `rdt-cli`/OpenCLI backend tier), then M2-T2 (Twitter `twitter-cli` tier).
-- **Code status:** 397 tests pass (baseline 384 → 397, +13). Eval runner exits 0. M1-T3 independently verified PASS (see `docs/verification-log.md`, 2026-06-24).
+- **Current phase:** Agent-Reach capability port — M1 merged & verified; **M2-T1 (Reddit + Jina tier) verified PASS, PR #13 ready to merge.** 🔍→✅
+- **Next up:** After M2-T1 review — M3 new channels (V2EX / 雪球 / Exa), or M2-T2 (Twitter tier) if pursued.
+- **Code status:** 401 tests pass (baseline 397 → 401, +4). Eval runner exits 0. (Decision ADR-006: Reddit resilience via the verified Jina tier, not `rdt-cli`/OpenCLI — OpenCLI is desktop-only and a same-IP CLI is 403'd like public-JSON.)
 
 ## In-Flight Checkpoint
 
@@ -22,14 +22,15 @@ Plan & contracts: `docs/plans/implementation-plan.md`. Legend: ⬜ not started �
 | M1-T1 Jina Reader backend | ✅ | Merged (PR #11). `_jina.py` + `backends/jina.py`. |
 | M1-T2 Harden G2 + Indie Hackers | ✅ | Merged (PR #11). `direct_scrape → jina_reader`. |
 | M1-T3 yt-dlp YouTube backend | ✅ | **Verified PASS** (`docs/verification-log.md`, 2026-06-24) + merged (PR #12). `backends/ytdlp.py` + `youtube.py` → `MultiBackendCollector` (`yt_dlp → youtube_api_scrape`); ADR-005. |
-| M2 Extra tiers (Reddit, Twitter, GitHub) | 🟡 | M2-T1 (Reddit) starting. |
+| M2-T1 Reddit + Jina tier | ✅ | **Verifier PASS** (`docs/verification-log.md`, 2026-06-25). `reddit.py` → `MultiBackendCollector` (`praw → public_json → jina_reader`); +4 tests; 401/401; ADR-006. PR #13 ready to merge (human gate). |
+| M2-T2 Twitter `twitter-cli` tier / GitHub `gh` tier | ⬜ | Optional; reassess vs. M3 after M2-T1. |
 | M3 New channels (V2EX, Xueqiu, Exa, Bilibili, 小宇宙) | ⬜ | Keyless/native first |
 | M4 Cookie/ToS channels (小红书, LinkedIn) | ⬜ | Last; per-channel ADR required |
 
 ## Decisions
 
 Locked in `docs/adr/`. **Do not relitigate** — raise changes with the user.
-- ADR-001 SQLite default · ADR-002 multi-backend fallback · ADR-003 eight-agent pipeline · ADR-004 adopt agentic-engineering chain · ADR-005 yt-dlp YouTube backend.
+- ADR-001 SQLite default · ADR-002 multi-backend fallback · ADR-003 eight-agent pipeline · ADR-004 adopt agentic-engineering chain · ADR-005 yt-dlp YouTube backend · ADR-006 Reddit multi-backend + Jina tier.
 
 ## Open Items (non-blocking)
 
@@ -41,6 +42,8 @@ Locked in `docs/adr/`. **Do not relitigate** — raise changes with the user.
 ## Session Handoff Log
 
 Newest first.
+
+- **2026-06-25** — **M1-T3 merged + verified; built M2-T1 (Reddit + Jina resilience tier).** Closed the M1-T3 loop: dispatched the bundled `agentic-engineering:verifier` (fresh context) → PASS (397/397, eval 0, scope clean); marked ✅ and merged PR #12 (CI flaked once on the pre-existing `duplicate column name: momentum_label` schema race in `test_api/test_sources.py`, green on re-run). Then started M2: per the user's choice, refactored `niche_radar/collectors/reddit.py` from `BaseCollector` to `MultiBackendCollector` with chain `praw → public_json → jina_reader`, reusing the M1-verified `JinaReaderBackend` (composed with `_reddit_search_urls`). **Why Jina not rdt-cli:** CI showed Reddit's public-JSON gets HTTP 403 from datacenter IPs; a same-IP CLI would be 403'd too, and OpenCLI is desktop-only — the relay (different egress) is what defeats the 403 (ADR-006). PRAW + public-JSON paths preserved verbatim as backends, so existing reddit tests pass unchanged. **Verified (producer self-check):** `pytest` 401/401 (397 → 401, +4 in `tests/test_collectors/test_reddit_jina.py`); `python3 -m niche_radar.eval.runner` exit 0; scope = `reddit.py` + new test + ADR-006. **Caveats:** ⚠️ awaiting independent verification before ✅ (PR open); Jina tier is opt-in (off by default). **What the next session should do:** after M2-T1 verifies + merges, either continue M2-T2 (Twitter `twitter-cli` tier) or — recommended — jump to M3 new channels (V2EX / 雪球 / Exa: keyless/native APIs, higher marginal value).
 
 - **2026-06-24** — **Built M1-T3: yt-dlp YouTube backend (transcripts, keyless).** New `niche_radar/collectors/backends/ytdlp.py` (`YtDlpBackend` + mockable seams `ytdlp_available` / `search_videos` / `fetch_transcript` / `vtt_to_text` / `normalize_video`). Refactored `niche_radar/collectors/youtube.py` from `BaseCollector` to `MultiBackendCollector` with chain `yt_dlp → youtube_api_scrape`: the existing Data-API/scrapetube path is preserved verbatim inside `YouTubeApiScrapeBackend` (fallback), and yt-dlp is preferred when its binary is present — captures the full description + auto-caption transcript folded into the item body, keyless (no Data-API quota). Transcript enrichment is bounded (`max_transcripts` cap) and fail-soft. Added `yt-dlp` to `requirements.txt` + `pyproject.toml` (Dockerfile installs via pip → binary on PATH; no apt step) and recorded **ADR-005** (new dependency, per AGENTS.md §5). **Verified (producer self-check):** `pytest` 397/397 (baseline 384 → 397, +13 in `tests/test_collectors/test_youtube.py`); `python -m niche_radar.eval.runner` exits 0; scope = `collectors/` + deps + ADR/docs. One unrelated network test flaked once under the sandbox proxy and passed on rerun (not a regression; it catches its own exceptions). **Caveats:** ⚠️ awaiting review in a new PR (M1 keystone already merged via PR #11); ⚠️ real transcript fetch needs the `yt-dlp` binary + network — gated by `is_available()`, so its absence degrades to the Data-API/scrapetube backend. **What the next session should do:** per the user's pacing choice, pause after this PR; when resumed, start M2 (Reddit `rdt-cli`/OpenCLI tier, then Twitter `twitter-cli` tier) per `docs/plans/implementation-plan.md`.
 
