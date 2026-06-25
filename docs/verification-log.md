@@ -20,6 +20,44 @@ The canonical commands a verifier runs (from `AGENTS.md` §6 / `docs/spec/collec
 
 ---
 
+## 2026-06-25 — M2-T1: Reddit multi-backend + Jina tier — VERDICT: PASS
+
+> Verifier context: fresh sub-agent (independent, did not write the code) · Diff: `7b56b0e..7d3d749` (branch `claude/practical-carson-ufbuen`)
+
+**Test ratchet:** baseline 397 → now 401 (✅ holds, +4). No test deleted, skipped, weakened, or xfail'd (`grep "def test_"` across `tests/` = 401; zero `@pytest.mark.skip`/`xfail`/`pytest.skip(`). The only test file in the diff is the new `tests/test_collectors/test_reddit_jina.py` (additions only).
+
+**Scope:** clean. `git diff 7b56b0e..7d3d749 --stat` touches exactly `niche_radar/collectors/reddit.py`, `tests/test_collectors/test_reddit_jina.py`, `docs/adr/ADR-006-reddit-multi-backend-jina-tier.md`, `docs/adr/README.md`, `docs/status.md`, `docs/verification-log.md` — all within the declared set. Note: the IMPL-PLAN M2-T1 row names `rdt-cli`/OpenCLI; ADR-006 (Accepted) explicitly supersedes that recipe with a `praw → public_json → jina_reader` tier (OpenCLI desktop-only / a CLI on the same datacenter IP is 403'd too). The locked done condition for this verdict is the producer self-check criteria table below, which the ADR matches. Not drift.
+
+**Existing Reddit tests unchanged + green:** `git diff 7b56b0e..7d3d749 -- tests/test_collectors/test_reddit_search.py tests/test_collectors/test_reddit_public.py` = empty (untouched). Both pass: `10 passed`.
+
+**Commands executed:**
+
+| Command | Exit | Key output |
+|---------|------|-----------|
+| `python3 -m pytest -q` | 0 | `401 passed in 55.71s` (== expected 401, ≥ baseline 397) |
+| `python3 -m pytest tests/test_collectors/test_reddit_jina.py -v` | 0 | `4 passed`; `test_praw_wins_when_creds_present`, `..._public_json_without_creds`, `..._jina_when_public_blocked`, `..._jina_off_by_default_makes_no_calls` all PASSED |
+| `python3 -m pytest tests/test_collectors/test_reddit_search.py tests/test_collectors/test_reddit_public.py -q` | 0 | `10 passed` (existing Reddit tests, unmodified) |
+| `python3 -m niche_radar.eval.runner ; echo EXIT=$?` | 0 | `EXIT=0`; accuracy 40% — pre-existing offline-no-LLM artifact (`got=None`), unaffected by this collectors change (matches prior verdicts) |
+
+**Per-criterion (producer done-condition table / spec §3.2,§3.3,§2.3 / ADR-006):**
+
+| # | Criterion | Verdict | Evidence |
+|---|-----------|---------|----------|
+| 1 | PRAW wins when creds present | PASS | `test_praw_wins_when_creds_present` → `metadata["active_backend"]=="praw"`, `items[0]["source_id"]=="a"`. Chain `return`s on first backend with items (`multi_backend.py:108-114`) → no fallthrough to public_json/jina, no network. |
+| 2 | No creds → public_json | PASS | `test_falls_through_to_public_json_without_creds` → `active_backend=="public_json"`, `items[0]["source_id"]=="pj1"`. PRAW `is_available` False (no cid/secret). |
+| 3 | public 403 + Jina enabled → jina_reader | PASS | `test_falls_through_to_jina_when_public_blocked` → `JINA_READER_ENABLED=1`, public_json raises (403, no items+errors), `active_backend=="jina_reader"`, `items[0]["metadata"]["capture"]=="jina_reader"`. |
+| 4 | Jina off by default → no outbound call | PASS | `test_jina_off_by_default_makes_no_calls` patches `_http.request` to raise `AssertionError` if hit; passes. `JinaReaderBackend.is_available`→`_jina.is_enabled` is False without `JINA_READER_ENABLED`/`jina_api_key`/`jina_fallback`, so `fetch` (the only `_http.request` caller) is never invoked (`multi_backend.py:91-93`). Result degrades to `partial`/`failed`, never raises; `jina_reader` still present in `metadata["backends"]` chain. |
+| 5 | Existing Reddit tests unchanged | PASS | Both files byte-identical across the range (empty diff); `10 passed`. |
+| 6 | Full suite + eval | PASS | `pytest` 401 pass exit 0 (≥397); `eval.runner` exit 0. |
+
+**Design-claim sanity check:** confirmed independently of the tests — (a) creds-present chain stops at `praw` because `_run` returns on the first item-yielding backend; (b) Jina-off path makes zero `_http.request` calls because the opt-in `is_available` gate short-circuits before `fetch`. Both hold.
+
+**Failure detail:** none.
+
+**Round:** 1 (first independent verdict) — PASS.
+
+---
+
 ## 2026-06-25 — M2-T1: Reddit multi-backend + Jina tier — VERDICT: ⏳ AWAITING VERIFICATION (producer self-check)
 
 > Producer self-check, not an independent verdict.

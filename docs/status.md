@@ -2,7 +2,7 @@
 
 > **Single source of truth for "where we are."** Read at the start of every session; update at the end. The stable build plan is `docs/plans/implementation-plan.md`; **this file tracks live progress** against it.
 
-- **Current phase:** Agent-Reach capability port — M1 merged & verified; **M2-T1 (Reddit + Jina tier) built, in review.** 🔍
+- **Current phase:** Agent-Reach capability port — M1 merged & verified; **M2-T1 (Reddit + Jina tier) verified PASS, PR #13 ready to merge.** 🔍→✅
 - **Next up:** After M2-T1 review — M3 new channels (V2EX / 雪球 / Exa), or M2-T2 (Twitter tier) if pursued.
 - **Code status:** 401 tests pass (baseline 397 → 401, +4). Eval runner exits 0. (Decision ADR-006: Reddit resilience via the verified Jina tier, not `rdt-cli`/OpenCLI — OpenCLI is desktop-only and a same-IP CLI is 403'd like public-JSON.)
 
@@ -22,7 +22,7 @@ Plan & contracts: `docs/plans/implementation-plan.md`. Legend: ⬜ not started �
 | M1-T1 Jina Reader backend | ✅ | Merged (PR #11). `_jina.py` + `backends/jina.py`. |
 | M1-T2 Harden G2 + Indie Hackers | ✅ | Merged (PR #11). `direct_scrape → jina_reader`. |
 | M1-T3 yt-dlp YouTube backend | ✅ | **Verified PASS** (`docs/verification-log.md`, 2026-06-24) + merged (PR #12). `backends/ytdlp.py` + `youtube.py` → `MultiBackendCollector` (`yt_dlp → youtube_api_scrape`); ADR-005. |
-| M2-T1 Reddit + Jina tier | 🔍 | Built. `reddit.py` → `MultiBackendCollector` (`praw → public_json → jina_reader`); reuses verified `JinaReaderBackend`; +4 tests; 401/401; ADR-006. Awaiting verification (PR open). |
+| M2-T1 Reddit + Jina tier | ✅ | **Verifier PASS** (`docs/verification-log.md`, 2026-06-25). `reddit.py` → `MultiBackendCollector` (`praw → public_json → jina_reader`); +4 tests; 401/401; ADR-006. PR #13 ready to merge (human gate). |
 | M2-T2 Twitter `twitter-cli` tier / GitHub `gh` tier | ⬜ | Optional; reassess vs. M3 after M2-T1. |
 | M3 New channels (V2EX, Xueqiu, Exa, Bilibili, 小宇宙) | ⬜ | Keyless/native first |
 | M4 Cookie/ToS channels (小红书, LinkedIn) | ⬜ | Last; per-channel ADR required |
