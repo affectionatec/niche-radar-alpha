@@ -20,6 +20,45 @@ The canonical commands a verifier runs (from `AGENTS.md` §6 / `docs/spec/collec
 
 ---
 
+## 2026-06-26 — M3-T1/T2/T3: V2EX, Xueqiu, Exa collectors — VERDICT: PASS
+
+> Verifier context: fresh sub-agent (independent, did not write the code) · Diff: `70d90d8...task/m3-new-channels` (M3 commits only)
+
+**Test ratchet:** baseline 401 → now 434 (✅ holds, +33). No test deleted, skipped, or xfail'd (`grep -r "pytest.mark.skip\|xfail\|pytest.skip("` across `tests/` = 0; `grep "def test_"` = 434).
+
+**Scope:** clean. `git diff 70d90d8...task/m3-new-channels --stat` touches exactly `niche_radar/collectors/{v2ex,xueqiu,exa}.py`, `niche_radar/collectors/__init__.py`, `niche_radar/config.py`, `tests/test_collectors/{test_v2ex,test_xueqiu,test_exa}.py`, `docs/status.md` — all within the declared file list. `docs/status.md` is the required session-protocol checkpoint (AGENTS.md §4), not drift.
+
+**Commands executed:**
+
+| Command | Exit | Key output |
+|---------|------|-----------|
+| `python3 -m pytest --tb=short 2>&1 \| tail -5` | 0 | `434 passed in 53.98s` (≥ required 434, +33 over baseline 401) |
+| `python3 -m pytest tests/test_collectors/test_v2ex.py tests/test_collectors/test_xueqiu.py tests/test_collectors/test_exa.py -v` | 0 | `33 passed in 0.04s`; all 33 new tests individually PASSED |
+| `python3 -m niche_radar.eval.runner; echo "EXIT:$?"` | 0 | `EXIT:0`; accuracy 40% — pre-existing offline-no-LLM artifact (`got=None`), unchanged from prior verdicts, unaffected by this collectors change |
+
+**Per-criterion:**
+
+| # | Criterion | Verdict | Evidence |
+|---|-----------|---------|----------|
+| 1 | v2ex, xueqiu, exa in `ALL_SOURCES` + lazy-import dispatch | PASS | `__init__.py` lines 29–31 (ALL_SOURCES), lines 85–93 (_get_collector dispatch) |
+| 2 | `CREDENTIAL_SCHEMA` on each collector class | PASS | `V2exCollector` lines 140–155; `XueqiuCollector` lines 114–123; `ExaCollector` lines 93–108 |
+| 3a | V2EX v2_api: available only when `v2ex_api_token` set | PASS | `V2exV2ApiBackend.is_available` returns `bool(_token(settings, db))` (v2ex.py:89); `test_v2_backend_unavailable_without_token`, `test_v2_backend_available_with_token` both PASSED |
+| 3b | V2EX v1_api: always available | PASS | `V2exV1ApiBackend.is_available` returns `True` (v2ex.py:115); `test_v1_backend_always_available` PASSED |
+| 3c | Xueqiu: always available (auto-guest-session) | PASS | `XueqiuCollector.is_available` returns `True` (xueqiu.py:126); `test_collector_is_always_available` PASSED |
+| 3d | Exa: available only when `exa_api_key` set | PASS | `ExaCollector.is_available` returns `bool(_api_key(settings, db))` (exa.py:112); `test_unavailable_without_key`, `test_available_with_key` both PASSED |
+| 4 | `collect()` returns `CollectorResult` with correct structure | PASS | All integration tests pass; V2ex via MultiBackendCollector (multi_backend.py:108); Xueqiu and Exa return CollectorResult directly |
+| 5 | `dry_run=True` returns completed with empty items | PASS | V2ex: MultiBackendCollector.collect() line 77–78; Xueqiu: xueqiu.py:139–140, `test_collect_dry_run_returns_empty` PASSED; Exa: exa.py:134–136, `test_collect_dry_run_returns_empty` PASSED |
+| 6 | All network mocked — no live HTTP in tests | PASS | V2ex: `patch("niche_radar.collectors.v2ex.get_json", ...)`; Xueqiu: `patch("requests.get", ...)` + `patch("...xueqiu._session", ...)`; Exa: `patch("niche_radar.collectors.exa.post_json", ...)`; zero bare `requests.get` calls outside a `patch` context |
+| 7 | pytest count ≥ 434 | PASS | `434 passed` (== required 434; +33 from baseline 401) |
+| 8 | `python3 -m niche_radar.eval.runner` exits 0 | PASS | Exit 0; pre-existing offline-no-LLM artifact unchanged |
+| 9 | config.py has `v2ex_api_token`, `xueqiu_cookie`, `exa_api_key`, `freshness_v2ex_hours`, `freshness_xueqiu_hours` | PASS | config.py lines 45, 48, 51, 61, 62 respectively |
+
+**Failure detail:** none.
+
+**Round:** 1 (first independent verdict) — PASS.
+
+---
+
 ## 2026-06-25 — M2-T1: Reddit multi-backend + Jina tier — VERDICT: PASS
 
 > Verifier context: fresh sub-agent (independent, did not write the code) · Diff: `7b56b0e..7d3d749` (branch `claude/practical-carson-ufbuen`)

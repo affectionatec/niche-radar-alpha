@@ -41,6 +41,15 @@ class Settings(BaseSettings):
     retention_archived_niches: int = 180
     retention_collection_runs: int = 30
 
+    # V2EX (keyless China tech forum)
+    v2ex_api_token: str = ""
+
+    # Xueqiu (China finance social)
+    xueqiu_cookie: str = ""
+
+    # Exa semantic search (key-gated)
+    exa_api_key: str = ""
+
     # ── Freshness rules ─────────────────────────────────────────────────────
     # max_item_age_hours per source — items posted before this window are DROPPED
     # at collection time and never enter the DB. Tunable from .env if needed.
@@ -49,6 +58,8 @@ class Settings(BaseSettings):
     freshness_github_hours: int = 168      # 7 days — repo trends are weekly
     freshness_google_trends_hours: int = 24  # 1 day — trending = today
     freshness_youtube_hours: int = 336     # 14 days — video discovery is slow
+    freshness_v2ex_hours: int = 72         # 3 days — forum posts cool fast
+    freshness_xueqiu_hours: int = 48       # 2 days — finance discussions move fast
 
     # Analysis-time freshness — only feed the LLM items posted within this window.
     # Niches whose last_seen falls outside this window are auto-archived.
