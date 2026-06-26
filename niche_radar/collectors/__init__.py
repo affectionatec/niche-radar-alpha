@@ -25,6 +25,10 @@ ALL_SOURCES = [
     # last30days integration — credential-gated, skipped until configured
     "bluesky",
     "tiktok", "instagram", "threads",
+    # M3 new channels — keyless/native first
+    "v2ex",          # keyless (v1 API) or token-enhanced (v2 API)
+    "xueqiu",        # auto-guest-session; optional explicit cookie
+    "exa",           # key-gated semantic search
 ]
 
 
@@ -78,6 +82,15 @@ def _get_collector(source: str):
     elif source == "threads":
         from niche_radar.collectors.threads import ThreadsCollector
         return ThreadsCollector()
+    elif source == "v2ex":
+        from niche_radar.collectors.v2ex import V2exCollector
+        return V2exCollector()
+    elif source == "xueqiu":
+        from niche_radar.collectors.xueqiu import XueqiuCollector
+        return XueqiuCollector()
+    elif source == "exa":
+        from niche_radar.collectors.exa import ExaCollector
+        return ExaCollector()
     else:
         raise ValueError(f"Unknown source: {source}")
 
