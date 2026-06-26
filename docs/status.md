@@ -2,9 +2,9 @@
 
 > **Single source of truth for "where we are."** Read at the start of every session; update at the end. The stable build plan is `docs/plans/implementation-plan.md`; **this file tracks live progress** against it.
 
-- **Current phase:** Agent-Reach capability port — M1+M2+M3-T1/T2/T3 built & verified; **PR #14 ready for human gate.** 🔍→✅
-- **Next up:** After PR #14 merges — M3-T4 (Bilibili) or M4 (cookie channels); user's call.
-- **Code status:** 434 tests pass (baseline 401 → 434, +33). Eval runner exits 0. Verifier PASS 2026-06-26.
+- **Current phase:** Agent-Reach capability port — M1+M2+M3-T1/T2/T3 merged ✅; **M3-T4 (Bilibili) in progress.** 🟡
+- **Next up:** M3-T4 Bilibili verifier PASS → merge → M3-T5 (小宇宙) or M4 (cookie channels).
+- **Code status:** 434 tests pass (merged). Starting M3-T4 branch `task/m3-t4-bilibili`.
 
 ## In-Flight Checkpoint
 
@@ -24,7 +24,7 @@ Plan & contracts: `docs/plans/implementation-plan.md`. Legend: ⬜ not started �
 | M1-T3 yt-dlp YouTube backend | ✅ | **Verified PASS** (`docs/verification-log.md`, 2026-06-24) + merged (PR #12). `backends/ytdlp.py` + `youtube.py` → `MultiBackendCollector` (`yt_dlp → youtube_api_scrape`); ADR-005. |
 | M2-T1 Reddit + Jina tier | ✅ | **Verifier PASS** (`docs/verification-log.md`, 2026-06-25). `reddit.py` → `MultiBackendCollector` (`praw → public_json → jina_reader`); +4 tests; 401/401; ADR-006. PR #13 ready to merge (human gate). |
 | M2-T2 Twitter `twitter-cli` tier / GitHub `gh` tier | ⬜ | Optional; reassess vs. M3 after M2-T1. |
-| M3-T1/T2/T3 V2EX + Xueqiu + Exa | 🔍 | **Verifier PASS** (`docs/verification-log.md`, 2026-06-26); PR #14 ready — awaiting human gate |
+| M3-T1/T2/T3 V2EX + Xueqiu + Exa | ✅ | **Verifier PASS** (`docs/verification-log.md`, 2026-06-26) + merged (PR #14). `v2ex.py` + `xueqiu.py` + `exa.py`; 434 tests. |
 | M3-T4 Bilibili collector | ⬜ | After M3-T1/T2/T3 merge |
 | M3-T5 小宇宙 podcast collector | ⬜ | Whisper dep risk — evaluate hosted transcription first |
 | M4 Cookie/ToS channels (小红书, LinkedIn) | ⬜ | Last; per-channel ADR required |
