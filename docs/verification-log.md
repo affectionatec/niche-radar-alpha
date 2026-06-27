@@ -2,6 +2,45 @@
 
 > Append-only record of independent verdicts, **newest first**. A task moves to ✅ in `docs/status.md` only when a verifier with **fresh context** (sub-agent or fresh session — never the producer's conversation) re-runs the task's done condition from `docs/plans/implementation-plan.md` + `docs/spec/` and records PASS here with evidence. Never edit a past verdict.
 
+## 2026-06-27 — M4-T1 (Xiaohongshu) + M4-T2 (LinkedIn): Cookie/ToS-risky Jina relay collectors — VERDICT: PASS
+
+> Verifier context: fresh sub-agent (independent, did not write the code) · Diff: `main...task/m4-cookie-channels`
+
+**Test ratchet:** baseline 455 → now 473 (✅ holds, +18). No test deleted, skipped, or xfail'd (`grep -rn "pytest.mark.skip\|@pytest.mark.xfail\|pytest.skip(" tests/` = 0; `grep "def test_" tests/ | wc -l` = 473).
+
+**Scope:** clean. `git diff main...task/m4-cookie-channels --stat` touches exactly `niche_radar/collectors/xiaohongshu.py` (new), `niche_radar/collectors/linkedin.py` (new), `niche_radar/collectors/__init__.py` (+9 lines for registration), `docs/adr/ADR-007-xiaohongshu-jina-tier.md` (new), `docs/adr/ADR-008-linkedin-public-jina-tier.md` (new), `docs/adr/README.md` (+2 lines), `tests/test_collectors/test_xiaohongshu.py` (new), `tests/test_collectors/test_linkedin.py` (new), `docs/status.md` (session-protocol checkpoint). `docs/status.md` is the required session-protocol checkpoint (AGENTS.md §4), consistent with prior verdicts. No changes to `requirements.txt`, `pyproject.toml`, or `Dockerfile` — no new pip dependencies.
+
+**Commands executed:**
+
+| Command | Exit | Key output |
+|---------|------|-----------|
+| `python3 -m pytest --tb=short 2>&1 \| tail -5` | 0 | `473 passed in 111.31s` (== required ≥ 473, +18 over baseline 455) |
+| `python3 -m pytest tests/test_collectors/test_xiaohongshu.py tests/test_collectors/test_linkedin.py -v` | 0 | `18 passed in 0.03s`; all 18 new tests (8 XHS + 10 LinkedIn) individually PASSED |
+| `python3 -m niche_radar.eval.runner; echo "EXIT:$?"` | 0 | `EXIT:0`; accuracy 40% — pre-existing offline-no-LLM artifact (`got=None`), unchanged from prior verdicts, unaffected by this collectors change |
+
+**Per-criterion:**
+
+| # | Criterion | Verdict | Evidence |
+|---|-----------|---------|----------|
+| 1 | Both registered in `ALL_SOURCES` + lazy-import dispatch | PASS | `__init__.py` lines 34–35 (`"xiaohongshu"`, `"linkedin"` in ALL_SOURCES), lines 101–106 (`elif source == "xiaohongshu": ... XiaohongshuCollector()`; `elif source == "linkedin": ... LinkedInCollector()`) |
+| 2 | `CREDENTIAL_SCHEMA` on each collector class with at minimum `jina_fallback` and `jina_api_key` | PASS | Xiaohongshu: `xiaohongshu.py` lines 55–77 — `jina_fallback`, `jina_api_key`, `search_queries`. LinkedIn: `linkedin.py` lines 133–155 — `jina_fallback`, `jina_api_key`, `search_queries`. Both are `ClassVar[list[dict]]` with correct `key`, `label`, `secret`, `optional`, `help` fields. |
+| 3a | Xiaohongshu `is_available()`: False when `JINA_READER_ENABLED` is off (source skipped in unattended runs) | PASS | `XiaohongshuCollector.is_available()` inherits from `MultiBackendCollector` (multi_backend.py:65–71): `any(b.is_available(...) for b in inst.build_backends())`. `build_backends()` returns `[JinaReaderBackend("xiaohongshu", _xhs_search_urls)]` (xiaohongshu.py:80). `JinaReaderBackend.is_available()` (jina.py:41) returns `_jina.is_enabled(...)`, which is False when neither `jina_fallback` cred, `jina_api_key`, nor `JINA_READER_ENABLED` are set (_jina.py:57–72). Test: `test_collector_skips_when_jina_disabled` → `is_available() is False` PASSED; `test_collector_available_when_jina_enabled` → `is_available() is True` PASSED. |
+| 3b | LinkedIn `is_available()`: True even without Jina (public_search always available) | PASS | `LinkedInCollector.build_backends()` returns `[LinkedInPublicSearchBackend(), JinaReaderBackend("linkedin", ...)]` (linkedin.py:157–160). `LinkedInPublicSearchBackend.is_available()` always returns `True` (linkedin.py:78–79). `MultiBackendCollector.is_available()` `any(...)` is always True with at least one always-available backend. Test: `test_collector_available_with_public_search` → `is_available() is True` PASSED; `test_public_search_backend_always_available` → `is True` PASSED. |
+| 4 | `collect()` returns `CollectorResult` with correct `metadata["backends"]` + `metadata["active_backend"]` | PASS | `MultiBackendCollector.collect()` (multi_backend.py:108–114) returns `CollectorResult` with `metadata={"backends": attempts, "active_backend": backend.name}`. XHS: `test_collect_returns_items_via_jina_backend` → `metadata["active_backend"] == "jina_reader"`, each `item["metadata"]["capture"] == "jina_reader"` PASSED. LinkedIn: `test_collector_uses_public_search_when_jina_off` → `active_backend == "public_search"` PASSED; `test_collector_prefers_jina_when_enabled` → `active_backend == "jina_reader"` PASSED. |
+| 5 | `dry_run=True` returns completed with empty items | PASS | `MultiBackendCollector.collect()` (multi_backend.py:77–78): `if dry_run: return CollectorResult(self.source_name, [], "", "completed", 0)`. Both `test_collect_dry_run_returns_empty` (XHS, LinkedIn) → `status=="completed"`, `items==[]` PASSED. |
+| 6 | All network mocked — no live HTTP in tests | PASS | XHS tests: `patch.object(_jina, "read_url", ...)` mocks all Jina outbound calls. LinkedIn tests: `patch("niche_radar.collectors.linkedin.requests.get", ...)` mocks public search; `patch.object(_jina, "read_url", ...)` mocks Jina. Both test files declare "fully offline" in docstrings. Suite passes in sandboxed egress. |
+| 7 | pytest count ≥ 473 | PASS | `473 passed in 111.31s` (== required 473; +18 from baseline 455) |
+| 8 | `python3 -m niche_radar.eval.runner` exits 0 | PASS | Exit 0; accuracy 40% — pre-existing offline-no-LLM artifact unchanged |
+| 9 | ADR-007 and ADR-008 exist and are indexed in `docs/adr/README.md` | PASS | `docs/adr/ADR-007-xiaohongshu-jina-tier.md` exists (Status: Accepted, rejects OpenCLI/xhs-cli in favor of Jina Reader relay). `docs/adr/ADR-008-linkedin-public-jina-tier.md` exists (Status: Accepted, rejects linkedin-mcp in favor of public_search → jina_reader chain). `docs/adr/README.md` lines 13–14: both ADRs listed as Accepted in the index table. |
+| 10 | No new pip dependencies | PASS | `git diff main...task/m4-cookie-channels -- requirements.txt pyproject.toml Dockerfile` = empty (no changes to dependency manifests) |
+| 11 | LinkedIn: `test_collector_prefers_jina_when_enabled` — when public search fails and Jina is enabled, the chain falls through to `jina_reader` | PASS | Test patches `LinkedInPublicSearchBackend.fetch` to raise `RuntimeError("public search failed")`, enables Jina via `JINA_READER_ENABLED=1`, mocks `read_url`. Asserts `result.metadata["active_backend"] == "jina_reader"` and `result.status == "completed"`. Test PASSED. |
+
+**Design-claim sanity check (independent of tests):** Both ADRs explicitly reject the literal Agent-Reach recipes (OpenCLI/xiaohongshu-mcp/xhs-cli for XHS; linkedin-mcp for LinkedIn) because those are desktop/interactive tools incompatible with an unattended pipeline. Instead, both collectors reuse the proven `JinaReaderBackend` (M1 G2/IH, M2 Reddit), with Xiaohongshu as a single-backend Jina-only collector and LinkedIn as a `public_search → jina_reader` chain where the public tier is always available and keyless. The `is_available()` gating is correct: Xiaohongshu is opt-in only (skipped when Jina is off); LinkedIn is always available (public search is keyless). No new imports beyond the existing stack (`requests`, `structlog`, `sqlite3`, `json`, `re`, `hashlib`, `datetime`). The `MultiBackendCollector` contract (ADR-002) is followed precisely: XHS as single-backend (leaves door open for TikHub later), LinkedIn as priority-ordered chain.
+
+**Failure detail:** none.
+
+**Round:** 1 (first independent verdict) — PASS.
+
 ## 2026-06-27 — M3-T4: Bilibili collector — VERDICT: PASS
 
 > Verifier context: fresh sub-agent (independent, did not write the code) · Diff: `main...task/m3-t4-bilibili`
