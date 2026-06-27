@@ -29,6 +29,7 @@ ALL_SOURCES = [
     "v2ex",          # keyless (v1 API) or token-enhanced (v2 API)
     "xueqiu",        # auto-guest-session; optional explicit cookie
     "exa",           # key-gated semantic search
+    "bilibili",      # auto guest buvid3; optional SESSDATA cookie
 ]
 
 
@@ -91,6 +92,9 @@ def _get_collector(source: str):
     elif source == "exa":
         from niche_radar.collectors.exa import ExaCollector
         return ExaCollector()
+    elif source == "bilibili":
+        from niche_radar.collectors.bilibili import BilibiliCollector
+        return BilibiliCollector()
     else:
         raise ValueError(f"Unknown source: {source}")
 
