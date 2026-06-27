@@ -2,6 +2,44 @@
 
 > Append-only record of independent verdicts, **newest first**. A task moves to ✅ in `docs/status.md` only when a verifier with **fresh context** (sub-agent or fresh session — never the producer's conversation) re-runs the task's done condition from `docs/plans/implementation-plan.md` + `docs/spec/` and records PASS here with evidence. Never edit a past verdict.
 
+## 2026-06-27 — M3-T4: Bilibili collector — VERDICT: PASS
+
+> Verifier context: fresh sub-agent (independent, did not write the code) · Diff: `main...task/m3-t4-bilibili`
+
+**Test ratchet:** baseline 434 → now 455 (✅ holds, +21). No test deleted, skipped, or xfail'd (`grep -rn "pytest.mark.skip\|@pytest.mark.xfail\|pytest.skip(" tests/` = 0; `grep "def test_" tests/ | wc -l` = 455).
+
+**Scope:** clean. `git diff main...task/m3-t4-bilibili --stat` touches exactly `niche_radar/collectors/bilibili.py` (new), `niche_radar/collectors/__init__.py` (+4 lines for registration), `niche_radar/config.py` (+4 lines for settings), `tests/test_collectors/test_bilibili.py` (new), `docs/status.md` (status checkpoint). `docs/status.md` is the session-protocol checkpoint (AGENTS.md §4), not drift — consistent with prior verdicts.
+
+**Commands executed:**
+
+| Command | Exit | Key output |
+|---------|------|-----------|
+| `python3 -m pytest --tb=short 2>&1 \| tail -5` | 0 | `455 passed in 109.95s` (== required ≥ 455, +21 over baseline 434) |
+| `python3 -m pytest tests/test_collectors/test_bilibili.py -v` | 0 | `21 passed in 56.23s`; all 21 new tests individually PASSED |
+| `python3 -m niche_radar.eval.runner; echo "EXIT:$?"` | 0 | `EXIT:0`; accuracy 40% — pre-existing offline-no-LLM artifact (`got=None`), unchanged from prior verdicts, unaffected by this collectors change |
+
+**Per-criterion:**
+
+| # | Criterion | Verdict | Evidence |
+|---|-----------|---------|----------|
+| 1 | Registered in `ALL_SOURCES` + lazy-import dispatch | PASS | `__init__.py` line 32 (`"bilibili"` in ALL_SOURCES), lines 95–97 (`elif source == "bilibili": ... BilibiliCollector()`) |
+| 2 | `CREDENTIAL_SCHEMA` defined on `BilibiliCollector` | PASS | `bilibili.py` lines 226–241: `CREDENTIAL_SCHEMA: ClassVar[list[dict]]` with `sessdata` (secret, optional) and `search_queries` (optional) |
+| 3a | `BilibiliAuthApiBackend`: available only when `bilibili_sessdata` set | PASS | `bilibili.py` line 184: `return bool(_sessdata(settings, db))`; `test_auth_backend_unavailable_without_sessdata` (False), `test_auth_backend_available_with_sessdata` (True) both PASSED |
+| 3b | `BilibiliPublicApiBackend`: always available | PASS | `bilibili.py` line 206: `return True`; `test_public_backend_always_available` PASSED |
+| 4 | `BilibiliCollector.is_available()` returns True when at least one backend available | PASS | Inherited from `MultiBackendCollector` (multi_backend.py:65-71): `any(b.is_available(...) for b in inst.build_backends())`; public_api backend always returns True, so collector is always available. Integration tests confirm `collect()` succeeds without credentials. |
+| 5 | `collect()` returns `CollectorResult` with `metadata["backends"]` and `metadata["active_backend"]` | PASS | `MultiBackendCollector.collect()` (multi_backend.py:108-113) returns `CollectorResult` with `metadata={"backends": attempts, "active_backend": backend.name}`; `test_collector_prefers_auth_when_sessdata_set` verifies `active_backend=="auth_api"`, `test_collector_uses_public_without_sessdata` verifies `active_backend=="public_api"`, `test_collector_falls_through_to_public_when_auth_fails` verifies fallthrough with `active_backend=="public_api"` |
+| 6 | `dry_run=True` returns completed with empty items | PASS | `MultiBackendCollector.collect()` (multi_backend.py:77-78): `if dry_run: return CollectorResult(self.source_name, [], "", "completed", 0)`; `test_collector_dry_run_returns_empty` PASSED (`status=="completed"`, `items==[]`) |
+| 7 | All network mocked — no live HTTP in tests | PASS | All `requests.Session` and `requests.get` calls wrapped in `patch(...)`; zero bare `requests.get/post/...` or `httpx` calls outside mock context; `grep -n "httpx" tests/test_collectors/test_bilibili.py` = empty |
+| 8 | pytest count ≥ 455 | PASS | `455 passed` (== required 455; +21 from baseline 434) |
+| 9 | `python3 -m niche_radar.eval.runner` exits 0 | PASS | Exit 0; pre-existing offline-no-LLM artifact unchanged |
+| 10 | `config.py` has `bilibili_sessdata` and `freshness_bilibili_hours` | PASS | config.py line 51: `bilibili_sessdata: str = ""`; line 66: `freshness_bilibili_hours: int = 336` |
+| 11 | Deduplication: same bvid from multiple queries appears once with merged `matched_queries` | PASS | `_search_videos` lines 165-168: appends query to existing item's `matched_queries` when sid already seen; `test_collector_deduplicates_across_queries` PASSED (`ids.count("bili-BVdup")==1`, `len(matched_queries)==n_queries`) |
+| 12 | HTML tag stripping (`_clean`) removes Bilibili markup from titles | PASS | `_clean` (bilibili.py:88-92) uses `_HTML_TAG_RE.sub("", text).strip()`; `test_clean_strips_html_tags` PASSED (`<em>工具</em> 推荐` → `工具 推荐`), `test_clean_handles_none` PASSED, `test_clean_handles_no_tags` PASSED; `_normalize` applies `_clean` to both title and description (lines 111-112) |
+
+**Failure detail:** none.
+
+**Round:** 1 (first independent verdict) — PASS.
+
 ## Verdict format
 
 ```

@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     # Xueqiu (China finance social)
     xueqiu_cookie: str = ""
 
+    # Bilibili (China video platform)
+    bilibili_sessdata: str = ""
+
     # Exa semantic search (key-gated)
     exa_api_key: str = ""
 
@@ -60,6 +63,7 @@ class Settings(BaseSettings):
     freshness_youtube_hours: int = 336     # 14 days — video discovery is slow
     freshness_v2ex_hours: int = 72         # 3 days — forum posts cool fast
     freshness_xueqiu_hours: int = 48       # 2 days — finance discussions move fast
+    freshness_bilibili_hours: int = 336    # 14 days — video discovery is slow
 
     # Analysis-time freshness — only feed the LLM items posted within this window.
     # Niches whose last_seen falls outside this window are auto-archived.
