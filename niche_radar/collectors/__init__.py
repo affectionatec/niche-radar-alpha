@@ -33,6 +33,7 @@ ALL_SOURCES = [
     # M4 cookie/ToS-risky channels — opt-in Jina relay, ADR-007, ADR-008
     "xiaohongshu",   # Jina Reader relay (opt-in); no cookie needed
     "linkedin",      # public search → Jina Reader (opt-in); keyless
+    "xiaoyuzhou",    # Jina Reader relay (opt-in); JS SPA, ADR-009
 ]
 
 
@@ -104,6 +105,9 @@ def _get_collector(source: str):
     elif source == "linkedin":
         from niche_radar.collectors.linkedin import LinkedInCollector
         return LinkedInCollector()
+    elif source == "xiaoyuzhou":
+        from niche_radar.collectors.xiaoyuzhou import XiaoyuzhouCollector
+        return XiaoyuzhouCollector()
     else:
         raise ValueError(f"Unknown source: {source}")
 
