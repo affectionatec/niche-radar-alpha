@@ -2,6 +2,44 @@
 
 > Append-only record of independent verdicts, **newest first**. A task moves to ✅ in `docs/status.md` only when a verifier with **fresh context** (sub-agent or fresh session — never the producer's conversation) re-runs the task's done condition from `docs/plans/implementation-plan.md` + `docs/spec/` and records PASS here with evidence. Never edit a past verdict.
 
+## 2026-06-28 — M3-T5: Xiaoyuzhou (小宇宙) podcast collector — VERDICT: PASS
+
+> Verifier context: fresh sub-agent (independent, did not write the code) · Diff: `main...task/m3-t5-xiaoyuzhou`
+
+**Test ratchet:** baseline 473 → now 481 (✅ holds, +8). No test deleted, skipped, or xfail'd (`grep -rn "pytest.mark.skip\|@pytest.mark.xfail\|pytest.skip(" tests/` = 0; `grep "def test_" tests/ | wc -l` = 481).
+
+**Scope:** clean. `git diff main...task/m3-t5-xiaoyuzhou --stat` touches exactly `niche_radar/collectors/xiaoyuzhou.py` (new), `tests/test_collectors/test_xiaoyuzhou.py` (new), `niche_radar/collectors/__init__.py` (+4 lines registration), `docs/adr/ADR-009-xiaoyuzhou-jina-no-whisper.md` (new), `docs/adr/README.md` (+1 index line), `docs/status.md` (session-protocol checkpoint). `docs/status.md` is the required session-protocol checkpoint (AGENTS.md §4), consistent with prior verdicts — not drift. No changes to `requirements.txt`, `pyproject.toml`, or `Dockerfile` — no new pip dependencies.
+
+**Commands executed:**
+
+| Command | Exit | Key output |
+|---------|------|-----------|
+| `python3 -m pytest --tb=short 2>&1 \| tail -5` | 0 | `481 passed in 110.89s` (== required ≥ 481, +8 over baseline 473) |
+| `python3 -m pytest tests/test_collectors/test_xiaoyuzhou.py -v` | 0 | `8 passed in 0.02s`; all 8 new tests individually PASSED |
+| `python3 -m niche_radar.eval.runner; echo "EXIT:$?"` | 0 | `EXIT:0`; accuracy 40% — pre-existing offline-no-LLM artifact (`got=None`), unchanged from prior verdicts, unaffected by this collectors change |
+
+**Per-criterion:**
+
+| # | Criterion | Verdict | Evidence |
+|---|-----------|---------|----------|
+| 1 | Registered in `ALL_SOURCES` + lazy-import dispatch | PASS | `__init__.py` line 36 (`"xiaoyuzhou"` in ALL_SOURCES), lines 108–110 (`elif source == "xiaoyuzhou": ... XiaoyuzhouCollector()`) |
+| 2 | `CREDENTIAL_SCHEMA` with `jina_fallback`, `jina_api_key`, `search_queries` | PASS | `xiaoyuzhou.py` lines 67–89: `CREDENTIAL_SCHEMA: ClassVar[list[dict]]` with all three required keys, each with correct `key`, `label`, `secret`, `optional`, `help` fields |
+| 3 | `is_available()`: False when Jina off (source skipped); True when `JINA_READER_ENABLED` set | PASS | `MultiBackendCollector.is_available()` (multi_backend.py:65–71): `any(b.is_available(...) for b in inst.build_backends())`. `build_backends()` returns `[JinaReaderBackend("xiaoyuzhou", _xiaoyuzhou_urls)]` (xiaoyuzhou.py:91–92). `JinaReaderBackend.is_available()` (jina.py:41) returns `_jina.is_enabled(...)`, which is False when no env/cred is set. `test_collector_skips_when_jina_disabled` → `is_available() is False` PASSED; `test_collector_available_when_jina_enabled` → `is_available() is True` PASSED |
+| 4 | `collect()` returns `CollectorResult` with `metadata["active_backend"] == "jina_reader"` | PASS | `MultiBackendCollector.collect()` (multi_backend.py:108–114) returns `CollectorResult` with `metadata={"backends": attempts, "active_backend": backend.name}`. `test_collect_returns_items_via_jina_backend` → `metadata["active_backend"] == "jina_reader"`, each `item["metadata"]["capture"] == "jina_reader"` PASSED |
+| 5 | `dry_run=True` returns completed with empty items | PASS | `MultiBackendCollector.collect()` (multi_backend.py:77–78): `if dry_run: return CollectorResult(self.source_name, [], "", "completed", 0)`. `test_collect_dry_run_returns_empty` → `status=="completed"`, `items==[]` PASSED |
+| 6 | URLs include homepage (https://www.xiaoyuzhoufm.com) + search queries | PASS | `_xiaoyuzhou_urls()` builds `[_XIAOYUZHOU] + [search_urls]` (xiaoyuzhou.py:58–61). `test_urls_include_homepage_and_search_queries` → `urls[0] == "https://www.xiaoyuzhoufm.com"`, `len(urls) >= 9`, all non-homepage URLs contain `"/search?q="` PASSED |
+| 7 | All network mocked — no live HTTP in tests | PASS | All xiaoyuzhou tests use `patch.object(_jina, "read_url", ...)` to mock Jina outbound calls. No bare `requests.`, `httpx`, `urllib`, `http.client`, or `aiohttp` calls in `test_xiaoyuzhou.py`. Suite passes in sandboxed egress. |
+| 8 | pytest count ≥ 481 | PASS | `481 passed in 110.89s` (== required 481; +8 from baseline 473) |
+| 9 | `python3 -m niche_radar.eval.runner` exits 0 | PASS | Exit 0; pre-existing offline-no-LLM artifact unchanged |
+| 10 | ADR-009 exists and is indexed in `docs/adr/README.md` | PASS | `docs/adr/ADR-009-xiaoyuzhou-jina-no-whisper.md` exists (Status: Accepted, chooses Jina Reader relay now + defer Whisper). `docs/adr/README.md` line 15: ADR-009 listed as Accepted in the index table. |
+| 11 | No new pip dependencies | PASS | `git diff main...task/m3-t5-xiaoyuzhou -- requirements.txt pyproject.toml Dockerfile` = empty (no changes to dependency manifests) |
+
+**Design-claim sanity check (independent of tests):** The collector follows the exact pattern established by ADR-006 (Reddit), ADR-007 (Xiaohongshu), and ADR-008 (LinkedIn): a `MultiBackendCollector` wrapping a single composed `JinaReaderBackend` that reads 小宇宙 pages through `r.jina.ai`. Per ADR-009, the Whisper transcription recipe from Agent-Reach is explicitly rejected in favor of this established Jina relay pattern — 小宇宙 is a JS-rendered SPA where every path returns the same 42KB JS shell, and Jina Reader renders the JS to extract podcast titles, show notes, and episode descriptions. The collector is opt-in only (`JINA_READER_ENABLED` or per-source `jina_fallback` credential) — without Jina, the source is silently skipped. Zero new imports beyond the existing stack. The `MultiBackendCollector` contract (ADR-002) is followed precisely: single-backend collector leaves the door open for a future Whisper or hosted-transcription backend to be inserted above Jina without refactoring.
+
+**Failure detail:** none.
+
+**Round:** 1 (first independent verdict) — PASS.
+
 ## 2026-06-27 — M4-T1 (Xiaohongshu) + M4-T2 (LinkedIn): Cookie/ToS-risky Jina relay collectors — VERDICT: PASS
 
 > Verifier context: fresh sub-agent (independent, did not write the code) · Diff: `main...task/m4-cookie-channels`

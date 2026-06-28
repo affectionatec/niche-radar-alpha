@@ -2,9 +2,9 @@
 
 > **Single source of truth for "where we are."** Read at the start of every session; update at the end. The stable build plan is `docs/plans/implementation-plan.md`; **this file tracks live progress** against it.
 
-- **Current phase:** Agent-Reach capability port — **M1+M2+M3+M4 built & verified; PR #16 ready for human gate.** 🔍→✅
-- **Next up:** After PR #16 merges — implementation plan essentially complete. M3-T5 (小宇宙) is the only unscoped task (Whisper dep risk — evaluate hosted-transcription backend first).
-- **Code status:** 473 tests pass (baseline 455 → 473, +18). Eval runner exits 0. Verifier PASS 2026-06-27. ADR-001 through ADR-008 recorded.
+- **Current phase:** Agent-Reach capability port — **COMPLETE.** All M1–M4 + M3-T5 built & verified. PR #17 ready for human gate. 🎉
+- **Next up:** Merge PR #17 (human gate). Then new roadmap phase — user's call.
+- **Code status:** 481 tests pass (baseline 371 → 481, +110). Eval runner exits 0. 9 ADRs recorded (ADR-001–009). 7 PRs (#11–#17).
 
 ## In-Flight Checkpoint
 
@@ -26,8 +26,8 @@ Plan & contracts: `docs/plans/implementation-plan.md`. Legend: ⬜ not started �
 | M2-T2 Twitter `twitter-cli` tier / GitHub `gh` tier | ⬜ | Optional; reassess vs. M3 after M2-T1. |
 | M3-T1/T2/T3 V2EX + Xueqiu + Exa | ✅ | **Verifier PASS** (`docs/verification-log.md`, 2026-06-26) + merged (PR #14). `v2ex.py` + `xueqiu.py` + `exa.py`; 434 tests. |
 | M3-T4 Bilibili collector | ✅ | **Verifier PASS** (`docs/verification-log.md`, 2026-06-27) + merged (PR #15). `bilibili.py`; 455 tests. |
-| M3-T5 小宇宙 podcast collector | ⬜ | Whisper dep risk — evaluate hosted transcription first |
-| M4-T1/T2 Cookie/ToS channels (小红书 Jina relay + LinkedIn public+Jina) | 🔍 | **Verifier PASS** (`docs/verification-log.md`, 2026-06-27); PR #16 ready — awaiting human gate |
+| M3-T5 小宇宙 podcast collector | 🔍 | **Verifier PASS** (`docs/verification-log.md`, 2026-06-28); PR #17 ready — awaiting human gate |
+| M4-T1/T2 Cookie/ToS channels (小红书 Jina relay + LinkedIn public+Jina) | ✅ | **Verifier PASS** (`docs/verification-log.md`, 2026-06-27) + merged (PR #16). 473 tests. ADR-007, ADR-008. |
 
 ## Decisions
 
@@ -44,6 +44,8 @@ Locked in `docs/adr/`. **Do not relitigate** — raise changes with the user.
 ## Session Handoff Log
 
 Newest first.
+
+- **2026-06-28** — **Built M3-T5: 小宇宙 podcast collector (ADR-009).** PR #16 merged. Evaluated Whisper transcription options per M3-T5 scope — wrote **ADR-009** rejecting local Whisper (~2 GB model, ffmpeg, audio storage) and hosted transcription (paid API, audio download infra) in favor of the Jina Reader relay pattern. Built `niche_radar/collectors/xiaoyuzhou.py` as a `MultiBackendCollector` with a single composed `JinaReaderBackend`. 小宇宙 is a JS SPA (every path returns the same 42 KB JS shell) — Jina renders the JS and extracts podcast titles, show notes, and episode descriptions. URL strategy: homepage (trending podcasts) + 8 Chinese pain-point search queries (the SPA resolves these client-side after JS execution). Opt-in only. Zero new deps. Registered in `ALL_SOURCES` + dispatch. **Verified (producer self-check):** `pytest` 481/481 (473 → 481, +8 in `test_xiaoyuzhou.py`); `python3 -m niche_radar.eval.runner` exits 0; all network mocked. **Caveats:** ⚠️ 小宇宙 is a full SPA — content quality depends on Jina's JS rendering. ⚠️ Audio transcription is deferred (can be added as a `SourceBackend` later). **Verification:** Independent verifier PASS (2026-06-28, `docs/verification-log.md`); PR #17 flipped to ready-for-review. 🎉 **The Agent-Reach capability port is complete.** All 9 planned tasks (M1–M4 + M3-T5) across 7 PRs (#11–#17) are built and independently verified. The project has gained 12 new/strengthened sources, 9 ADRs, and 110 net-new tests (371 → 481). **What the next session should do:** merge PR #17 when ready; then decide the next roadmap phase.
 
 - **2026-06-27** — **Built M4: Xiaohongshu + LinkedIn cookie channels (ADR-007, ADR-008).** Created `task/m4-cookie-channels` from main after PR #15 merged. Wrote two pre-ADR decisions (required per M4 spec): **ADR-007** (小红书 — Jina Reader relay, rejecting OpenCLI/xiaohongshu-mcp/xhs-cli as desktop-only tools per ADR-006 precedent) and **ADR-008** (LinkedIn — public_search → jina_reader chain, rejecting linkedin-mcp for the same reason). Built both collectors: **Xiaohongshu** (`niche_radar/collectors/xiaohongshu.py`) — `MultiBackendCollector` wrapping a single composed `JinaReaderBackend`, 8 Chinese pain-point queries, reads XHS search pages through r.jina.ai, opt-in only (JINA_READER_ENABLED or per-source `jina_fallback` credential); **LinkedIn** (`niche_radar/collectors/linkedin.py`) — `MultiBackendCollector` with `public_search` backend (keyless, always available, best-effort HTML scraping of linkedin.com/search/results/content/) → composed `JinaReaderBackend` (opt-in, JS-rendered real content). Zero new pip deps for either collector. Both registered in `ALL_SOURCES` + lazy-import dispatch. **Verified (producer self-check):** `pytest` 473/473 (455 → 473, +18 in `test_xiaohongshu.py` + `test_linkedin.py`); `python3 -m niche_radar.eval.runner` exits 0; all network mocked. **Caveats:** ⚠️ Both collectors Jina-gated (opt-in). Without Jina: XHS silently skips; LinkedIn uses public HTML scraping only (thin results from JS-heavy pages). ⚠️ 小红书 anti-bot may escalate against r.jina.ai egress. **Verification:** Independent verifier PASS (2026-06-27, `docs/verification-log.md`); PR #16 flipped to ready-for-review. **What the next session should do:** after human gate on PR #16 merges, the Agent-Reach implementation plan is essentially complete. M3-T5 (小宇宙) is the only unscoped task — evaluate a hosted-transcription backend first before committing to Whisper locally.
 
