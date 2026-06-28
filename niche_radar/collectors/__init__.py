@@ -30,6 +30,9 @@ ALL_SOURCES = [
     "xueqiu",        # auto-guest-session; optional explicit cookie
     "exa",           # key-gated semantic search
     "bilibili",      # auto guest buvid3; optional SESSDATA cookie
+    # M4 cookie/ToS-risky channels — opt-in Jina relay, ADR-007, ADR-008
+    "xiaohongshu",   # Jina Reader relay (opt-in); no cookie needed
+    "linkedin",      # public search → Jina Reader (opt-in); keyless
 ]
 
 
@@ -95,6 +98,12 @@ def _get_collector(source: str):
     elif source == "bilibili":
         from niche_radar.collectors.bilibili import BilibiliCollector
         return BilibiliCollector()
+    elif source == "xiaohongshu":
+        from niche_radar.collectors.xiaohongshu import XiaohongshuCollector
+        return XiaohongshuCollector()
+    elif source == "linkedin":
+        from niche_radar.collectors.linkedin import LinkedInCollector
+        return LinkedInCollector()
     else:
         raise ValueError(f"Unknown source: {source}")
 
