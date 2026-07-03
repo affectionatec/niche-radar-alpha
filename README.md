@@ -19,12 +19,12 @@
 
 ## Overview
 
-Niche Radar monitors **16 public platforms**, runs an **8-agent LLM analysis pipeline**, and delivers scored niche candidates through a web dashboard — so you don't have to manually scan Reddit, HN, Twitter, and YouTube for product ideas every day.
+Niche Radar monitors **23 public platforms**, runs an **8-agent LLM analysis pipeline**, and delivers scored niche candidates through a web dashboard — so you don't have to manually scan Reddit, HN, Twitter, and YouTube for product ideas every day.
 
 **The pipeline in one line:**
 
 ```
-16 Sources → Collect (4h cycle) → 8-Agent LLM Pipeline (6h cycle) → Scored Niches → Dashboard
+23 Sources → Collect (4h cycle) → 8-Agent LLM Pipeline (6h cycle) → Scored Niches → Dashboard
 ```
 
 ### The 8-Agent Pipeline
@@ -145,7 +145,7 @@ Visit **http://localhost:3000**. If no LLM key is configured yet, you'll be redi
 
 | Page | What it does |
 |------|-------------|
-| **Home** | System health across all 16 sources, data freshness, collection stats |
+| **Home** | System health across all 23 sources, data freshness, collection stats |
 | **Niches** | Sortable table of scored candidates with LLM score, verdict, momentum |
 | **Niche Detail** | Full scoring breakdown per dimension, agent reasoning chain (A4→A5→A6), web validation, generated PRD |
 | **Shortlist** | User-curated starred opportunities |
@@ -155,7 +155,7 @@ Visit **http://localhost:3000**. If no LLM key is configured yet, you'll be redi
 | **Settings** | LLM provider config (8 providers, live model refresh), scoring weights, prompt packs, data source credentials |
 
 > [!TIP]
-> See [sample reports](docs/sample-reports/) for examples of pipeline output — including a 🟢 GO verdict with full PRD and a 🔴 NO-GO verdict with detailed rationale.
+> See [sample reports](docs/sample-reports/) for hand-written illustrations of the report format — including a 🟢 GO verdict with full PRD and a 🔴 NO-GO verdict with detailed rationale.
 
 ## Data Sources
 
@@ -164,7 +164,7 @@ Visit **http://localhost:3000**. If no LLM key is configured yet, you'll be redi
 | Reddit | PRAW (official API) + keyless public-JSON fallback | Client ID + Secret ([free](https://www.reddit.com/prefs/apps)), or none | 🟢 Stable |
 | Hacker News | Firebase + Algolia API | None | 🟢 Stable |
 | GitHub Trending | REST API | None (optional PAT) | 🟢 Stable |
-| YouTube | Data API v3 | None | 🟢 Stable |
+| YouTube | yt-dlp (keyless, auto-caption transcripts) → Data API v3 / scrapetube fallback | None | 🟢 Stable |
 | Stack Overflow | Official API v2.3 | None | 🟢 Stable |
 | Twitter / X | Multi-backend chain: xAI → Xquik → cookie GraphQL | Any one of: xAI key, Xquik key, or cookies | 🟢 Stable (API key) · 🔴 cookie fallback |
 | Bluesky | AT Protocol search | App password ([free](https://bsky.app/settings/app-passwords)) | 🟢 Stable |
@@ -175,14 +175,21 @@ Visit **http://localhost:3000**. If no LLM key is configured yet, you'll be redi
 | Product Hunt | GraphQL API | None | 🟡 Fragile |
 | App Store | iTunes API / scraping | None | 🟡 Fragile |
 | Play Store | google-play-scraper | None | 🟡 Fragile |
-| G2 Reviews | HTML scraping | None | 🟠 Brittle |
-| Indie Hackers | HTML scraping | None | 🟠 Brittle |
+| G2 Reviews | HTML scraping → Jina Reader fallback (opt-in) | None | 🟠 Brittle |
+| Indie Hackers | HTML scraping → Jina Reader fallback (opt-in) | None | 🟠 Brittle |
+| V2EX | Official API (keyless v1 · node-targeted v2 with token) | None (optional token) | 🟢 Stable |
+| Xueqiu 雪球 | Web API with auto guest cookie | None (optional cookie) | 🟡 Fragile |
+| Exa | Semantic search API | Exa API key | 🟢 Stable |
+| Bilibili | Search API with auto guest fingerprint | None (optional SESSDATA) | 🟡 Fragile |
+| Xiaohongshu 小红书 | Jina Reader relay (opt-in) | Jina opt-in | 🟠 Brittle |
+| LinkedIn | Public search scrape → Jina Reader (opt-in) | None | 🟠 Brittle |
+| Xiaoyuzhou 小宇宙 | Jina Reader relay (opt-in, JS SPA) | Jina opt-in | 🟠 Brittle |
 
 > [!TIP]
 > Most sources work out of the box with zero credentials. All source credentials can be managed from **Settings → Data Sources** in the dashboard. One ScrapeCreators key unlocks TikTok, Instagram, and Threads together.
 
 > [!NOTE]
-> **X/Twitter is now resilient.** Capture runs through an ordered fallback chain — set an **xAI** or **Xquik** API key for a stable, cookie-free path; the legacy cookie-scraping backend is only used as a last resort. See [the integration plan](docs/integrations/last30days-integration-plan.md).
+> **X/Twitter is now resilient.** Capture runs through an ordered fallback chain — set an **xAI** or **Xquik** API key for a stable, cookie-free path; the legacy cookie-scraping backend is only used as a last resort (ADR-002).
 
 ## LLM Providers
 
@@ -210,7 +217,7 @@ Visit **http://localhost:3000**. If no LLM key is configured yet, you'll be redi
 │  │  Next.js 14       │     │    FastAPI + Uvicorn    │  │
 │  │  React 18, SWR    │     │    APScheduler          │  │
 │  └──────────────────┘     │    8-Agent Pipeline      │  │
-│                            │    16 Collectors         │  │
+│                            │    23 Collectors         │  │
 │                            └──────────┬──────────┘   │
 │                                       │               │
 │                            ┌──────────▼──────────┐   │
@@ -229,7 +236,7 @@ niche-radar-alpha/
 ├── .env.example                    # Env var template
 ├── CONTEXT.md                      # Domain glossary
 ├── niche_radar/                    # Python backend
-│   ├── collectors/                 # 16 data source collectors
+│   ├── collectors/                 # 23 data source collectors
 │   ├── agents/                     # 8-agent LLM pipeline
 │   │   ├── pipeline.py             #   Phase A–D orchestration
 │   │   ├── models.py               #   A1–A8 Pydantic I/O
@@ -252,7 +259,6 @@ niche-radar-alpha/
 │   ├── prd.md · spec/ · adr/ · plans/ · status.md  # agentic-engineering doc chain
 │   ├── ARCHITECTURE.md             # System design, module map, clustering strategy
 │   ├── agent-pipeline.md           # Agent design philosophy + prompt documentation
-│   ├── PRODUCT.md                  # Problem statement & features
 │   ├── DESIGN.md                   # UI/UX design system
 │   ├── spec.md                     # Original MVP spec (being decomposed into spec/)
 │   └── images/                     # Diagrams and assets
@@ -371,7 +377,6 @@ pytest -v
 | [CONTEXT.md](CONTEXT.md) | Domain glossary — canonical terms used in the codebase |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, module map, clustering strategy |
 | [agent-pipeline.md](docs/agent-pipeline.md) | Agent design philosophy, prompts, failure cases |
-| [PRODUCT.md](docs/PRODUCT.md) | Problem statement, users, features, non-goals |
 | [DESIGN.md](docs/DESIGN.md) | UI/UX design system (xAI-inspired dark theme) |
 | [spec.md](docs/spec.md) | Full MVP specification |
 | [Sample Reports](docs/sample-reports/) | Example pipeline output (GO + NO-GO verdicts) |

@@ -20,7 +20,7 @@
   "golden_004": {
     "is_valid_signal": false,
     "confidence": 0.15,
-    "signal_type": "complaint",
+    "signal_type": "noise",
     "reasoning": "General frustration with Google Search AI changes. No specific user need, no willingness to pay, no actionable product gap stated."
   },
   "golden_005": {

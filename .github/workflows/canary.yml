@@ -1,0 +1,31 @@
+name: Collector Canary
+
+# Weekly live-web smoke of the keyless collectors. The test suite mocks all
+# network I/O, so scraper rot (a platform changing its HTML/API) is invisible
+# to CI — this canary catches it. Never a PR gate: live endpoints may flake.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Run live collector canary
+        run: python -m niche_radar.eval.canary

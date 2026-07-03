@@ -1,71 +1,84 @@
-"""Tests for MockLLMClient — deterministic fixture-based LLM mock."""
+"""Tests for MockLLMClient — deterministic LLM mock implementing the real protocol."""
 from __future__ import annotations
 
-import pytest
 from niche_radar.eval.mock_client import MockLLMClient
+from niche_radar.llm.base import LLMClient
 
 
-def test_mock_client_returns_fixture_response():
-    fixtures = {
-        "item_001": {"content": '{"is_valid_signal": true, "confidence": 0.9}'},
-        "item_002": {"content": '{"is_valid_signal": false, "confidence": 0.1}'},
+def test_mock_client_satisfies_llm_client_protocol():
+    client = MockLLMClient()
+    assert isinstance(client, LLMClient)
+
+
+def test_mock_client_returns_response_for_active_agent():
+    client = MockLLMClient(
+        responses={
+            "a1": {"is_valid_signal": True, "confidence": 0.9},
+            "a2": {"who": "designer", "what": "manual copying"},
+        }
+    )
+
+    client.set_agent("a1")
+    assert client.complete_structured("sys", "user") == {
+        "is_valid_signal": True,
+        "confidence": 0.9,
     }
-    client = MockLLMClient(fixtures=fixtures, default={"content": '{"is_valid_signal": false}'})
 
-    result = client.chat_completion(
-        messages=[{"role": "user", "content": "test with item_001 in it"}],
-        caller_id="item_001",
-    )
-    assert result == '{"is_valid_signal": true, "confidence": 0.9}'
-
-    result = client.chat_completion(
-        messages=[{"role": "user", "content": "test with item_002 in it"}],
-        caller_id="item_002",
-    )
-    assert result == '{"is_valid_signal": false, "confidence": 0.1}'
+    client.set_agent("a2")
+    assert client.complete_structured("sys", "user") == {
+        "who": "designer",
+        "what": "manual copying",
+    }
 
 
-def test_mock_client_falls_back_to_default_for_unknown_item():
-    fixtures = {}
-    client = MockLLMClient(fixtures=fixtures, default={"content": '{"is_valid_signal": false, "confidence": 0.0}'})
-
-    result = client.chat_completion(
-        messages=[{"role": "user", "content": "some unknown item"}],
-        caller_id="unknown_item",
-    )
-    assert result == '{"is_valid_signal": false, "confidence": 0.0}'
+def test_mock_client_falls_back_to_default_for_unknown_agent():
+    client = MockLLMClient(responses={}, default={"is_valid_signal": False})
+    client.set_agent("a7")
+    assert client.complete_structured("sys", "user") == {"is_valid_signal": False}
 
 
-def test_mock_client_records_calls():
-    fixtures = {"item_001": {"content": "ok"}}
-    client = MockLLMClient(fixtures=fixtures)
+def test_mock_client_default_default_is_empty_dict():
+    client = MockLLMClient()
+    client.set_agent("a1")
+    assert client.complete_structured("sys", "user") == {}
 
-    client.chat_completion(messages=[{"role": "user", "content": "call 1"}], caller_id="item_001")
-    client.chat_completion(messages=[{"role": "user", "content": "call 2"}], caller_id="item_002")
+
+def test_mock_client_returns_copies_not_shared_state():
+    canned = {"is_valid_signal": True}
+    client = MockLLMClient(responses={"a1": canned})
+    client.set_agent("a1")
+    first = client.complete_structured("sys", "user")
+    first["mutated"] = True
+    assert client.complete_structured("sys", "user") == {"is_valid_signal": True}
+
+
+def test_mock_client_records_calls_with_agent_and_prompts():
+    client = MockLLMClient(responses={"a1": {"is_valid_signal": True}})
+
+    client.set_agent("a1")
+    client.complete_structured("system prompt", "user prompt", temperature=0.3)
+    client.set_agent("a2")
+    client.complete_structured("system 2", "user 2")
 
     assert len(client.calls) == 2
-    assert client.calls[0]["caller_id"] == "item_001"
-    assert client.calls[1]["caller_id"] == "item_002"
+    assert client.calls[0]["agent_id"] == "a1"
+    assert client.calls[0]["system"] == "system prompt"
+    assert client.calls[0]["user"] == "user prompt"
+    assert client.calls[0]["temperature"] == 0.3
+    assert client.calls[1]["agent_id"] == "a2"
+
+
+def test_mock_client_complete_json_uses_active_agent():
+    client = MockLLMClient(responses={"a3": {"market_leader": "X"}})
+    client.set_agent("a3")
+    assert client.complete_json("prompt") == {"market_leader": "X"}
+
+
+def test_mock_client_complete_returns_empty_string():
+    client = MockLLMClient()
+    assert client.complete("prompt") == ""
 
 
 def test_mock_client_model_property():
-    client = MockLLMClient(fixtures={})
+    client = MockLLMClient()
     assert client.model == "mock-eval-model"
-
-
-def test_mock_client_stream_raises_not_implemented():
-    client = MockLLMClient(fixtures={})
-    with pytest.raises(NotImplementedError):
-        client.chat_completion_stream(messages=[{"role": "user", "content": "any"}])
-
-
-def test_mock_client_unknown_caller_id_no_default_returns_empty():
-    client = MockLLMClient(fixtures={})
-    result = client.chat_completion(messages=[], caller_id="nonexistent")
-    assert result == ""
-
-
-def test_mock_client_records_kwargs():
-    client = MockLLMClient(fixtures={"x": {"content": "ok"}})
-    client.chat_completion(messages=[], caller_id="x", temperature=0.5, top_p=0.9)
-    assert client.calls[0]["kwargs"] == {"temperature": 0.5, "top_p": 0.9}

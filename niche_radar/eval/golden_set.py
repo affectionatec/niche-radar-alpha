@@ -104,16 +104,23 @@ def load_golden_set(path: Path = DEFAULT_GOLDEN_PATH) -> list[GoldenItem]:
     return items
 
 
+ALL_CHECKS: tuple[str, ...] = ("a1_pass", "verdict", "tier", "score_range")
+
+
 def evaluate_against_golden(
     golden_items: list[GoldenItem],
     pipeline_results: dict[str, dict[str, Any]],
+    checks: tuple[str, ...] | None = None,
 ) -> EvalSummary:
     """Compare pipeline outputs against golden set expectations.
 
     pipeline_results: {item_id: {"a1_pass": bool, "verdict": str, "tier": str, "score": int}}
+    checks: which check names to evaluate (default: all). Callers that only
+    replay part of the pipeline pass the subset they actually produced, so
+    unexercised expectations aren't counted as failures.
     """
     summary = EvalSummary()
-    check_names = ["a1_pass", "verdict", "tier", "score_range"]
+    check_names = list(checks) if checks is not None else list(ALL_CHECKS)
 
     for name in check_names:
         summary.by_check[name] = {"total": 0, "passed": 0}
@@ -122,7 +129,7 @@ def evaluate_against_golden(
         result = EvalResult(item_id=golden.item_id)
         actual = pipeline_results.get(golden.item_id, {})
 
-        if golden.expected_a1_pass is not None:
+        if "a1_pass" in check_names and golden.expected_a1_pass is not None:
             actual_pass = actual.get("a1_pass")
             ok = actual_pass == golden.expected_a1_pass
             result.checks["a1_pass"] = ok
@@ -131,7 +138,7 @@ def evaluate_against_golden(
             if ok:
                 summary.by_check["a1_pass"]["passed"] += 1
 
-        if golden.expected_a6_verdict is not None:
+        if "verdict" in check_names and golden.expected_a6_verdict is not None:
             actual_verdict = actual.get("verdict")
             ok = actual_verdict == golden.expected_a6_verdict
             result.checks["verdict"] = ok
@@ -140,7 +147,7 @@ def evaluate_against_golden(
             if ok:
                 summary.by_check["verdict"]["passed"] += 1
 
-        if golden.expected_tier is not None:
+        if "tier" in check_names and golden.expected_tier is not None:
             actual_tier = actual.get("tier")
             ok = actual_tier == golden.expected_tier
             result.checks["tier"] = ok
@@ -149,7 +156,7 @@ def evaluate_against_golden(
             if ok:
                 summary.by_check["tier"]["passed"] += 1
 
-        if golden.expected_score_range is not None:
+        if "score_range" in check_names and golden.expected_score_range is not None:
             actual_score = actual.get("score")
             lo, hi = golden.expected_score_range
             ok = actual_score is not None and lo <= actual_score <= hi
