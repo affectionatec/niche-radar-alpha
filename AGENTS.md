@@ -6,7 +6,7 @@
 ## 1. Project Identity
 
 - **Name:** Niche Radar Alpha
-- **One-liner:** Automated trend-intelligence pipeline that monitors 16 public platforms, runs an 8-agent LLM analysis pipeline, and delivers scored niche/product opportunities through a web dashboard.
+- **One-liner:** Automated trend-intelligence pipeline that monitors 23 public platforms, runs an 8-agent LLM analysis pipeline, and delivers scored niche/product opportunities through a web dashboard.
 - **Tech stack:** Python 3.11+ · FastAPI + Uvicorn (`:8000`) · SQLite default / PostgreSQL opt-in · APScheduler · Next.js 14 dashboard (`:3000`) · Docker Compose · pluggable LLM (OpenAI-compatible + Anthropic).
 - **Repo structure:**
 
@@ -28,10 +28,8 @@ niche_radar/            Python package — the pipeline
   scheduler.py          APScheduler — collect 4h, analyze 6h, cleanup daily
   config.py             pydantic-settings configuration
 frontend/               Next.js 14 dashboard (SWR, /api/[...proxy] → backend)
-tests/                  pytest suites (44 files, 371 test functions)
+tests/                  pytest suites
 docs/                   Documentation chain — see §2
-.ralph/                 Legacy Ralph-loop PRD (superseded by the chain — ADR-004)
-docs/superpowers/       Legacy Superpowers plans/specs (absorbed by the chain — ADR-004)
 ```
 
 ## 2. Documentation Chain — Read Before You Code
@@ -49,7 +47,7 @@ This project uses a six-document chain. **Read them in order.**
 
 **Domain glossary:** `CONTEXT.md` is the canonical glossary. Use its exact terms (Collector, Raw Item, Niche Candidate, Pipeline, Verdict, …) in code, comments, and PRs. If a new domain concept recurs, add it to `CONTEXT.md`.
 
-**Legacy / reference docs (absorbed, not authoritative for workflow):** `docs/agent-pipeline.md` (A1–A8 design philosophy), `docs/ARCHITECTURE.md`, `docs/PRODUCT.md`, `docs/DESIGN.md` (UI system), `docs/spec.md` (original monolithic MVP spec, being decomposed into `docs/spec/`).
+**Legacy / reference docs (absorbed, not authoritative for workflow):** `docs/agent-pipeline.md` (A1–A8 design philosophy), `docs/ARCHITECTURE.md`, `docs/DESIGN.md` (UI system), `docs/spec.md` (original monolithic MVP spec, being decomposed into `docs/spec/`). Retired legacy trees (`.ralph/`, `docs/superpowers/`, `docs/PRODUCT.md`, pre-chain enhancement/integration plans) were removed 2026-07-03 — recover from git history if ever needed.
 
 ### Session Protocol
 

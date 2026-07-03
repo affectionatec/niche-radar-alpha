@@ -2,9 +2,9 @@
 
 > **Single source of truth for "where we are."** Read at the start of every session; update at the end. The stable build plan is `docs/plans/implementation-plan.md`; **this file tracks live progress** against it.
 
-- **Current phase:** Agent-Reach capability port — **COMPLETE.** All M1–M4 + M3-T5 built & verified. PR #17 ready for human gate. 🎉
-- **Next up:** Merge PR #17 (human gate). Then new roadmap phase — user's call.
-- **Code status:** 481 tests pass (baseline 371 → 481, +110). Eval runner exits 0. 9 ADRs recorded (ADR-001–009). 7 PRs (#11–#17).
+- **Current phase:** Post-port consolidation. Agent-Reach port fully merged (PR #17 = e52379e on main). First-principles review done — **the eval gate now executes real agent code**; next phase should be validation, not more sources (→ `docs/reviews/2026-07-03-first-principles-review.md`).
+- **Next up:** User decision on the review's P0 roadmap: (1) first measured real end-to-end run with a cheap LLM key; (2) golden set 5 → 50+ items; freeze new collectors until then.
+- **Code status:** 496 tests pass (481 → 496, +15). Eval runner exits 0 — and now actually runs A1→A2 via `orchestrator.run_single`. 9 ADRs (ADR-001–009). Weekly live-collector canary added.
 
 ## In-Flight Checkpoint
 
@@ -26,24 +26,27 @@ Plan & contracts: `docs/plans/implementation-plan.md`. Legend: ⬜ not started �
 | M2-T2 Twitter `twitter-cli` tier / GitHub `gh` tier | ⬜ | Optional; reassess vs. M3 after M2-T1. |
 | M3-T1/T2/T3 V2EX + Xueqiu + Exa | ✅ | **Verifier PASS** (`docs/verification-log.md`, 2026-06-26) + merged (PR #14). `v2ex.py` + `xueqiu.py` + `exa.py`; 434 tests. |
 | M3-T4 Bilibili collector | ✅ | **Verifier PASS** (`docs/verification-log.md`, 2026-06-27) + merged (PR #15). `bilibili.py`; 455 tests. |
-| M3-T5 小宇宙 podcast collector | 🔍 | **Verifier PASS** (`docs/verification-log.md`, 2026-06-28); PR #17 ready — awaiting human gate |
+| M3-T5 小宇宙 podcast collector | ✅ | **Verifier PASS** (2026-06-28) + merged (PR #17 = e52379e). Agent-Reach port complete. |
+| First-principles review + eval-gate rewrite + canary | 🔍 | 2026-07-03 session — this branch. Eval gate now executes real A1→A2; legacy doc trees pruned; weekly collector canary. |
 | M4-T1/T2 Cookie/ToS channels (小红书 Jina relay + LinkedIn public+Jina) | ✅ | **Verifier PASS** (`docs/verification-log.md`, 2026-06-27) + merged (PR #16). 473 tests. ADR-007, ADR-008. |
 
 ## Decisions
 
 Locked in `docs/adr/`. **Do not relitigate** — raise changes with the user.
-- ADR-001 SQLite default · ADR-002 multi-backend fallback · ADR-003 eight-agent pipeline · ADR-004 adopt agentic-engineering chain · ADR-005 yt-dlp YouTube backend · ADR-006 Reddit multi-backend + Jina tier.
+- ADR-001 SQLite default · ADR-002 multi-backend fallback · ADR-003 eight-agent pipeline · ADR-004 adopt agentic-engineering chain · ADR-005 yt-dlp YouTube backend · ADR-006 Reddit multi-backend + Jina tier · ADR-007 小红书 Jina relay · ADR-008 LinkedIn public+Jina · ADR-009 小宇宙 Jina, no Whisper.
 
 ## Open Items (non-blocking)
 
 - `docs/spec.md` (monolith) coexists with `docs/spec/` during incremental decomposition (ADR-004). Becomes blocking only if the two diverge — `docs/spec/` is authoritative on conflict.
-- `.ralph/` and `docs/superpowers/` remain as legacy/historical. Retire once open items are absorbed; non-blocking.
 - `docs/spec/{analysis-pipeline,api,storage}.md` are Draft (consolidating) — harden as their domains get touched.
-- ⚠️ **Env blocker for code work:** `pip install -e ".[dev]"` fails in this fresh container — the transitive dep `pyjsparser` (via `trendspyg`/Google Trends) won't build against the system setuptools (`AttributeError: install_layout`). Becomes blocking at M1-T1 (first code task needs `pytest`). Fix before M1: upgrade build tooling (`pip install -U pip setuptools wheel` in a venv) or install a prebuilt `pyjsparser`/skip `trendspyg` for local test runs.
+- Eval gate covers A1 only; verdict/tier/score checks are explicitly reported as "Not evaluated" until the cluster phase (A3–A8) gets fixture replay (→ review P0).
+- Env note: in a fresh container, create a venv and `pip install -U pip setuptools wheel` **before** `pip install -e ".[dev]"` — otherwise the transitive dep `pyjsparser` (via `trendspyg`) fails to build (`AttributeError: install_layout`). Verified working 2026-07-03.
 
 ## Session Handoff Log
 
 Newest first.
+
+- **2026-07-03** — **First-principles project review + eval-gate rewrite + legacy pruning (user-requested "大刀阔斧" assessment).** Full review in `docs/reviews/2026-07-03-first-principles-review.md` — headline: engineering quality is real (independently re-verified 481/481 in a fresh container), but product validation is near-zero, and the CI "eval gate" was a tautology: it compared the fixture file against the golden file without ever executing agent code; `MockLLMClient` was interface-incompatible dead code (`chat_completion` string vs the pipeline's `complete_structured` dict). **Built:** (1) rewired the eval gate — `MockLLMClient` now implements the real `LLMClient` protocol and `runner.py` routes every golden item through the real `orchestrator.run_single` A1→A2 chain (prompt build, Pydantic validation, short-circuit logic all exercised); terminal A1 failures now fail the gate instead of masquerading as rejections; unwired verdict/tier/score checks are explicitly reported "Not evaluated" instead of silently ignored. The rewired gate immediately caught a real bug: `golden_004`'s fixture used invalid enum `signal_type: "complaint"` — fixed. (2) `niche_radar/eval/canary.py` + weekly `canary.yml` — live-web smoke of 10 keyless collectors to catch scraper rot the all-mocked suite cannot see (not a PR gate). (3) Pruned legacy trees: `.ralph/`, `docs/superpowers/`, `docs/PRODUCT.md`, `docs/enhancement/`, `docs/integrations/` (~200KB; recoverable from git history). (4) Fixed doc drift: 16 → 23 platforms in README/AGENTS.md, README source table completed with the 7 missing sources, sample reports relabeled as hand-written illustrations (they claimed to be pipeline output). **Verified (producer self-check):** `pytest` 496/496 (481 → 496, +15); `python3 -m niche_radar.eval.runner` exits 0 (now meaningfully); frontend `npm run build` passes. **Caveats:** ⚠️ live collector behavior could not be verified from this sandbox (proxy blocks outbound hosts) — the canary workflow will answer it on GitHub runners; ⚠️ eval still covers A1 only. **What the next session should do:** user decision on the review's P0 roadmap — first measured real end-to-end run (cheap LLM key, real report artifact + cost numbers) and golden set 5 → 50+; freeze new collectors until both land.
 
 - **2026-06-28** — **Built M3-T5: 小宇宙 podcast collector (ADR-009).** PR #16 merged. Evaluated Whisper transcription options per M3-T5 scope — wrote **ADR-009** rejecting local Whisper (~2 GB model, ffmpeg, audio storage) and hosted transcription (paid API, audio download infra) in favor of the Jina Reader relay pattern. Built `niche_radar/collectors/xiaoyuzhou.py` as a `MultiBackendCollector` with a single composed `JinaReaderBackend`. 小宇宙 is a JS SPA (every path returns the same 42 KB JS shell) — Jina renders the JS and extracts podcast titles, show notes, and episode descriptions. URL strategy: homepage (trending podcasts) + 8 Chinese pain-point search queries (the SPA resolves these client-side after JS execution). Opt-in only. Zero new deps. Registered in `ALL_SOURCES` + dispatch. **Verified (producer self-check):** `pytest` 481/481 (473 → 481, +8 in `test_xiaoyuzhou.py`); `python3 -m niche_radar.eval.runner` exits 0; all network mocked. **Caveats:** ⚠️ 小宇宙 is a full SPA — content quality depends on Jina's JS rendering. ⚠️ Audio transcription is deferred (can be added as a `SourceBackend` later). **Verification:** Independent verifier PASS (2026-06-28, `docs/verification-log.md`); PR #17 flipped to ready-for-review. 🎉 **The Agent-Reach capability port is complete.** All 9 planned tasks (M1–M4 + M3-T5) across 7 PRs (#11–#17) are built and independently verified. The project has gained 12 new/strengthened sources, 9 ADRs, and 110 net-new tests (371 → 481). **What the next session should do:** merge PR #17 when ready; then decide the next roadmap phase.
 
