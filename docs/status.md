@@ -2,8 +2,8 @@
 
 > **Single source of truth for "where we are."** Read at the start of every session; update at the end. The stable build plan is `docs/plans/implementation-plan.md`; **this file tracks live progress** against it.
 
-- **Current phase:** P0 validation (review roadmap) — 🔍 built, awaiting verification. Both P0 items landed this session: two real measured E2E cycles ran on DeepSeek in Docker (artifacts + cost in `docs/sample-reports/`), and the golden set is 61 items labeled from real raw_items. Two real production bugs found & fixed by the run (dead HN collector, zero-row cost attribution).
-- **Next up:** Independent verification of both P0 branches → human gate → merge. Then the measured priority: **A1 prompt hardening against the 61-item golden set (precision 26.1%, recall 85.7%)**, and the F4/F5 input-side fixes (youtube `posted_at` NULL, linkedin empty shells) per `docs/sample-reports/2026-07-04-run-metrics.md` §5. Collector freeze still applies.
+- **Current phase:** P0 validation (review roadmap) — ✅ both tasks **verifier-PASSed** (2026-07-04, round 1 each); PR #19 + PR #20 ready for the human gate. Two real measured E2E cycles ran on DeepSeek in Docker (artifacts + cost in `docs/sample-reports/`); golden set is 61 items labeled from real raw_items; two real production bugs found & fixed by the run (dead HN collector, zero-row cost attribution).
+- **Next up:** Human gate: read + merge PR #19 and PR #20 (merge #19 first; #20 is data-only and conflict-free). Then the measured priority: **A1 prompt hardening against the 61-item golden set (precision 26.1%, recall 85.7%)**, and the F4/F5 input-side fixes (youtube `posted_at` NULL, linkedin empty shells) per `docs/sample-reports/2026-07-04-run-metrics.md` §5. Collector freeze still applies.
 - **Code status:** 498 tests pass (496 → 498, +2). Eval gate 61/61 items green (exit 0). One full pipeline cycle measured at **$0.0358** (171 calls, 212k tokens, 42% cache-hit) on deepseek-v4-flash.
 
 ## In-Flight Checkpoint
@@ -28,7 +28,7 @@ Plan & contracts: `docs/plans/implementation-plan.md`. Legend: ⬜ not started �
 | M3-T4 Bilibili collector | ✅ | **Verifier PASS** (`docs/verification-log.md`, 2026-06-27) + merged (PR #15). `bilibili.py`; 455 tests. |
 | M3-T5 小宇宙 podcast collector | ✅ | **Verifier PASS** (2026-06-28) + merged (PR #17 = e52379e). Agent-Reach port complete. |
 | First-principles review + eval-gate rewrite + canary | ✅ | Merged (PR #18 = a7a0a2f). |
-| P0-A First measured real E2E run + live-rot fixes | 🔍 | Branch `task/p0-first-real-run`. 2 cycles on deepseek-v4-flash via Docker; HN Algolia fix + llm_usage thread-safety fix (+2 tests, 498 total); real report artifacts + `2026-07-04-run-metrics.md` (11 findings F1–F11). Awaiting verifier. |
+| P0-A First measured real E2E run + live-rot fixes | ✅ | **Verifier PASS** (2026-07-04, `docs/verification-log.md`, round 1). 2 cycles on deepseek-v4-flash via Docker; HN Algolia fix + llm_usage thread-safety fix live-verified; 498/498; artifacts + `2026-07-04-run-metrics.md` (F1–F11). PR #19 ready for human gate. |
 | P0-B Golden set 5 → 61 from real raw_items | ✅ | **Verifier PASS** (2026-07-04, `docs/verification-log.md`, round 1). 61 items (10 pass/51 reject), eval gate 61/61, integrity + label spot-check clean. PR #20 ready for human gate. A1 calibration: precision 26.1% / recall 85.7% (n=48). |
 | M4-T1/T2 Cookie/ToS channels (小红书 Jina relay + LinkedIn public+Jina) | ✅ | **Verifier PASS** (`docs/verification-log.md`, 2026-06-27) + merged (PR #16). 473 tests. ADR-007, ADR-008. |
 
