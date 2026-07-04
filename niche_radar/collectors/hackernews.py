@@ -101,7 +101,12 @@ class HackerNewsCollector(BaseCollector):
                                 params={
                                     "query": query,
                                     "tags": "ask_hn",
-                                    "numericFilters": f"points>{min_points},num_comments>{min_comments}",
+                                    # Algolia's HN index rejects points/num_comments in
+                                    # numericFilters since ~2026-07 (400: attribute not in
+                                    # numericAttributesForFiltering). Only created_at_i is
+                                    # still filterable server-side; points/comments
+                                    # thresholds are enforced client-side below.
+                                    "numericFilters": f"created_at_i>{int(cutoff.timestamp())}",
                                     "hitsPerPage": 50,
                                 },
                                 timeout=15,
@@ -115,6 +120,11 @@ class HackerNewsCollector(BaseCollector):
                         if not source_id:
                             continue
                         source_id = str(source_id)
+
+                        if (hit.get("points") or 0) <= min_points or (
+                            hit.get("num_comments") or 0
+                        ) <= min_comments:
+                            continue
 
                         created_at_ts = hit.get("created_at_i")
                         if created_at_ts:

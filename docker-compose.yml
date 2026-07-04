@@ -2,6 +2,9 @@ services:
   radar:
     build: .
     container_name: niche-radar
+    env_file:
+      - path: .env
+        required: false
     volumes:
       - ./data:/app/data
       - ./reports:/app/reports

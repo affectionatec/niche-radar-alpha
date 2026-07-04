@@ -2,6 +2,77 @@
 
 > Append-only record of independent verdicts, **newest first**. A task moves to ✅ in `docs/status.md` only when a verifier with **fresh context** (sub-agent or fresh session — never the producer's conversation) re-runs the task's done condition from `docs/plans/implementation-plan.md` + `docs/spec/` and records PASS here with evidence. Never edit a past verdict.
 
+## 2026-07-04 — P0-A: First measured real E2E run + live-rot fixes (HN 400, thread-local usage) — VERDICT: PASS
+
+> Verifier context: fresh sub-agent (independent, did not write the code; re-dispatched after the original P0-A verifier died without returning a verdict) · Diff: `main...task/p0-first-real-run` (PR #19, commit `5d61e9d`) · All Python via `niche-radar-alpha-radar:latest` Docker image (no local venv)
+
+**Test ratchet:** baseline 496 (main post-PR-#18) → now 498 (✅ holds, +2). No test deleted, skipped, or weakened (`grep -rn "pytest.mark.skip\|@pytest.mark.xfail\|pytest.skip(" tests/` = 0; `grep -rhoE "def test_" tests/ | wc -l` = 498). The two modified test files show only: a rename tracking the API change (`test_record_usage_stores_on_thread_local` → `test_record_usage_stores_in_accumulator`, assertions preserved), mechanical `_local.records` → `_records` adaptations (one assertion strengthened), and 2 new tests.
+
+**Scope:** clean. 14 files, all within the declared list: `niche_radar/collectors/hackernews.py`, `niche_radar/llm/usage.py`, `tests/test_llm/{test_cost_attribution,test_usage}.py`, `docker-compose.yml`, `.gitignore`, `.dockerignore`, `.env.example`, `docs/sample-reports/*` (+3 real-run artifacts, −2 hand-written samples), `docs/status.md`. The `usage.py` diff also carries the `_cached_tokens` provider-shape fix (F3) — same declared file, new test, documented in the metrics artifact.
+
+**Commands executed (Python in Docker, worktree mounted at /app):**
+
+| Command | Exit | Key output |
+|---------|------|-----------|
+| `docker run ... --entrypoint python ... -m pytest -q` | 0 | `498 passed, 1 warning in 112.23s` (== claimed 498, +2 over baseline 496) |
+| `docker run ... --entrypoint python ... -m niche_radar.eval.runner` | 0 | `Total items: 5, Passed: 5, Failed: 0` (main's golden set; the 61-item expansion is P0-B) |
+| `docker run ... --entrypoint python ... -m pytest tests/test_llm/test_cost_attribution.py::test_flush_usage_sees_records_from_worker_threads -v` | 0 | `1 passed` — 8 records from 4 worker threads, flush sees all 8, DB rows = 8 |
+| `git diff main...HEAD \| grep -c "sk-"` | 0 | literal count **3** — inspected: `risk-reward` ×2 + `task-completion-alerts`, English hyphenations in report prose, no credentials; key-shaped `grep -cE "sk-[A-Za-z0-9]{16,}"` = 0; api_key/Bearer/AKIA scan = 0 |
+| `curl "https://hn.algolia.com/api/v1/search?...numericFilters=points%3E10..."` (live, optional) | 0 | `{"code":400,"message":"invalid numeric attribute(points), attribute not specified in numericAttributesForFiltering setting"}`; same with the exact old combined filter |
+| `curl "https://hn.algolia.com/api/v1/search?...numericFilters=created_at_i%3E1751000000..."` (live, optional) | 0 | hits returned. Note: on `search_by_date` (an index this collector does not use) points-filtering still works — the 400 is specific to `/search`, which is the endpoint at `hackernews.py:24` |
+
+**Per-criterion:**
+
+| # | Criterion | Verdict | Evidence |
+|---|-----------|---------|----------|
+| 1 | Full pytest ≥ 498, exact count | PASS | 498 passed, exit 0; ratchet 496 → 498 |
+| 2 | `python -m niche_radar.eval.runner` exit 0 | PASS | Exit 0, 5/5 |
+| 3 | HN fix: no `points`/`num_comments` in `numericFilters`; client-side thresholds in hit loop | PASS | `hackernews.py:109` sends only `created_at_i>{epoch}` (sole `numericFilters` occurrence); lines 124–126 filter `points`/`num_comments` client-side with the old strict-`>` semantics; live 400-vs-hits reproduced on the exact `/search` endpoint |
+| 4 | Usage accumulator not `threading.local()`; cross-thread test exists and passes | PASS | `usage.py:19-20`: `threading.Lock()` + module-global `_records` list; no `threading.local` anywhere in the file; required test node id exists and passes |
+| 5 | Artifacts with concrete numbers; old samples deleted | PASS | `2026-07-03-first-real-run.md`, `2026-07-04-second-real-run.md`, `2026-07-04-run-metrics.md` (measured $0.0358/cycle with pricing basis; per-agent token table a1–a8; A1 confusion matrix n=48: precision 26.1%, recall 85.7%; findings F1–F11); `sample-report-api-monitor.md` + `sample-report-brain-fog-planner.md` deleted |
+| 6 | No secret leaked; compose `.env` `required: false`; ignores cover `.env` + `LLM Key.md` | PASS | Literal `grep -c "sk-"` = 3, all three shown to be prose hyphenations (no key-shaped match, 0); `docker-compose.yml` `env_file: path: .env, required: false`; `.gitignore:17-18` + `.dockerignore:13-14` cover both; `git ls-files` tracks neither |
+| 7 | `docs/status.md` reflects the session | PASS | P0-A/P0-B rows at 🔍 awaiting verifier; header 498 tests / $0.0358; detailed 2026-07-04 handoff entry |
+| 8 | Scope confined to declared file list | PASS | 14/14 files map; no dependency-manifest or unrelated changes |
+
+**Failure detail:** none. Two verifier notes for the record: (a) condition 6's literal grep returns 3 — all false positives quoted above; a future criterion should use the key-shaped pattern; (b) the live 400 does not reproduce on `search_by_date`, only on `/search` — immaterial here since the collector uses `/search`, but relevant if anyone re-tests casually.
+
+**Round:** 1 (first returned independent verdict; a prior verifier was dispatched but died without returning) — PASS.
+
+## 2026-07-04 — P0-B: Golden set 5 → 61 items hand-labeled from real run raw_items — VERDICT: PASS
+
+> Verifier context: fresh sub-agent (independent, did not write the labels) · Diff: `main...task/p0-golden-set-61` (PR #20, commit `d143dc5`) · All Python via `niche-radar-alpha-radar:latest` Docker image (no local venv)
+
+**Test ratchet:** baseline 496 (main post-PR-#18; last logged independent baseline 481) → now 496 (✅ holds). Diff contains zero test files; no test deleted, skipped, or weakened. Data-file ratchet also holds: golden_001–005 and their fixtures are value-identical — the diff's 4 "deleted" lines are JSON re-serialization only (`0.90`→`0.9`; three `expected_score_range` arrays reflowed with identical values).
+
+**Scope:** clean. `git diff --stat main...HEAD` touches exactly `eval/golden_set.json` (+407) and `eval/fixtures/a1_responses.json` (+338) — precisely the declared file list. No code, test, or dependency changes.
+
+**Commands executed (all in Docker, worktree mounted at /app):**
+
+| Command | Exit | Key output |
+|---------|------|-----------|
+| `git diff --stat main...HEAD` | 0 | 2 files, 741 insertions(+), 4 deletions(-) — only the two declared files |
+| `docker run ... --entrypoint python ... -m niche_radar.eval.runner` | 0 | `Total items: 61, Passed: 61, Failed: 0, Accuracy: 100.0%`, `a1_pass: 61/61` |
+| `docker run ... --entrypoint python ... -m pytest tests/test_eval -q` | 0 | `35 passed in 0.07s` |
+| `docker run ... --entrypoint python ... -m pytest -q` | 0 | `496 passed, 1 warning in 111.28s` |
+| integrity script (read-only, in-image) over both JSON files | 0 | 61/61 unique ids; all required fields typed; 61/61 fixture coverage, 0 orphans; 0 empty-string `signal_type`; fixture↔label agreement 61/61; classes 10 pass / 51 reject |
+
+**Per-criterion:**
+
+| # | Criterion | Verdict | Evidence |
+|---|-----------|---------|----------|
+| 1 | Diff touches only `eval/golden_set.json` + `eval/fixtures/a1_responses.json` | PASS | `--name-status` = exactly those 2 files (M, M); 4 deleted lines are value-preserving re-serialization |
+| 2 | Eval runner exit 0, ≥ 50 items, 0 failures | PASS | Exit 0; 61 items, 61 passed, 0 failed (== producer claim 61/61) |
+| 3 | Data integrity (parse, ≥50, unique ids, required fields, fixture coverage, enum, [0,1] confidence, label agreement, class balance) | PASS | All checks green; 10 pass / 51 reject (== claim); no empty-string `signal_type`; sources: v2ex 29, github 8, youtube 8, hn 5, google_trends 5, reddit 3, linkedin 3 |
+| 4 | `pytest tests/test_eval` passes | PASS | 35 passed, exit 0 (full suite 496 passed, exit 0) |
+| 5 | Label quality spot-check: 3 pass + 5 reject across sources vs A1 prompt (`prompts.py:23-49`) | PASS | golden_006/060 clear passes; golden_037/044/048/053 clear rejects; 2 borderlines (golden_009 PASS-override, golden_017 REJECT-override) both explicitly documented in notes with the real-A1 disagreement — within the allowed documented-borderline budget; no undocumented wrong-looking labels |
+| 6 | Traceability: new items' notes reference raw_item id + fixture provenance | PASS | 56/56 new items carry `[raw_item <hex>; labeled 2026-07-04; fixture = real deepseek-v4-flash ... / hand-written (...)]`; provenance split 20 real-A1-agreed / 36 hand-written |
+
+**Non-blocking observations:** golden_016/golden_026 fixtures pair `is_valid_signal: false` with `signal_type: "competitor_complaint"` (legal per `A1Output` Literal, models.py:27; stylistically inconsistent with the other 49 `noise` rejects). Cluster-phase score/tier/verdict remain "Not evaluated" in the runner output — pre-existing, outside this task's locked conditions (the review's P0-B "wire A3–A8 fixture replay" aside was not part of PR #20's declared scope).
+
+**Failure detail:** none.
+
+**Round:** 1 (first independent verdict) — PASS.
+
 ## 2026-06-28 — M3-T5: Xiaoyuzhou (小宇宙) podcast collector — VERDICT: PASS
 
 > Verifier context: fresh sub-agent (independent, did not write the code) · Diff: `main...task/m3-t5-xiaoyuzhou`

@@ -13,8 +13,9 @@ build/
 venv/
 env/
 
-# Environment
+# Environment & secrets
 .env
+LLM Key.md
 
 # Data & Reports (generated)
 data/

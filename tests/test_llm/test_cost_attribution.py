@@ -51,18 +51,47 @@ class FakeUsage:
 def test_record_usage_with_niche_id():
     """record_usage accepts optional niche_id parameter."""
     record_usage("a4", "gpt-4", FakeUsage(), niche_id="niche-001")
-    from niche_radar.llm.usage import _local
-    r = _local.records[-1]
+    from niche_radar.llm.usage import _records
+    r = _records[-1]
     assert r.niche_candidate_id == "niche-001"
-    _local.records = []
+    _records.clear()
 
 
 def test_record_usage_without_niche_id_defaults_to_none():
     record_usage("a1", "gpt-4", FakeUsage())
-    from niche_radar.llm.usage import _local
-    r = _local.records[-1]
+    from niche_radar.llm.usage import _records
+    r = _records[-1]
     assert r.niche_candidate_id is None
-    _local.records = []
+    _records.clear()
+
+
+def test_flush_usage_sees_records_from_worker_threads(tmp_path: Path):
+    """Usage recorded in ThreadPoolExecutor workers (how phases A/C call the
+    LLM) must be visible to a flush on the main thread. The original
+    thread-local accumulator lost all worker records: the first real pipeline
+    run made 203 LLM calls and flushed 0 rows."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    db_path = str(tmp_path / "test.db")
+    _create_usage_table(db_path)
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        futures = [
+            pool.submit(record_usage, f"a{i % 8 + 1}", "gpt-4", FakeUsage())
+            for i in range(8)
+        ]
+        for f in futures:
+            f.result()
+
+    flushed = flush_usage(db_path, "run-threads")
+    assert flushed == 8
+
+    conn = sqlite3.connect(db_path)
+    count = conn.execute(
+        "SELECT COUNT(*) FROM llm_usage WHERE pipeline_run = 'run-threads'"
+    ).fetchone()[0]
+    conn.close()
+    assert count == 8
 
 
 def test_flush_usage_persists_niche_id(tmp_path: Path):
@@ -121,11 +150,38 @@ def test_get_usage_summary_includes_per_niche(tmp_path: Path):
 
 def test_record_usage_captures_cache_tokens():
     record_usage("a1", "gpt-4", FakeUsage(100, 50, 150, cached_tokens=40, cache_write_tokens=60))
-    from niche_radar.llm.usage import _local
-    r = _local.records[-1]
+    from niche_radar.llm.usage import _records
+    r = _records[-1]
     assert r.cached_tokens == 40
     assert r.cache_write_tokens == 60
-    _local.records = []
+    _records.clear()
+
+
+def test_record_usage_captures_openai_nested_and_deepseek_cache_tokens():
+    """Cache hits arrive as prompt_tokens_details.cached_tokens (OpenAI) or
+    prompt_cache_hit_tokens (DeepSeek) — both must be captured."""
+    from niche_radar.llm.usage import _records
+
+    class Details:
+        cached_tokens = 25
+
+    class OpenAIUsage:
+        prompt_tokens = 100
+        completion_tokens = 50
+        total_tokens = 150
+        prompt_tokens_details = Details()
+
+    class DeepSeekUsage:
+        prompt_tokens = 100
+        completion_tokens = 50
+        total_tokens = 150
+        prompt_cache_hit_tokens = 33
+
+    record_usage("a1", "gpt-4", OpenAIUsage())
+    assert _records[-1].cached_tokens == 25
+    record_usage("a1", "deepseek-v4-flash", DeepSeekUsage())
+    assert _records[-1].cached_tokens == 33
+    _records.clear()
 
 
 def test_flush_usage_persists_cache_tokens(tmp_path: Path):
