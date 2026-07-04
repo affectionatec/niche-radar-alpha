@@ -25,8 +25,344 @@
   },
   "golden_005": {
     "is_valid_signal": true,
-    "confidence": 0.90,
+    "confidence": 0.9,
     "signal_type": "pain_point",
     "reasoning": "Specific profession (DevOps engineer), clear manual process (15 SaaS status pages), quantifiable pain (every morning). Monitoring aggregator opportunity."
+  },
+  "golden_006": {
+    "is_valid_signal": true,
+    "confidence": 0.9,
+    "signal_type": "pain_point",
+    "reasoning": "User needs to prevent Codex App from reading .env files to protect API keys, but denying read permissions also impairs the app's memory and capabilities."
+  },
+  "golden_007": {
+    "is_valid_signal": true,
+    "confidence": 0.9,
+    "signal_type": "pain_point",
+    "reasoning": "Users of M-series Macs cannot force RGB output over HDMI on external displays, and existing workarounds are obsolete."
+  },
+  "golden_008": {
+    "is_valid_signal": true,
+    "confidence": 0.85,
+    "signal_type": "pain_point",
+    "reasoning": "Users face difficulty verifying the authenticity of AI models provided by relay stations, as some fake model identities and capabilities."
+  },
+  "golden_009": {
+    "is_valid_signal": true,
+    "confidence": 0.65,
+    "signal_type": "pain_point",
+    "reasoning": "Engineers need short-term access to realistic enterprise-grade LLM deployment environments to practice on; consumer GPU rentals don't replicate them."
+  },
+  "golden_010": {
+    "is_valid_signal": true,
+    "confidence": 0.7,
+    "signal_type": "pain_point",
+    "reasoning": "Developer running several AI-assisted projects in parallel loses track of each project's state and next steps; cross-project context management for AI coding is unmet."
+  },
+  "golden_011": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Support question about one tool's behavior (Antigravity stalling); no unmet product need stated."
+  },
+  "golden_012": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "How-to/configuration question about Apple ID age verification; no buildable product core."
+  },
+  "golden_013": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Product launch post: the author already built the training platform they describe; an ad, not an unmet need."
+  },
+  "golden_014": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Hardware purchase advice (which router runs a full BGP table); not a software product need."
+  },
+  "golden_015": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Personal account mishap story (Apple ID billing after gifting a subscription); a support issue, not a product signal."
+  },
+  "golden_016": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "competitor_complaint",
+    "reasoning": "Rant about Copilot Pro+ model availability; venting with no actionable core."
+  },
+  "golden_017": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Market commentary about overpriced AI-generated college-application reports; third-party observation, not a first-person unmet need."
+  },
+  "golden_018": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Complaint that Telegram's iOS push notifications are broken; platform outage chatter, nothing buildable."
+  },
+  "golden_019": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Router shopping advice (OpenWrt-capable model); hardware purchase, not a software need."
+  },
+  "golden_020": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Job-market venting about frontend hiring; emotional, no actionable product core."
+  },
+  "golden_021": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Telecom plan shopping question (China Unicom bundle); not software-related."
+  },
+  "golden_022": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Launch post for a Finder context-menu app the author already built; an announcement, not an unmet need."
+  },
+  "golden_023": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Essay on having to double-check AI search summaries; diffuse concern without a specific buildable need."
+  },
+  "golden_024": {
+    "is_valid_signal": false,
+    "confidence": 0.95,
+    "signal_type": "noise",
+    "reasoning": "General advice-seeking with no specific software-related pain point or unmet need."
+  },
+  "golden_025": {
+    "is_valid_signal": false,
+    "confidence": 1.0,
+    "signal_type": "noise",
+    "reasoning": "No software or workflow problem; it's a food preference discussion."
+  },
+  "golden_026": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "competitor_complaint",
+    "reasoning": "Complaint that Codex couldn't build a screenshot-stitching app well; stitching apps already exist (Picsew etc.), no unmet need."
+  },
+  "golden_027": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Recommendation/launch post for a wallpaper app; no unmet need."
+  },
+  "golden_028": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Launch post for the author's own AI-agent notification tool; solved by the author already."
+  },
+  "golden_029": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Launch post for the author's news CLI; an announcement, not a need."
+  },
+  "golden_030": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Launch post for a Wordle word-finder site; no unmet need."
+  },
+  "golden_031": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Market speculation that the AI coding wave has peaked; opinion, nothing buildable."
+  },
+  "golden_032": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Asking what a meme nickname for Gemini means; chatter."
+  },
+  "golden_033": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Career anxiety venting about frequent job changes; not a software need."
+  },
+  "golden_034": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Write-up sharing an experiment with Claude Code subagents; a story, not an unmet need."
+  },
+  "golden_035": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "A repo tagline (token-saving Claude skill); a product announcement, not a person describing an unmet need."
+  },
+  "golden_036": {
+    "is_valid_signal": false,
+    "confidence": 1.0,
+    "signal_type": "noise",
+    "reasoning": "No pain point expressed; just a product description."
+  },
+  "golden_037": {
+    "is_valid_signal": false,
+    "confidence": 0.95,
+    "signal_type": "noise",
+    "reasoning": "Text is a product description, not a user-expressed pain point."
+  },
+  "golden_038": {
+    "is_valid_signal": false,
+    "confidence": 0.0,
+    "signal_type": "noise",
+    "reasoning": "The text is a product description, not a user pain point or complaint."
+  },
+  "golden_039": {
+    "is_valid_signal": false,
+    "confidence": 0.9,
+    "signal_type": "noise",
+    "reasoning": "The text is a description of a GitHub repository, not a genuine user pain point. It presents a solution rather than a problem."
+  },
+  "golden_040": {
+    "is_valid_signal": false,
+    "confidence": 0.95,
+    "signal_type": "noise",
+    "reasoning": "Not a user pain point; it's a project description."
+  },
+  "golden_041": {
+    "is_valid_signal": false,
+    "confidence": 1.0,
+    "signal_type": "noise",
+    "reasoning": "Not a pain point; it's a product description."
+  },
+  "golden_042": {
+    "is_valid_signal": false,
+    "confidence": 0.95,
+    "signal_type": "noise",
+    "reasoning": "This is a product advertisement, not a user pain point."
+  },
+  "golden_043": {
+    "is_valid_signal": false,
+    "confidence": 1.0,
+    "signal_type": "noise",
+    "reasoning": "No pain point related to software or workflow; it's a search trend for a celebrity."
+  },
+  "golden_044": {
+    "is_valid_signal": false,
+    "confidence": 0.95,
+    "signal_type": "noise",
+    "reasoning": "Not a pain point; informational search query and news article snippet."
+  },
+  "golden_045": {
+    "is_valid_signal": false,
+    "confidence": 0.95,
+    "signal_type": "noise",
+    "reasoning": "The text is a search trend query and news headline, not a personal pain point or unmet need related to software or workflow."
+  },
+  "golden_046": {
+    "is_valid_signal": false,
+    "confidence": 1.0,
+    "signal_type": "noise",
+    "reasoning": "The text is a sports news headline about a WNBA player's technical fouls, not a genuine user pain point related to software, workflow, or information needs."
+  },
+  "golden_047": {
+    "is_valid_signal": false,
+    "confidence": 1.0,
+    "signal_type": "noise",
+    "reasoning": "Not a user pain point; it's a news headline about a festival lineup."
+  },
+  "golden_048": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Vague query, not a specific user pain point."
+  },
+  "golden_049": {
+    "is_valid_signal": false,
+    "confidence": 0.3,
+    "signal_type": "noise",
+    "reasoning": "vague complaint with no actionable core"
+  },
+  "golden_050": {
+    "is_valid_signal": false,
+    "confidence": 0.2,
+    "signal_type": "noise",
+    "reasoning": "Vague complaint with no actionable core; just a search query without specific context."
+  },
+  "golden_051": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Tool-roundup video ('I tested every AI agent'); content marketing, not a pain signal."
+  },
+  "golden_052": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Listicle video of open-source SaaS replacements; content marketing."
+  },
+  "golden_053": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "'5 Things I Wish I Knew Before Self Hosting' — despite the 'I wish' phrasing it is a tips listicle, not an unmet need."
+  },
+  "golden_054": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Tool promo video (n8n) with sponsor link; content marketing."
+  },
+  "golden_055": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "AI-tool roundup video with sponsor link; content marketing."
+  },
+  "golden_056": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "'Avoid Stripe' consulting-funnel video; marketing, not a first-person unmet need."
+  },
+  "golden_057": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Explainer video ('AI SaaS explained in 7 min') promoting a no-code tool; marketing."
+  },
+  "golden_058": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Homelab services tour video; a showcase, not a pain signal."
+  },
+  "golden_059": {
+    "is_valid_signal": true,
+    "confidence": 0.85,
+    "signal_type": "pain_point",
+    "reasoning": "Experienced developer cannot reach flow state with today's prompt-response AI coding loop and explicitly asks for a fundamentally different interaction model."
+  },
+  "golden_060": {
+    "is_valid_signal": true,
+    "confidence": 0.85,
+    "signal_type": "pain_point",
+    "reasoning": "AI coding assistants duplicate existing functionality, accumulate dead code, and lack whole-codebase awareness, degrading codebases over iterations."
+  },
+  "golden_061": {
+    "is_valid_signal": false,
+    "confidence": 0.1,
+    "signal_type": "noise",
+    "reasoning": "Rant about insufferable AI-evangelist posting on LinkedIn; social complaint without a product core."
   }
 }
