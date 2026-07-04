@@ -2,6 +2,41 @@
 
 > Append-only record of independent verdicts, **newest first**. A task moves to ✅ in `docs/status.md` only when a verifier with **fresh context** (sub-agent or fresh session — never the producer's conversation) re-runs the task's done condition from `docs/plans/implementation-plan.md` + `docs/spec/` and records PASS here with evidence. Never edit a past verdict.
 
+## 2026-07-04 — P0-B: Golden set 5 → 61 items hand-labeled from real run raw_items — VERDICT: PASS
+
+> Verifier context: fresh sub-agent (independent, did not write the labels) · Diff: `main...task/p0-golden-set-61` (PR #20, commit `d143dc5`) · All Python via `niche-radar-alpha-radar:latest` Docker image (no local venv)
+
+**Test ratchet:** baseline 496 (main post-PR-#18; last logged independent baseline 481) → now 496 (✅ holds). Diff contains zero test files; no test deleted, skipped, or weakened. Data-file ratchet also holds: golden_001–005 and their fixtures are value-identical — the diff's 4 "deleted" lines are JSON re-serialization only (`0.90`→`0.9`; three `expected_score_range` arrays reflowed with identical values).
+
+**Scope:** clean. `git diff --stat main...HEAD` touches exactly `eval/golden_set.json` (+407) and `eval/fixtures/a1_responses.json` (+338) — precisely the declared file list. No code, test, or dependency changes.
+
+**Commands executed (all in Docker, worktree mounted at /app):**
+
+| Command | Exit | Key output |
+|---------|------|-----------|
+| `git diff --stat main...HEAD` | 0 | 2 files, 741 insertions(+), 4 deletions(-) — only the two declared files |
+| `docker run ... --entrypoint python ... -m niche_radar.eval.runner` | 0 | `Total items: 61, Passed: 61, Failed: 0, Accuracy: 100.0%`, `a1_pass: 61/61` |
+| `docker run ... --entrypoint python ... -m pytest tests/test_eval -q` | 0 | `35 passed in 0.07s` |
+| `docker run ... --entrypoint python ... -m pytest -q` | 0 | `496 passed, 1 warning in 111.28s` |
+| integrity script (read-only, in-image) over both JSON files | 0 | 61/61 unique ids; all required fields typed; 61/61 fixture coverage, 0 orphans; 0 empty-string `signal_type`; fixture↔label agreement 61/61; classes 10 pass / 51 reject |
+
+**Per-criterion:**
+
+| # | Criterion | Verdict | Evidence |
+|---|-----------|---------|----------|
+| 1 | Diff touches only `eval/golden_set.json` + `eval/fixtures/a1_responses.json` | PASS | `--name-status` = exactly those 2 files (M, M); 4 deleted lines are value-preserving re-serialization |
+| 2 | Eval runner exit 0, ≥ 50 items, 0 failures | PASS | Exit 0; 61 items, 61 passed, 0 failed (== producer claim 61/61) |
+| 3 | Data integrity (parse, ≥50, unique ids, required fields, fixture coverage, enum, [0,1] confidence, label agreement, class balance) | PASS | All checks green; 10 pass / 51 reject (== claim); no empty-string `signal_type`; sources: v2ex 29, github 8, youtube 8, hn 5, google_trends 5, reddit 3, linkedin 3 |
+| 4 | `pytest tests/test_eval` passes | PASS | 35 passed, exit 0 (full suite 496 passed, exit 0) |
+| 5 | Label quality spot-check: 3 pass + 5 reject across sources vs A1 prompt (`prompts.py:23-49`) | PASS | golden_006/060 clear passes; golden_037/044/048/053 clear rejects; 2 borderlines (golden_009 PASS-override, golden_017 REJECT-override) both explicitly documented in notes with the real-A1 disagreement — within the allowed documented-borderline budget; no undocumented wrong-looking labels |
+| 6 | Traceability: new items' notes reference raw_item id + fixture provenance | PASS | 56/56 new items carry `[raw_item <hex>; labeled 2026-07-04; fixture = real deepseek-v4-flash ... / hand-written (...)]`; provenance split 20 real-A1-agreed / 36 hand-written |
+
+**Non-blocking observations:** golden_016/golden_026 fixtures pair `is_valid_signal: false` with `signal_type: "competitor_complaint"` (legal per `A1Output` Literal, models.py:27; stylistically inconsistent with the other 49 `noise` rejects). Cluster-phase score/tier/verdict remain "Not evaluated" in the runner output — pre-existing, outside this task's locked conditions (the review's P0-B "wire A3–A8 fixture replay" aside was not part of PR #20's declared scope).
+
+**Failure detail:** none.
+
+**Round:** 1 (first independent verdict) — PASS.
+
 ## 2026-06-28 — M3-T5: Xiaoyuzhou (小宇宙) podcast collector — VERDICT: PASS
 
 > Verifier context: fresh sub-agent (independent, did not write the code) · Diff: `main...task/m3-t5-xiaoyuzhou`

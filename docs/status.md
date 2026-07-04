@@ -29,7 +29,7 @@ Plan & contracts: `docs/plans/implementation-plan.md`. Legend: ⬜ not started �
 | M3-T5 小宇宙 podcast collector | ✅ | **Verifier PASS** (2026-06-28) + merged (PR #17 = e52379e). Agent-Reach port complete. |
 | First-principles review + eval-gate rewrite + canary | ✅ | Merged (PR #18 = a7a0a2f). |
 | P0-A First measured real E2E run + live-rot fixes | 🔍 | Branch `task/p0-first-real-run`. 2 cycles on deepseek-v4-flash via Docker; HN Algolia fix + llm_usage thread-safety fix (+2 tests, 498 total); real report artifacts + `2026-07-04-run-metrics.md` (11 findings F1–F11). Awaiting verifier. |
-| P0-B Golden set 5 → 61 from real raw_items | 🔍 | Branch `task/p0-golden-set-61`. 61 items (10 pass/51 reject) labeled from the real runs, fixtures reuse real model responses where they agree with labels; eval gate 61/61. A1 calibration: precision 26.1% / recall 85.7% (n=48). Awaiting verifier. |
+| P0-B Golden set 5 → 61 from real raw_items | ✅ | **Verifier PASS** (2026-07-04, `docs/verification-log.md`, round 1). 61 items (10 pass/51 reject), eval gate 61/61, integrity + label spot-check clean. PR #20 ready for human gate. A1 calibration: precision 26.1% / recall 85.7% (n=48). |
 | M4-T1/T2 Cookie/ToS channels (小红书 Jina relay + LinkedIn public+Jina) | ✅ | **Verifier PASS** (`docs/verification-log.md`, 2026-06-27) + merged (PR #16). 473 tests. ADR-007, ADR-008. |
 
 ## Decisions
