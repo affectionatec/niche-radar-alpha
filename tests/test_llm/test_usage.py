@@ -25,31 +25,31 @@ class FakeUsage:
 # ── record_usage ─────────────────────────────────────────────────────────
 
 
-def test_record_usage_stores_on_thread_local():
+def test_record_usage_stores_in_accumulator():
     record_usage("a1", "gpt-4", FakeUsage(100, 50, 150))
-    from niche_radar.llm.usage import _local
-    assert len(_local.records) == 1
-    r = _local.records[0]
+    from niche_radar.llm.usage import _records
+    assert len(_records) == 1
+    r = _records[0]
     assert r.agent == "a1"
     assert r.model == "gpt-4"
     assert r.prompt_tokens == 100
     assert r.completion_tokens == 50
     assert r.total_tokens == 150
-    _local.records = []
+    _records.clear()
 
 
 def test_record_usage_noop_on_none_usage():
     record_usage("a1", "gpt-4", None)
-    from niche_radar.llm.usage import _local
-    assert not hasattr(_local, "records") or _local.records == []
+    from niche_radar.llm.usage import _records
+    assert _records == []
 
 
 def test_record_usage_computes_total_if_missing():
     record_usage("a1", "gpt-4", FakeUsage(30, 20, 0))
-    from niche_radar.llm.usage import _local
-    r = _local.records[0]
+    from niche_radar.llm.usage import _records
+    r = _records[0]
     assert r.total_tokens == 50  # 30 + 20
-    _local.records = []
+    _records.clear()
 
 
 # ── flush_usage ──────────────────────────────────────────────────────────
@@ -96,7 +96,7 @@ def test_flush_usage_persists_to_db(tmp_path: Path):
 
 def test_flush_usage_clears_records_after_flush():
     record_usage("a1", "model", FakeUsage())
-    from niche_radar.llm.usage import _local
+    from niche_radar.llm.usage import _records
 
     db_path = str(Path("/tmp") / "test_flush_clear.db")
     conn = sqlite3.connect(db_path)
@@ -112,7 +112,7 @@ def test_flush_usage_clears_records_after_flush():
     conn.close()
 
     flush_usage(db_path, "run-002")
-    assert _local.records == []
+    assert _records == []
 
 
 def test_flush_usage_no_records_returns_zero(tmp_path: Path):
@@ -129,8 +129,8 @@ def test_flush_usage_no_records_returns_zero(tmp_path: Path):
     conn.commit()
     conn.close()
 
-    from niche_radar.llm.usage import _local
-    _local.records = []
+    from niche_radar.llm.usage import _records
+    _records.clear()
     count = flush_usage(db_path, "run-003")
     assert count == 0
 

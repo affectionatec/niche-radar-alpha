@@ -11,8 +11,13 @@ import structlog
 
 logger = structlog.get_logger()
 
-# Thread-local accumulator — agents log usage here, flushed at end of run
-_local = threading.local()
+# Process-global accumulator — agents record usage from ThreadPoolExecutor
+# worker threads (phases A and C run parallel), while flush_usage runs on the
+# main thread. A thread-local store here silently loses every worker thread's
+# records (found in the first real measured run, 2026-07-03: 203 LLM calls,
+# zero llm_usage rows), so the accumulator must be shared and lock-guarded.
+_lock = threading.Lock()
+_records: list[UsageRecord] = []
 
 
 @dataclass
@@ -27,6 +32,19 @@ class UsageRecord:
     niche_candidate_id: str | None = None
 
 
+def _cached_tokens(usage: Any) -> int:
+    """Cache-hit prompt tokens across provider shapes: flat `cached_tokens`
+    (Anthropic adapter / tests), OpenAI's `prompt_tokens_details.cached_tokens`,
+    DeepSeek's top-level `prompt_cache_hit_tokens`."""
+    cached = getattr(usage, "cached_tokens", 0) or 0
+    if not cached:
+        details = getattr(usage, "prompt_tokens_details", None)
+        cached = (getattr(details, "cached_tokens", 0) or 0) if details is not None else 0
+    if not cached:
+        cached = getattr(usage, "prompt_cache_hit_tokens", 0) or 0
+    return cached
+
+
 def record_usage(agent: str, model: str, usage: Any, *, niche_id: str | None = None) -> None:
     """Record a single LLM call's usage. `usage` is the OpenAI-style usage object."""
     if usage is None:
@@ -34,22 +52,27 @@ def record_usage(agent: str, model: str, usage: Any, *, niche_id: str | None = N
     prompt = getattr(usage, "prompt_tokens", 0) or 0
     completion = getattr(usage, "completion_tokens", 0) or 0
     total = getattr(usage, "total_tokens", 0) or (prompt + completion)
-    cached = getattr(usage, "cached_tokens", 0) or 0
+    cached = _cached_tokens(usage)
     cache_write = getattr(usage, "cache_write_tokens", 0) or 0
 
-    if not hasattr(_local, "records"):
-        _local.records = []
-    _local.records.append(UsageRecord(
+    record = UsageRecord(
         agent=agent, model=model,
         prompt_tokens=prompt, completion_tokens=completion, total_tokens=total,
         cached_tokens=cached, cache_write_tokens=cache_write,
         niche_candidate_id=niche_id,
-    ))
+    )
+    with _lock:
+        _records.append(record)
 
 
 def flush_usage(db_path: str, pipeline_run: str) -> int:
-    """Write accumulated usage records to the database. Returns count flushed."""
-    records: list[UsageRecord] = getattr(_local, "records", [])
+    """Write accumulated usage records to the database. Returns count flushed.
+
+    Drains records logged by any thread since the last flush.
+    """
+    with _lock:
+        records: list[UsageRecord] = list(_records)
+        _records.clear()
     if not records:
         return 0
     try:
@@ -64,9 +87,7 @@ def flush_usage(db_path: str, pipeline_run: str) -> int:
         conn.close()
     except Exception as exc:
         logger.warning("flush_usage_failed", error=str(exc))
-    count = len(records)
-    _local.records = []
-    return count
+    return len(records)
 
 
 def get_usage_summary(db_path: str, days: int = 30) -> dict:
