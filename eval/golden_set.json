@@ -6,7 +6,10 @@
     "expected_a1_pass": true,
     "expected_a6_verdict": "GO",
     "expected_tier": "hot",
-    "expected_score_range": [45, 70],
+    "expected_score_range": [
+      45,
+      70
+    ],
     "notes": "Clear pain, specific user, monetizable, moderate competition"
   },
   {
@@ -23,7 +26,10 @@
     "expected_a1_pass": true,
     "expected_a6_verdict": "GO",
     "expected_tier": "hot",
-    "expected_score_range": [40, 65],
+    "expected_score_range": [
+      40,
+      65
+    ],
     "notes": "Explicit willingness to pay, niche health tracking"
   },
   {
@@ -39,7 +45,402 @@
     "source": "hn",
     "expected_a1_pass": true,
     "expected_a6_verdict": "GO",
-    "expected_score_range": [50, 70],
+    "expected_score_range": [
+      50,
+      70
+    ],
     "notes": "Clear pain, specific audience (DevOps), existing competitors but gap exists"
+  },
+  {
+    "item_id": "golden_006",
+    "text": "老哥们 请教一个 Codex App 的使用问题：如何不让它读取.env*的文件内容？\n\n现在使用 Codex 桌面版，使用的是 Full Access 完全访问模式\r\n\r\n但是开发过程中.env 中有 API Key\r\n\r\n如何不让它读取.env*的文件？\r\n\r\n---\r\n\r\n使用过 permissions 相关的配置，但是用了之后它读取不到自己的记忆，能力下降了很多\r\n\r\n老哥们是如何解决这个问题的？可以借鉴一下老哥们的 config.toml 配置么\r\n```\r\ndefault_permissions = \"workspace-network-no-env\"\r\n\r\n# Custom permission profile: keep project work fast while blocking env files.\r\n[permissions.workspace-network-no-env.filesystem]\r\n\":minimal\" = \"read\"\r\n\":tmpdir\" = \"write\"\r\n\":slash_tmp\" = \"write\"\r\n\"~/.gitconfig\" = \"read\"\r\n\"~/.config/git\" = \"read\"\r\nglob_scan_max_depth = 6\r\n\r\n[permissions.workspace-network-no-env.filesystem.\":workspace_roots\"]\r\n\".\" = \"write\"\r\n\".env\" = \"deny\"\r\n\".env.*\" = \"deny\"\r\n\"**/.env\" = \"den",
+    "source": "v2ex",
+    "expected_a1_pass": true,
+    "notes": "Real v2ex item. Secret-scoping for AI coding agents; clear developer pain. [raw_item 150454cb; labeled 2026-07-04; fixture = real deepseek-v4-flash A1 response (agreed with label)]"
+  },
+  {
+    "item_id": "golden_007",
+    "text": "macos 26 (M5) 外接 HDMI 显示器，现在还有什么方法能强制 RGB 输出吗？\n\n似乎网上的方法要么是针对 intel mac 的，要么是针对早期版本系统+M1/M2 的，在我的设备上全部无法生效。",
+    "source": "v2ex",
+    "expected_a1_pass": true,
+    "notes": "Real v2ex item. Existing fixes rot with each macOS/silicon rev; recurring niche. [raw_item 8942431f; labeled 2026-07-04; fixture = real deepseek-v4-flash A1 response (agreed with label)]"
+  },
+  {
+    "item_id": "golden_008",
+    "text": "请教下 AI 中转站模型真伪测试跑分标准\n\n因为有的中转站会造假，所以就整了个 AI 中转站的跑分网页。\r\n网站上个月就做出来了，但之前比较忙，还没有开始真的按计划跑。\r\n\r\n这段时间我也接触过其他的一些中转站，按正常来说，比如 GPT5.5 模型，是支持图片的，\r\n但是为什么我在使用一些中转站的时候，提示他不支持图片？如果做其他内容测试吧，又判断出来是 GPT5.5 的模型？\r\n\r\n\r\n\r\n我现在的跑分测试是 25 个，考虑到网络延迟的情况，很多都做了最低标准的限制。\r\n我自己是想加上图片测试的，但是测试几个结果和我想象的不一样，是我提示词不对吗。\r\n\r\n各位还有什么好的建议，可以尽可能的去测试模型的真伪？\r\n\r\nhttps://www.jingxialai.com/apirank/\r\n\r\n现在网站上的几个中转站有这两天新提交的，也有我在其他群里面看见，我加进去的。\r\n\r\n这是我现在的：\r\n\r\n① 自我认知探测\r\n② API 响应字段核查\r\n③ 字母计数测试\r\n④ 单词逆序测试\r\n⑤ 语言陷阱题\r\n⑥ 数学推理\r\n⑦ 组合数学\r\n⑧ 数值比较\r\n⑨ 精确格式控制\r\n⑩ 响应速度分析\r\n⑪ 一致性重复测试\r\n⑫ 幻觉检测\r\n⑬ 复杂指令遵循\r\n⑭ 反事实推理\r\n⑮ 高级逻辑推理\r\n⑯ 代码生成\r\n⑰ 流式输出检测\r\n⑱ 知识截止日期探测\r\n⑲ 中文能力深度测试\r\n⑳ 异构语言查错 (Rust)\r\n㉑ 多轮对话记忆测试\r\n㉒ 函数调用能力探针\r\n㉓ 多模态盲降级探测\r\n㉔ 空间方向推理测试\r\n㉕ 极端字符约束能力",
+    "source": "v2ex",
+    "expected_a1_pass": true,
+    "notes": "Real v2ex item. Model-authenticity verification for API resellers; unmet. [raw_item 3fa7c22c; labeled 2026-07-04; fixture = real deepseek-v4-flash A1 response (agreed with label)]"
+  },
+  {
+    "item_id": "golden_009",
+    "text": "不懂就问，简历中吹嘘自己是公司大模型部署的维护人，哪里能找到真实点的企业设备？\n\n不清楚企业级部署是不是和我们租用个 4090 平台一样部署，想租几天企业级的硬件自己玩几天，看看有什么区别？",
+    "source": "v2ex",
+    "expected_a1_pass": true,
+    "notes": "Real v2ex item. Borderline: real A1 (deepseek-v4-flash 2026-07-03) REJECTED this; labeled PASS — rentable enterprise-like practice environments are a real gap. [raw_item f2e2f490; labeled 2026-07-04; fixture hand-written (real A1 disagreed with label)]"
+  },
+  {
+    "item_id": "golden_010",
+    "text": "Vibe Coding 时上下文最先满的竟是自己？\n\n我最近同时开发多个项目，我自己的上下文已经不够用了哈哈哈哈。已经不知道某个项目接下来该干啥了。开始陷于短暂的痴呆了",
+    "source": "v2ex",
+    "expected_a1_pass": true,
+    "notes": "Real v2ex item. Half-joking tone but a genuine emerging pain of parallel vibe-coding. [raw_item ef31e4ee; labeled 2026-07-04; fixture hand-written (item not analyzed at labeling time)]"
+  },
+  {
+    "item_id": "golden_011",
+    "text": "有用 antigravity 的朋友吗\n\n我想把它当成 Claude 和 codex 的替代品可以吗，Claude 和 codex 老是封号，然后 ip 不对一点就又用不了，我现在 antigravity 使用很稳定，但是有个问题就是问他问题不回答，就思考着思考着就没了，有用过的老铁可以帮忙解答一下到底是咋回事吗",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item. Real A1 PASSED this support question (0.85) — over-permissive. [raw_item 0ca120af; labeled 2026-07-04; fixture hand-written (real A1 disagreed with label)]"
+  },
+  {
+    "item_id": "golden_012",
+    "text": "iPhone 美区 Apple ID 初始化， App Store 安装 App 被要求确认是否 18 岁，应该如何配置？\n\n- 要求扫描证件，没有，真没有。\r\n- 理解他的说明，好像可以录入(绑定信用卡到 iPhone)也行?\r\n  - 不想贸然鲁莽尝试，请问:\r\n    - 如果拿国内 VISA 卡去绑，应该录入不了吧？\r\n    - 如果拿海外虚拟信用卡，是否可以？\r\n      - 是不是一定要美区发卡的虚拟信用卡？\r\n    - (虚拟/实体信用卡)账单地址和 Apple ID 注册的住宅地址，有关系吗？",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item. Real A1 PASSED this how-to question (0.8) — over-permissive. [raw_item 153f9dd0; labeled 2026-07-04; fixture hand-written (real A1 disagreed with label)]"
+  },
+  {
+    "item_id": "golden_013",
+    "text": "我们做了一个基于负荷的耐力训练平台 Trainingload.ai，想请跑步/骑行朋友试试\n\n大家好，我是 Trainingload.ai 团队。\r\n过去一段时间，我们一直在做一个面向跑步、骑行、游泳和铁三训练者的工具：Trainingload.ai 。\r\n它不是一个单纯记录运动数据的 App 。我们更想解决的问题是：训练计划规划、训练完成完成的真实情况、训练负荷和复盘建议等，它们经常散落在不同地方。你可能在一个平台看活动记录，在另一个表格排计划，再用感觉判断要不要加量或恢复。时间久了，很难知道自己到底是在稳定进步，还是只是在堆训练量。\r\n所以我们做了 Trainingload.ai：把计划、活动、负荷和 AI 教练放进同一个训练闭环里。\r\n\r\n目前它主要能做这些事：\r\n- 通过 AI 教练或者 手动 来制定和管理结构化训练计划。\r\n- 把真实完成的运动关联回计划，看计划执行情况。\r\n- 目前支持 Strava 、Polar 、Intervals.icu 等平台同步，同样也可以上传 GPX / FIT / TCX 文件，在将来，我们会支持更多的平台。\r\n- 用 PMC / CTL / ATL / TSB 等训练负荷指标观察体能、疲劳和状态\r\n- 分析跑步、骑行、游泳等耐力训练数据，包括心率、功率、配速、阈值、VO₂max 趋势和最佳表现等。\r\n- 通过 AI 教练对运动进行复盘，对训练计划进行规划以及变动等\r\n- AI 教练并不会擅自改计划，他会在调整前会先给你看，由你确认后再应用。\r\n我们希望它适合这些人：\r\n- 5km 、10km 等跑步比赛/训练、骑行提升或铁三训练的人。",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item. Real A1 PASSED this launch post (0.95) — launches must be rejected. [raw_item a7a757ea; labeled 2026-07-04; fixture hand-written (real A1 disagreed with label)]"
+  },
+  {
+    "item_id": "golden_014",
+    "text": "家里路由器跑 BGP 全表的话，买什么路由器比较合适？\n\n大厂的太贵了\r\n看了下 MikroTik CCR2004 的成本还可以，4G 内存够用吗？",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item. Real A1 PASSED this shopping question (0.8) — over-permissive. [raw_item df9cb40a; labeled 2026-07-04; fixture hand-written (real A1 disagreed with label)]"
+  },
+  {
+    "item_id": "golden_015",
+    "text": "因为帮朋友代充了 ChatGPT Plus，我的 Apple ID 不干净了\n\n起因是前几个月，我用我的美区 Apple Id ，帮我朋友代充了 ChatGPT Plus ，后面这个订阅过期了。\r\n\r\n后来我朋友用自己注册的美区 Apple Id 给自己的 ChatGPT 充值了。\r\n\r\n我最近由于工作需要使用 Codex ，准备自己充一波，钱扣了，然后提示什么错误，发现没有充上。\r\n\r\n点击恢复购买，提示 “你的 AppleID 购买项目关联到另一个 ChatGPT 账号。巴拉巴拉...”。\r\n\r\n后面跟我朋友联系，发现充到他的账号上了。并且是覆盖式的，他在 6 月 30 号充值的，我今天 7 月 3 号 充值的。他的 ChatGPT 账号显示 8 月 3 号过期...\r\n\r\n后来翻阅相关文档，发现是永久绑定的，天塌了！这个美区 Apple ID 是我长期使用的...以前真不知道，还有这样的操作",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item. Real A1 PASSED this (0.95) — over-permissive. [raw_item cc9d2350; labeled 2026-07-04; fixture hand-written (real A1 disagreed with label)]"
+  },
+  {
+    "item_id": "golden_016",
+    "text": "微软， github 这是在做什么！\n\nhttps://docs.github.com/en/copilot/get-started/plans\r\n\r\n这个页面写的很多 copilot pro 和 pro+的模型，升级了 pro+还是不能用，为升级以前以为升级就可用了，没想到升级了，还是出不来，从未见过如此厚颜无耻之人！",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item. Real A1 PASSED this rant (0.95) — over-permissive. [raw_item 7f0d7067; labeled 2026-07-04; fixture hand-written (real A1 disagreed with label)]"
+  },
+  {
+    "item_id": "golden_017",
+    "text": "教人填志愿这钱真好赚啊， AI 报告卖 12980\n\n前阵子家里亲戚要填高考志愿，我跟着看了一圈，才发现这门生意比我想象中夸张。\r\n\r\n有机构报价几千到一万多，包装得很完整：一对一老师、专业测评、院校分析、冲稳保方案、未来职业规划。家长听完以后很容易觉得“虽然贵，但孩子就这一次，买个安心也值”。\r\n\r\n但我看完几份所谓的志愿方案之后，第一反应不是专业，而是熟悉。\r\n\r\n熟悉到什么程度呢？就是那种很像 AI 生成的文章：每段都很完整，每个结论都很圆滑，关键词也都在，比如“结合兴趣”“综合院校层次”“未来就业趋势”“城市发展潜力”。看着没错，但你真要追问依据，它又没有给出多少能核验的东西。\r\n\r\n后来央视也曝光过类似情况：有些高价志愿填报服务，背后的方案可能就是用免费 AI 生成的。所谓老师或者规划师，做的事可能只是把 AI 写出来的内容包装一下，再讲给家长听。\r\n\r\n ![]( https://i.imgur.com/ARRAwfZ.png) \r\n\r\n这件事让我觉得挺危险的。\r\n\r\n不是说 AI 不能用，而是高考志愿这个场景，最怕的不是“建议不够好听”，而是“建议没有证据”。\r\n\r\n我后来主要看这几个点\r\n\r\n一开始我也以为报志愿就是看分数、看位次、排个冲稳保。真正翻资料以后才发现，里面很多坑不是靠一句“综合判断”能解决的。\r\n\r\n比如一个专业能不能报，不能只看去年最低分，还要看：\r\n\r\n- 今年招生人数有没有变化；\r\n- 对选科有没有限制；\r\n- 有没有单科成绩要求；\r\n- 有没有体检限制；\r\n- 专业在哪个校区；\r\n- 学费、住宿、培养方向有没有特殊说明；\r\n- 如果服从调剂",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item. Real A1 PASSED (0.9) and it became the #1 'quick win' in the first real report — flagship over-permissive case. [raw_item 83d83f2f; labeled 2026-07-04; fixture hand-written (real A1 disagreed with label)]"
+  },
+  {
+    "item_id": "golden_018",
+    "text": "Telegram 的 iOS 通知是彻底完了吗?\n\n虽然以后代理解决方案,但我一般非必要情况不开代理,家里使用 mihomo 配了规则,连上 Wifi 可以无感接收通知,但是切换成数据流量就不行了,这已经 2 个月了吧,以后是不是也恢复不了了?",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item. Real A1 PASSED this (0.85) — over-permissive. [raw_item 3b1056f3; labeled 2026-07-04; fixture hand-written (real A1 disagreed with label)]"
+  },
+  {
+    "item_id": "golden_019",
+    "text": "想买个支持刷 openwrt 的路由器当主路由, 有什么型号推荐吗?\n\n预算 1000 以内, 看了 glinet mt6000, 有说断流很严重的",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item. Real A1 PASSED this shopping question (0.9) — over-permissive. [raw_item ee1490fa; labeled 2026-07-04; fixture hand-written (real A1 disagreed with label)]"
+  },
+  {
+    "item_id": "golden_020",
+    "text": "多年以后，面对前端如此困难的求职环境，你是否还会回想起当初第一次敲下 HTML 的那个遥远的下午\n\n哎，工作好难找。\r\n打了几千个招呼，就个位数约面，然后走不到终面就没消息了。\r\n最近这家更是不做人了，HR 好友都加不上，面完一周也没消息。在线面试面试官也不开摄像头。\r\n多年以后，面对前端如此困难的求职环境，你是否还会回想起当初第一次敲下 HTML ，听着电脑机箱风扇的噪音，吹着风扇，室友在上铺打着农药的那个遥远的下午。",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item. Real A1 PASSED this rant (0.9) — over-permissive. [raw_item 71ad6961; labeled 2026-07-04; fixture hand-written (real A1 disagreed with label)]"
+  },
+  {
+    "item_id": "golden_021",
+    "text": "广东深圳联通有融合套餐推荐吗？\n\n联通的流量王黄金尊享版已经下架了，错失\r\n\r\n10010 客服和 app 客服说改畅越黄金版 230G+400 分钟，可以送低消宽带 1000 兆；但实际宽带业务部门说办不了，前后口径不一致。\r\n\r\n大佬们，现在有什么推荐吗？\r\n\r\n不换号，补办新卡，只改套餐\r\n\r\n流量和套餐都要，现在联通给我的建议是 79 元 60G+100 分钟+1000 兆宽带，但是和原来差额太大了",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item. Real A1 PASSED this (0.9) — over-permissive. [raw_item ef0a27a0; labeled 2026-07-04; fixture hand-written (real A1 disagreed with label)]"
+  },
+  {
+    "item_id": "golden_022",
+    "text": "vibe 了一个 macOS 上访达右键菜单增强的应用\n\n前几天 v 友 @bush911 发帖问 mac 上访如何快速地新建 txt 文件\r\n刚好我也有类似的需求，于是，codex 直接干了一个应用\r\n\r\n代码地址: https://github.com/Funnyrz/ClickMate\r\n\r\n下载地址： https://github.com/Funnyrz/ClickMate/releases/download/v1.0/ClickMate-unsigned.dmg\r\n https://i.imgur.com/9V6uvjx.png \r\n https://i.imgur.com/OXuCUG2.png \r\n https://i.imgur.com/1gt1Q2U.png",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item. Real A1 PASSED this launch (0.95) — over-permissive. [raw_item 461cbce6; labeled 2026-07-04; fixture hand-written (real A1 disagreed with label)]"
+  },
+  {
+    "item_id": "golden_023",
+    "text": "搜索引擎开始替你下结论之后，查资料反而更要小心了\n\n最近在准备一个技术分享，里面有一段要讲某个方案的选型背景。这个领域我不是特别熟，以前的做法就是 Google 一圈，看几篇博客、官方文档和 issue ，再自己整理。\r\n\r\n现在会下意识先问 AI 搜索。它确实很快，几秒钟就能给你一段像样的总结，甚至还能顺手列出优缺点。\r\n\r\n ![]( https://i.imgur.com/47GIk8c.png) \r\n\r\n但问题也在这里：如果我直接把这段总结写进文章里，结果方案理解错了、引用了过期信息，或者漏掉了一个关键限制，发出去就很尴尬。尤其是写技术分享、做汇报、给团队提方案的时候，错的不只是一个答案，而是后面整套判断。\r\n\r\n以前搜索引擎主要给链接，你至少会点进去看看是谁写的、什么时候写的、有没有上下文。现在 AI 搜索经常直接给结论，人很容易懒得再点原文。\r\n\r\n我最近看到一篇 MIT 相关的论文，里面提到一个挺值得注意的点：AI 搜索更容易引用头部网站，长尾网站会更难被看见。也就是说，很多细节博客、论坛讨论、issue 里的反例，可能还在网上，但在 AI 总结里被压掉了。\r\n\r\n ![]( https://i.imgur.com/ENfUxre.png) \r\n\r\n这件事对内容创作者也挺伤。以前用户搜到你的文章，至少会进来看看。现在你的内容可能被 AI 用来生成答案，但用户看到的只是搜索页上的一段总结。\r\n\r\n对使用者来说，麻烦在于你很难知道这段总结漏了什么。\r\n\r\n比如 AI 说：\r\n\r\n目前业内普遍认为，某某方案在成本和稳定性之间取得了较好平衡。\r\n\r\n这句话看起来很稳，但继",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item. Real A1 PASSED this essay (0.95) — over-permissive. [raw_item f9f1cc3f; labeled 2026-07-04; fixture hand-written (real A1 disagreed with label)]"
+  },
+  {
+    "item_id": "golden_024",
+    "text": "家里亲戚今年高考，求推荐本科专业\n\n如题，求推荐本科好就业的专业。\r\n\r\n分数这些我就不贴这里了，现在 AI 帮填志愿已经挺成熟，但就是专业这块拿不准，当前填志愿的方向是：城市选择不重要，专业选择放在第一，毕业了能找到工作才是硬道理。这个志愿填报方向也欢迎交流、指导。",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item. Correctly rejected by real A1. [raw_item 5a24998b; labeled 2026-07-04; fixture = real deepseek-v4-flash A1 response (agreed with label)]"
+  },
+  {
+    "item_id": "golden_025",
+    "text": "咸粽子好吃还是甜粽子好吃？\n\n本人经常吃甜粽子，感觉甜粽子好吃，但是上一个端午节 朋友从南方寄过来几个咸粽子，有叉烧肉咸蛋黄的，有腊肉的还有一个是包的鲜肉粽。感觉都能接受呢？（把币扔给我🤣）",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item. Correctly rejected by real A1. [raw_item b13f3519; labeled 2026-07-04; fixture = real deepseek-v4-flash A1 response (agreed with label)]"
+  },
+  {
+    "item_id": "golden_026",
+    "text": "codex 似乎也没有说的那么神~\n\n使用 codex 官方 api,想创建一个 iphone 长截图拼接 app,以为是一把直接梭哈,结果烧完 5 小时重置一遍还是不能用哈...\r\n\r\n多张图片导入拼接,上下部重复区域识别太拉跨,最后是手动调节上下部重复区域.但是拼接重影严重\r\n\r\n导入滚动视频想自动生成长截图更是惨不忍睹哈.直接放弃\r\n\r\n\r\n\r\n有点难度的,感觉还是不行.各位程序员大哥一时半会也不会完全被优化 ;-)",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item (cycle-2 batch). [raw_item daee34a2; labeled 2026-07-04; fixture hand-written (item not analyzed at labeling time)]"
+  },
+  {
+    "item_id": "golden_027",
+    "text": "Mac 端最强动态壁纸 APP： Backdrop\n\n## 我愿称之为 Mac 端最强动态壁纸 APP ！！\r\n\r\n\r\n无论是锁屏、还是桌面常驻都运行地非常丝滑，而且功耗很低。\r\n\r\n\r\n可以自己使用高清视频创建壁纸，除了没声音，其他都很完美（但我觉得有声音反而很聒噪）\r\n\r\n## 官方网站\r\n\r\nhttps://cindori.com/backdrop\r\n\r\n目前是收费的（我是先上车最近补的订阅），价格还行有试用。当然我相信你有另外的办法 Orz\r\n\r\n\r\n我的桌面壁纸，其实是动态的，但只能发图片。\r\n\r\n![]( https://i.imgur.com/rssL0yc.jpeg)",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item (cycle-2 batch). [raw_item 58453ce0; labeled 2026-07-04; fixture hand-written (item not analyzed at labeling time)]"
+  },
+  {
+    "item_id": "golden_028",
+    "text": "推荐一个我自己开发的自用的 AI Agent 通知工具吧\n\n项目地址： https://github.com/LetTTGACO/agent-notify/blob/main/README-CN.md\r\n\r\n通过接收 AI Agent 原始 hook 事件，在服务端格式化成简短、行动导向的通知，并通过 Bark 或 ntfy 推送到你的手机或桌面。\r\n\r\n## 它能做什么\r\n\r\n- 接收 AI Agent 原始 hook 事件。\r\n- 在服务端格式化简短、行动导向的通知（权限请求、提问、错误、长任务完成）。\r\n- 让短任务（默认 120 秒以内）保持安静，只在会话运行时间足够长时提醒你。\r\n- 用防抖/节流限制 60s 之内的多次权限通知，减少权限/问题提醒刷屏。\r\n- 提供按工具独立的 `/agent-notify` 开关（本质是 skill ），支持当前会话、定时和持久静音。\r\n- 通过 Bark （ iPhone / Apple Watch ）或 ntfy （跨平台）推送。\r\n  \r\n  \r\n## 我为什么开发这个工具\r\n\r\n目前我是使用 Codex 桌面端作为主力，Claude Code/OpenCode 偶尔用。\r\n\r\n我日常遇到的痒点：\r\n1. 单项目开发时。AI 处理稍长一点的任务时，我可能在摸鱼刷社区软件，任务完成后我不一定知道。Codex 桌面端有相关设置，可以解决，但是 Agent Cli 工具没有。\r\n2. 多项目开发时。即使是 Codex 桌面端，也只能设置应用失焦时通知，要么就全通知。所以我在应用内时，其他任务完成后我需要个完成提醒。\r\n3. 偶尔在外",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item (cycle-2 batch). [raw_item 67b30c05; labeled 2026-07-04; fixture hand-written (item not analyzed at labeling time)]"
+  },
+  {
+    "item_id": "golden_029",
+    "text": "[分享] 分享一个我做的新闻 CLI 可以帮助大家获取实时资讯\n\n因为工作缘故，需要每天整理 AI 相关的新闻资讯，于是 vibe coding 了一个 news-cli 工具，里面聚合了 17 个源（后续会持续更新），目前已经开源出来，欢迎大家试用，哈哈~\r\n\r\n下面是一些演示示例：\r\n- cli 终端\r\n![BQACAgUAAyEGAASHRsPbAAEWlQ1qR-1xfbVRPysMQ-HIy1M0lHgQEQACqx0AAlnEQFYzEoO6Y0BCljwE.png]( https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAEWlQ1qR-1xfbVRPysMQ-HIy1M0lHgQEQACqx0AAlnEQFYzEoO6Y0BCljwE.png)\r\n![BQACAgUAAyEGAASHRsPbAAEWlRFqR-2rM1iCuyBnXNQwvuRK5ViayAACrx0AAlnEQFZ4_zF5gBbIZzwE.png]( https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAEWlRFqR-2rM1iCuyBnXNQwvuRK5ViayAACrx0AAlnEQFZ4_zF5gBbIZzwE.png)\r\n\r\n\r\n\r\n\r\n其实我还做了 AI skills ，可以让 AI agent 快速接入，输出日报：\r\n![BQACAgUAAyEGAASHRsPbAAEWlRxqR-34npaEGiQgKKUosjHhjTwloAACuh0AAlnEQFY1eHb5VZ0I4zwE",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item (cycle-2 batch). [raw_item 6c788234; labeled 2026-07-04; fixture hand-written (item not analyzed at labeling time)]"
+  },
+  {
+    "item_id": "golden_030",
+    "text": "做了一个 5 Letter Word Finder：按 Wordle 线索快速筛 5 字母单词\n\n最近做了一个英文 5 字母单词查找工具，主要给 Wordle / crossword / Scrabble 这类场景用：\r\n\r\nhttps://5letterwordsfinder.org/\r\n\r\n特点：\r\n\r\n- 可以按 green tile 的固定位置筛选\r\n- 支持 must include / exclude letters\r\n- 支持 starts with / ends with / contains pattern\r\n- 支持 available letters ，用来做 anagram / rack search\r\n- 词库在前端本地跑，结果响应很快，不依赖远程 solver API\r\n- 有 common-only 模式，Wordle 场景不会被太多冷僻词淹没\r\n\r\n我把工具放在首页第一屏，下面才是说明文档和 FAQ 。现在主要想收集一下文字游戏玩家 / 做工具站朋友的反馈：哪些筛选项、排序逻辑或移动端交互还可以再改？",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item (cycle-2 batch). [raw_item 4c5dfbeb; labeled 2026-07-04; fixture hand-written (item not analyzed at labeling time)]"
+  },
+  {
+    "item_id": "golden_031",
+    "text": "我预判，第一波 AI 洪峰已过！\n\nAI coding 趋势终于拐点了！\r\n\r\n**我预判，第一波 AI 洪峰已过。**\r\n\r\n\r\n据我观察**4 个方面**:\r\n\r\n1 、第三方价格数据(暴跌，需求减少)：\r\n\r\nGeminiPro 一年会员自动开通 CDK 包绑卡订阅 **¥12**\r\n\r\nChatGPT  [带 RT ]  [ Plus 成品号]  **¥15**\r\n\r\n2 、v 站数据（话题占比下降）：\r\n\r\n据观察 V 站上月 AI 话题占比趋近 100%，当前占比也有下降趋势\r\n\r\n3 、个人数据：\r\n\r\n短期使用量，也明显下跌。不可能永远有新项目，只有初版稳定之后就不会再有暴力 token 需求。\r\n\r\n4 、小红书数据：\r\n\r\n前段时间->vibe coding 帖子热度极高。\r\n\r\n很多**不懂代码的人**。\r\n\r\n偶然有一个/多个想法->开通 ai 会员(短期)->生成 app （养猫\\遛狗\\逗娃..）\r\n\r\n后面在于推广维护，短期很难再有一个新想法。\r\n\r\n**看懂趋势比埋头苦干更有价值！**\r\n\r\n真的需要，**说说大家的感觉**，比如公司使用，个人观察，中转站数据？",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item (cycle-2 batch). [raw_item 9be769b4; labeled 2026-07-04; fixture hand-written (item not analyzed at labeling time)]"
+  },
+  {
+    "item_id": "golden_032",
+    "text": "为什么称 Gemini 是“美国豆包”？\n\n经常看到有人说 Gemini 是“美国豆包”，这应该不是一个褒义词吧。\r\n\r\n想请教下大家，这个梗主要是吐槽它的哪个方面，是因为写代码太拉胯吗？\r\n\r\n我经常在 aistudio ( https://aistudio.google.com/) 查一些生活类的问题，比如汽车、医疗、历史相关等。我感觉比 GPT 的网页版或者国内的一些网页端都要好用一些。而且相比 ChatGPT 动不动就上下文超限，Gemini 主要优点是免费额度多。\r\n\r\n所以想和大家探讨两个问题：\r\n1. 为什么 Gemini 会喜提“美国豆包”的称号？大家是在什么场景下觉得它很难用的？\r\n2. 顺便问下，大家平时网页端的主力模型是哪个？",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item (cycle-2 batch). [raw_item f1f85c1d; labeled 2026-07-04; fixture hand-written (item not analyzed at labeling time)]"
+  },
+  {
+    "item_id": "golden_033",
+    "text": "专科毕业 3 年还在频繁换工作，正常节奏应该是什么样？\n\n毕业 3 年了，工作一直没真正稳定下来。尤其今年已经换了五六份工作，基本还是同一个行业、同一类岗位。\r\n最难受的是，我不是等到业绩压力真正压下来才崩，而是刚进到那个环境，想到业绩、排名、考核、节奏，身体和脑子就已经开始难受了。\r\n\r\n进去以后也不是没忙。看起来忙了一整天，但效率可能还不如别人一个上午。别人很快进入状态，我却经常脑壳疼、反应慢、头昏脑胀，越急越乱，越乱越垫底。\r\n\r\n我也知道不能一直怪外界，所以一直在改：作息、心态、方法、执行力、自控力都在调整。但现实是，结果反馈很慢，甚至很多时候感觉没反馈。努力了，却还是落后；想稳定，却总是撑不住。\r\n现在最困惑的是：到底是我不适合这个行业和岗位，还是我还没熬过适应期？是能力问题，还是长期焦虑、压力和身体状态已经影响了发挥？\r\n\r\n发出来不是为了卖惨，也不是想找借口，只是想把这个循环看清楚：\r\n入职 → 环境压力 → 脑子卡住 → 效率低 → 业绩垫底 → 更焦虑 → 想逃 → 换工作 → 下一份继续重复。\r\n想问问大家，专科毕业 3 年还没稳定下来，这种状态算正常的试错期，还是已经说明方向/岗位不太适合？\r\n正常来说，毕业 3 年左右、二十五岁上下，工作状态应该是什么样？是已经稳定在一个行业里慢慢积累，还是很多人也还在反复试错？\r\n\r\n如果有过类似经历，尤其是一进高压环境就脑子卡住、效率低、想逃的人，后来是怎么调整过来的？是换了低压岗位，还是继续熬过适应期，还是先去处理焦虑和身体状态？",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item (cycle-2 batch). [raw_item 455014ce; labeled 2026-07-04; fixture hand-written (item not analyzed at labeling time)]"
+  },
+  {
+    "item_id": "golden_034",
+    "text": "关于 Claude code 子代理的小测试，引发对自己使用习惯上的思考\n\n> **引言:** 这是一个我只是想了解 claud code 如何锁定子代理为 sonnet5 ，然后主代理 opus4.8 主动提出可以做 sonnet5 vs opus4.8 的 debug+对抗性审查的测试，最后 opus 发现自己也有问题的故事。\r\n\r\n## 过程：\r\n\r\n### 1. 开始\r\n\r\n**提示词 1**\r\n\r\n```\r\n进行一个和项目无关的小测试，关于子代理：\r\n刚才在 vscode 的 claude code 插件里设置了 `environmentVariables`\r\n`{ \"name\": \"CLAUDE_CODE_SUBAGENT_MODEL\", \"value\": \"claude-sonnet-5\" }`\r\n你照常调用下子代理随便做点什么，看看是否生效呢\r\n```\r\n\r\n**第一阶段回答:**\r\n\r\n```\r\n更推荐的做法：分层控制\r\n默认不设这个 env 变量，让子代理继承父会话模型（你主力 Opus 时，子代理也 Opus ，语义一致）。\r\n在具体 agent 的 frontmatter 里按需降级——.claude/agents/*.md 加 model: claude-sonnet-5 ，只给 Explore 、纯搜索类代理设。重推理的 arch/Plan 保持 Opus 。\r\n临时需要时，派生那一次传 model 参数覆盖即可。\r\n这样\"省钱\"和\"保质量\"是两个独立旋钮，而不是一个。\r\n\r\n什么时候全局 Sonnet 反而 OK\r\n你日常主力就是让子代理干搜索/探",
+    "source": "v2ex",
+    "expected_a1_pass": false,
+    "notes": "Real v2ex item (cycle-2 batch). [raw_item 5a8b573b; labeled 2026-07-04; fixture hand-written (item not analyzed at labeling time)]"
+  },
+  {
+    "item_id": "golden_035",
+    "text": "JuliusBrussee/caveman\n\n🪨 why use many token when few token do trick — Claude Code skill that cuts 65% of tokens by talking like caveman",
+    "source": "github",
+    "expected_a1_pass": false,
+    "notes": "Real github item. Real A1 PASSED this repo description (0.8) — repo blurbs must be rejected. [raw_item 5d534182; labeled 2026-07-04; fixture hand-written (real A1 disagreed with label)]"
+  },
+  {
+    "item_id": "golden_036",
+    "text": "elastic/elasticsearch\n\nFree and Open Source, Distributed, RESTful Search Engine",
+    "source": "github",
+    "expected_a1_pass": false,
+    "notes": "Real github item. [raw_item f8ba661d; labeled 2026-07-04; fixture = real deepseek-v4-flash A1 response (agreed with label)]"
+  },
+  {
+    "item_id": "golden_037",
+    "text": "anthropics/claude-code\n\nClaude Code is an agentic coding tool that lives in your terminal, understands your codebase, and helps you code faster by executing routine tasks, explaining complex code, and handling git workflows - all through natural language commands.",
+    "source": "github",
+    "expected_a1_pass": false,
+    "notes": "Real github item. [raw_item 7788facc; labeled 2026-07-04; fixture = real deepseek-v4-flash A1 response (agreed with label)]"
+  },
+  {
+    "item_id": "golden_038",
+    "text": "supabase/supabase\n\nThe Postgres development platform. Supabase gives you a dedicated Postgres database to build your web, mobile, and AI applications.",
+    "source": "github",
+    "expected_a1_pass": false,
+    "notes": "Real github item. [raw_item d205438a; labeled 2026-07-04; fixture = real deepseek-v4-flash A1 response (agreed with label)]"
+  },
+  {
+    "item_id": "golden_039",
+    "text": "ChromeDevTools/chrome-devtools-mcp\n\nChrome DevTools for coding agents",
+    "source": "github",
+    "expected_a1_pass": false,
+    "notes": "Real github item. [raw_item a2f20c0b; labeled 2026-07-04; fixture = real deepseek-v4-flash A1 response (agreed with label)]"
+  },
+  {
+    "item_id": "golden_040",
+    "text": "rommapp/romm\n\nA beautiful, powerful, self-hosted rom manager and player.",
+    "source": "github",
+    "expected_a1_pass": false,
+    "notes": "Real github item. [raw_item 94d6a4a9; labeled 2026-07-04; fixture = real deepseek-v4-flash A1 response (agreed with label)]"
+  },
+  {
+    "item_id": "golden_041",
+    "text": "pytorch/pytorch\n\nTensors and Dynamic neural networks in Python with strong GPU acceleration",
+    "source": "github",
+    "expected_a1_pass": false,
+    "notes": "Real github item. [raw_item 2b736928; labeled 2026-07-04; fixture = real deepseek-v4-flash A1 response (agreed with label)]"
+  },
+  {
+    "item_id": "golden_042",
+    "text": "TencentCloud/CubeSandbox\n\nInstant, Concurrent, Secure & Lightweight Sandbox for AI Agents.",
+    "source": "github",
+    "expected_a1_pass": false,
+    "notes": "Real github item. [raw_item e6550256; labeled 2026-07-04; fixture = real deepseek-v4-flash A1 response (agreed with label)]"
+  },
+  {
+    "item_id": "golden_043",
+    "text": "jannik sinner\n\nLIVE Intorno alle 15.30 Sinner-Brooksby: Jannik a caccia degli ottavi a Wimbledon",
+    "source": "google_trends",
+    "expected_a1_pass": false,
+    "notes": "Real google_trends item. [raw_item 2525223f; labeled 2026-07-04; fixture = real deepseek-v4-flash A1 response (agreed with label)]"
+  },
+  {
+    "item_id": "golden_044",
+    "text": "fireworks show near me\n\nFireworks, drone shows and parades: Here's where to celebrate the Fourth of July in San Diego County",
+    "source": "google_trends",
+    "expected_a1_pass": false,
+    "notes": "Real google_trends item. [raw_item 26709418; labeled 2026-07-04; fixture = real deepseek-v4-flash A1 response (agreed with label)]"
+  },
+  {
+    "item_id": "golden_045",
+    "text": "elon musk spacex ipo lockup\n\nSpaceX IPO sparks race for luxury housing in Southern California",
+    "source": "google_trends",
+    "expected_a1_pass": false,
+    "notes": "Real google_trends item. [raw_item 74829f92; labeled 2026-07-04; fixture = real deepseek-v4-flash A1 response (agreed with label)]"
+  },
+  {
+    "item_id": "golden_046",
+    "text": "angel reese wnba technical fouls\n\n“I Don’t Care”: Dream Teammate Risks WNBA Punishment for Angel Reese After 4th Straight Loss",
+    "source": "google_trends",
+    "expected_a1_pass": false,
+    "notes": "Real google_trends item. [raw_item 336e8ef8; labeled 2026-07-04; fixture = real deepseek-v4-flash A1 response (agreed with label)]"
+  },
+  {
+    "item_id": "golden_047",
+    "text": "essence festival 2026\n\nSlimmed-down ESSENCE Fest lineup could ease delay issues",
+    "source": "google_trends",
+    "expected_a1_pass": false,
+    "notes": "Real google_trends item. [raw_item 08ea1968; labeled 2026-07-04; fixture = real deepseek-v4-flash A1 response (agreed with label)]"
+  },
+  {
+    "item_id": "golden_048",
+    "text": "LinkedIn search: anyone built something to automate",
+    "source": "linkedin",
+    "expected_a1_pass": false,
+    "notes": "Real linkedin item — public_search backend returns contentless shells; degenerate input must be rejected. [raw_item 5489ee94; labeled 2026-07-04; fixture = real deepseek-v4-flash A1 response (agreed with label)]"
+  },
+  {
+    "item_id": "golden_049",
+    "text": "LinkedIn search: frustrating that there's no tool",
+    "source": "linkedin",
+    "expected_a1_pass": false,
+    "notes": "Real linkedin item — degenerate empty-body input. [raw_item 7b6f4623; labeled 2026-07-04; fixture = real deepseek-v4-flash A1 response (agreed with label)]"
+  },
+  {
+    "item_id": "golden_050",
+    "text": "LinkedIn search: this manual workflow is painful",
+    "source": "linkedin",
+    "expected_a1_pass": false,
+    "notes": "Real linkedin item — degenerate empty-body input. [raw_item dfa3efe0; labeled 2026-07-04; fixture = real deepseek-v4-flash A1 response (agreed with label)]"
+  },
+  {
+    "item_id": "golden_051",
+    "text": "I Tested Every Popular AI Agent (Here's What Works)\n\nI Tested Every Popular Agentic AI Tool Host Your Agentic AI Tool with Hostinger https://parkerprompts.com/hostinger In this ...\n\nTranscript:\nThere are more agentic AI tools out right now than anyone could keep track of, and they all promise to go off and do the work for you instead of just answering questions. So, I put the popular ones through real tasks to find out which ones actually deliver. And the ones that held up all shared one thing almost nobody talks about, [music] and it's the reason the famous ones tend to stop delivering the second you start relying on them. The first tool has gotten massively popular over the last few months",
+    "source": "youtube",
+    "expected_a1_pass": false,
+    "notes": "Real youtube item. [raw_item 4ed4d260; labeled 2026-07-04; fixture hand-written (item not analyzed at labeling time)]"
+  },
+  {
+    "item_id": "golden_052",
+    "text": "Paying for software is stupid… 10 free and open-source SaaS replacements\n\nFind all the best dev content at https://daily.dev/fireship Remember, for every paid SaaS, there is a free open-source self-hosted ...\n\nTranscript:\nmany years ago long before most of you were conceived we lived in a Utopia where if you wanted to use software you would walk into a store buy a box with a CD or floppy disc inside of it insert it into your computer and then it was yours to keep forever but then one day the devil got a job as a product manager at a software company and had this clever idea called SAS or software as a service when you buy it you don't actually own it and just rent it for a monthly fee until ",
+    "source": "youtube",
+    "expected_a1_pass": false,
+    "notes": "Real youtube item. [raw_item 94bc7a0c; labeled 2026-07-04; fixture hand-written (item not analyzed at labeling time)]"
+  },
+  {
+    "item_id": "golden_053",
+    "text": "5 Things I Wish I Knew Before Self Hosting\n\nGo to https://sponsr.is/kinsta_hardwarehaven to get your first month of Managed WordPress Hosting for free and migrate your ...",
+    "source": "youtube",
+    "expected_a1_pass": false,
+    "notes": "Real youtube item; hard negative for 'I wish' keyword matching. [raw_item 2f3f60b7; labeled 2026-07-04; fixture hand-written (item not analyzed at labeling time)]"
+  },
+  {
+    "item_id": "golden_054",
+    "text": "n8n will change your life as a developer...\n\nGet up to 67% off VPS at Hostinger to self-host your own automations. Use code FIRESHIP for an extra discount at ...",
+    "source": "youtube",
+    "expected_a1_pass": false,
+    "notes": "Real youtube item. [raw_item 69457567; labeled 2026-07-04; fixture hand-written (item not analyzed at labeling time)]"
+  },
+  {
+    "item_id": "golden_055",
+    "text": "The AI Tools You'll ACTUALLY Use in 2026!\n\nGet your free Make Pro subscription here* – https://www.make.com/en?\n\nTranscript:\nThere are tens of thousands of AI tools and new&nbsp; ones launching as we speak. Yet, most people just&nbsp;&nbsp; use ChatGPT for everything. And that's a big&nbsp; mistake because the people who are using the&nbsp;&nbsp; right AI stack every day, they have an unfair&nbsp; advantage and the gap is growing. And because&nbsp;&nbsp; AI is transforming how we all work, if you're&nbsp; not using the right AI tools for the right task,&nbsp;&nbsp; you're falling behind. So, let's change that&nbsp; in this video. I've tested hundreds of AI tools&nbsp;&nbsp; across many categ",
+    "source": "youtube",
+    "expected_a1_pass": false,
+    "notes": "Real youtube item. [raw_item d23aa3cb; labeled 2026-07-04; fixture hand-written (item not analyzed at labeling time)]"
+  },
+  {
+    "item_id": "golden_056",
+    "text": "To Anyone Running a SaaS Business (avoid stripe)\n\nClaim a FREE Consulting Call: Message ➡️ @andyqmai (instagram) or consulting@andymai.org Are you running a SaaS ...\n\nTranscript:\nwhy do SAS business owners avoid using stripe if you're planning to grow your SAS business you definitely don't want to be relying on stripe because you're going to be losing out on a ton of opportunity cost that we'll be sharing in today's video let's go over some of the key reasons why you should avoid only using stripe if you're plan to scale your online SAS business so one one of the big problems with stripe is that you don't own your data and you don't have the ability to walk away with it if you'd like to ther",
+    "source": "youtube",
+    "expected_a1_pass": false,
+    "notes": "Real youtube item. [raw_item 78613b60; labeled 2026-07-04; fixture hand-written (item not analyzed at labeling time)]"
+  },
+  {
+    "item_id": "golden_057",
+    "text": "AI SaaS explained in 7 min..\n\nCreate AI Apps in minutes with OnSpace AI, No Code & No API Key Needed – https://www.onspace.ai/?via=yt_CalebWritesCode ...\n\nTranscript:\nCompanies like Figma, HubSpot, and Duolingo are all down more than 65% and the entire SaaS-based industry has lost more than $300 billion in market cap recently. And the most common rhetoric out there is that AI is to blame for this. If you look at different sectors outside of SaaS like auto manufacturing and credit services, they tend to trade in low PE ratio as opposed to software. For example, auto manufacturers like Ford will easily trade on multiples like 8 to 12 PE while software companies like Duolingo can go up to 50 or",
+    "source": "youtube",
+    "expected_a1_pass": false,
+    "notes": "Real youtube item. [raw_item 28b18030; labeled 2026-07-04; fixture hand-written (item not analyzed at labeling time)]"
+  },
+  {
+    "item_id": "golden_058",
+    "text": "What’s Actually Running in My Homelab? (50+ Self-Hosted Services)\n\nI'm finally doing a full tour of the services I'm running in my homelab in 2026. In my last homelab video, I focused on the hardware.",
+    "source": "youtube",
+    "expected_a1_pass": false,
+    "notes": "Real youtube item. [raw_item 7b3aa109; labeled 2026-07-04; fixture hand-written (item not analyzed at labeling time)]"
+  },
+  {
+    "item_id": "golden_059",
+    "text": "Ask HN: Is anyone experimenting with different ways of using LLMs for coding?\n\nI&#x27;m a bit annoyed by the feeling that we&#x27;re kind of stuck when it comes to using LLMs for programming.<p>I use Claude Code and Codex, but I haven&#x27;t been able to enter flow state like I can when I hand write code.<p>This is kind of ironic to me since AI should be a bicycle for the mind, but right now it feels like a bicycle that just brakes abruptly every couple minutes. I stop, wait, review, prompt again.<p>Is there anyone exploring something fundamentally different than the prompt response loop we have today?<p>I actually think the idea of a tab model is directionally better than prompt response.<p",
+    "source": "hn",
+    "expected_a1_pass": true,
+    "notes": "Real hn item (Ask HN, 130 pts/161 comments) — collected after the Algolia numericFilters fix. [raw_item d7e0be1d; labeled 2026-07-04; fixture hand-written (item not analyzed at labeling time)]"
+  },
+  {
+    "item_id": "golden_060",
+    "text": "AI coding is a nightmare. Am I the only one experiencing this?\n\nHere are my biggest gripes with AI coding assistants right now:\nObsessed with reinventing the wheel. You&#x27;ll often find it writing three duplicate functions for the exact same feature in a single file. Why? Because it&#x27;s terrified of blowing up the context window, so it only reads a fraction of a large file and completely misses the existing functionality.\nWhy are files so bloated in the first place? Because AI prefers adding new code over modifying existing code, and it rarely deletes anything. After a few iterations, your codebase becomes a mountain of dead code.\nZero holistic awareness. It hyper-focuses on the current",
+    "source": "hn",
+    "expected_a1_pass": true,
+    "notes": "Real hn item (59 pts) — specific, recurring, buildable (codebase-hygiene tooling for AI-written code). [raw_item 1ee6b5ea; labeled 2026-07-04; fixture hand-written (item not analyzed at labeling time)]"
+  },
+  {
+    "item_id": "golden_061",
+    "text": "Ask HN: Why are so many \"AI evangelists\" posting such insufferable content?\n\nMy LinkedIn feed is absolutely unreal right now. 90% (I don&#x27;t even think I&#x27;m exaggerating) of the posts in my feed are from connections who have changed their title to something like &quot;AI Thought Leader | AI Native | Thought Coaching&quot;. They post *daily* about something LLM&#x2F;agentic. The biggest problem is that it&#x27;s never &quot;hey check out this cool thing&quot;, it&#x27;s &quot;if you&#x27;re not doing this, you&#x27;re a dinosaur who will be left in the past.&quot;<p>Other common content is regurgitating blog &#x2F; Twitter folks from &quot;AI influencers&quot;, associated with statemen",
+    "source": "hn",
+    "expected_a1_pass": false,
+    "notes": "Real hn item (55 pts). Venting; skeptical filter must reject. [raw_item 53057635; labeled 2026-07-04; fixture hand-written (item not analyzed at labeling time)]"
   }
 ]
