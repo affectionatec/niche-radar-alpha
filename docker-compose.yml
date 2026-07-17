@@ -26,7 +26,7 @@ services:
     restart: unless-stopped
 
   db:
-    image: docker.1panel.live/library/postgres:16-alpine
+    image: postgres:16-alpine
     container_name: niche-radar-db
     environment:
       POSTGRES_DB: niche_radar
