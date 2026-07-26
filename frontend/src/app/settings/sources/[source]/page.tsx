@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import useSWR from 'swr';
 import { endpoints, fetcher, postSourceCredentials, postSourceTest } from '@/lib/api';
 import { SourceStatus } from '@/lib/types';
@@ -22,10 +23,8 @@ function Input({ value, onChange, placeholder, type = 'text', disabled = false, 
   );
 }
 
-export default function SourceDetailPage({ params }: { params: Promise<{ source: string }> | { source: string } }) {
-  // Next.js 14+ may pass params as a Promise in some configurations
-  const resolvedParams = params as { source: string };
-  const slug = resolvedParams.source;
+export default function SourceDetailPage() {
+  const { source: slug } = useParams<{ source: string }>();
   const { data, mutate, isLoading, error } = useSWR<SourceStatus>(
     endpoints.source(slug), fetcher
   );

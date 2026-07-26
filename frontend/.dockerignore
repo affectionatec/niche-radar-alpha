@@ -1,4 +1,7 @@
 node_modules
 .next
 .env.local
+.env*
+*.pem
+*.key
 npm-debug.log*

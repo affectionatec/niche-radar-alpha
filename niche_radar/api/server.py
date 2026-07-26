@@ -4,6 +4,8 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from niche_radar.api.auth import SessionAuthMiddleware
+from niche_radar.api.routes.auth import router as auth_router
 from niche_radar.api.routes._common import _db, _tier  # re-exported for backward compat
 from niche_radar.api.routes.status import router as status_router
 from niche_radar.api.routes.niches import router as niches_router
@@ -13,16 +15,21 @@ from niche_radar.api.routes.sources import router as sources_router
 from niche_radar.api.routes.pipeline import router as pipeline_router
 from niche_radar.api.routes.entities import router as entities_router
 from niche_radar.api.routes.cost import router as cost_router
+from niche_radar.config import get_settings
+
 
 app = FastAPI(title="Niche Radar API", version="0.2.0")
 
+app.add_middleware(SessionAuthMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["GET", "POST"],
+    allow_origins=get_settings().cors_origins_list,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
 
+app.include_router(auth_router)
 app.include_router(status_router)
 app.include_router(niches_router)
 app.include_router(reports_router)

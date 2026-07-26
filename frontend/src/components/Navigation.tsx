@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { color, font, fontSize } from '@/lib/tokens';
+import { logout } from '@/lib/client';
 
 const NAV_LINKS = [
   { href: '/pipeline', label: 'PIPELINE' },
@@ -22,6 +23,8 @@ export default function Navigation() {
     if (href === '/') return pathname === '/';
     return pathname.startsWith(href);
   }
+
+  if (pathname === '/login') return null;
 
   return (
     <nav
@@ -120,17 +123,26 @@ export default function Navigation() {
           })}
         </div>
       </div>
-      <span
-        style={{
-          fontFamily: font.mono,
-          fontSize: fontSize.base,
-          color: color.fgGhost,
-          letterSpacing: '1px',
-          textTransform: 'uppercase' as const,
-        }}
-      >
-        ALPHA
-      </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <span
+          style={{
+            fontFamily: font.mono,
+            fontSize: fontSize.base,
+            color: color.fgGhost,
+            letterSpacing: '1px',
+            textTransform: 'uppercase' as const,
+          }}
+        >
+          ALPHA
+        </span>
+        <button
+          type="button"
+          className="radar-nav-logout"
+          onClick={() => void logout()}
+        >
+          EXIT
+        </button>
+      </div>
     </nav>
   );
 }

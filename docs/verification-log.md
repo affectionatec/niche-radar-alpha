@@ -2,6 +2,65 @@
 
 > Append-only record of independent verdicts, **newest first**. A task moves to ✅ in `docs/status.md` only when a verifier with **fresh context** (sub-agent or fresh session — never the producer's conversation) re-runs the task's done condition from `docs/plans/implementation-plan.md` + `docs/spec/` and records PASS here with evidence. Never edit a past verdict.
 
+## 2026-07-26 — Production application auth + CI/CD — VERDICT: PASS
+
+> Verifier context: fresh independent sub-agent; did not implement the change.
+> Target: current uncommitted worktree on
+> `chore/production-cicd-20260724` (`HEAD 9920ecb`), reviewed against
+> `docs/spec/auth.md`, `docs/deployment.md`, ADR-010, `PRODUCT.md`, and
+> `docs/DESIGN.md`.
+
+**Round history:** Round 1 returned FAIL for six concrete gaps: production
+startup prevented the specified safe 503, the public allowlist and auth tests
+were incomplete, proxy tests omitted methods/query strings, CI Actions used
+floating tags, manual deploy did not prove successful main CI, and the EXIT
+touch target was 32px. Round 2 independently inspected and re-ran every repaired
+condition. No blocking issue remains.
+
+**Test ratchet:** baseline 498 → now 522 (✅ holds, +24 auth cases). No existing
+test was deleted, skipped, weakened, or xfailed.
+
+**Commands executed:**
+
+| Command / check | Exit | Key output |
+|---|---:|---|
+| Fresh Python 3.11.15 environment: `python -m pytest` | 0 | `522 passed, 1 warning in 110.50s` |
+| Fresh Python 3.11.15 environment: `python -m niche_radar.eval.runner` | 0 | `61 passed, 0 failed`, accuracy 100% |
+| Independent system-Python re-run: `python3 -m pytest` + eval | 0 | `522 passed in 109.54s`; eval 61/61 |
+| `cd frontend && npm ci && npm test` | 0 | clean lockfile install; proxy contract `6/6` passed |
+| `npm run lint` | 0 | no ESLint warning or error |
+| `npm audit --omit=dev --audit-level=high` | 0 | 0 production vulnerabilities |
+| `npm run build` | 0 | Next 15.5.21 production build; static generation 14/14 and route table includes login/proxy |
+| Base + production Compose config, default and PostgreSQL profile | 0 | both configurations valid |
+| Effective Compose JSON inspection | 0 | `frontend`, `radar`, and optional `db` all have `ports: null`; only internal `expose` remains |
+| `git diff --check` | 0 | clean |
+| Credential/private-key/Web-Storage scans | 0 | no production credential or private key committed; no `localStorage`, `sessionStorage`, or `document.cookie` auth storage |
+
+**Per-criterion evidence:**
+
+| # | Criterion | Verdict | Evidence |
+|---|---|---|---|
+| 1 | Missing/malformed production secrets fail closed with a safe response | PASS | Startup-time secret loading was removed. Login and protected requests now catch `AuthConfigurationError` at request time and return generic 503 + `Retry-After`, without a filesystem path. `test_missing_production_secrets_return_safe_503` proves both paths. |
+| 2 | Exact public allowlist; all other API operations require a session | PASS | Middleware allowlist is exactly `GET /api/status` and `POST /api/auth/login`. The OpenAPI-driven test exercises every discovered GET/POST/PUT/PATCH/DELETE operation; HEAD status, OPTIONS settings, and docs also return 401. |
+| 3 | Session and credential security contract | PASS | Constant-time credential comparison; HMAC-SHA256 subject/iat/exp/nonce token; exact eight-hour expiry and future-skew checks; malformed/tampered/expired tokens rejected; signing-key rotation invalidates sessions; Cookie is `__Host-niche_radar_session`, Secure, HttpOnly, SameSite=Lax, Path=/, no Domain; bounded limiter tests pass. |
+| 4 | Trusted per-client limiter identity | PASS | Radar walks X-Forwarded-For from right to left, removing only private/loopback and Cloudflare networks. Independent matrices proved a spoofed left value cannot override an untrusted direct peer and a client→Cloudflare→Docker chain resolves to the client. Read-only inspection of the running Traefik confirmed both entrypoints use Cloudflare `forwardedheaders.trustedips` and do not enable `forwardedHeaders.insecure`. |
+| 5 | Complete same-origin proxy contract | PASS | Cookie and X-Forwarded headers propagate upstream; Set-Cookie and safe metadata propagate downstream; hop-by-hop/Host headers are stripped; traversal/slash injection is rejected; encoded path and complete query string are preserved; route exports GET, POST, PUT, DELETE. All 6 Node contract tests pass. |
+| 6 | Project-native login UI | PASS | Responsive dark-monochrome screen follows the project design system, has labels, keyboard focus, inline loading/invalid/rate-limit states, reduced-motion handling, same-origin-only `next`, no Web Storage, and 44px+ form/EXIT targets. AuthGate and logout redirect behavior are wired through the shared client. |
+| 7 | Production Compose and Traefik | PASS | Production mounts only the two fixed read-only Docker secrets, removes all Radar/frontend/PostgreSQL host ports, joins only the frontend to external `proxy`, configures the exact Radar Host/TLS/certresolver/service-port labels, and contains no BasicAuth middleware. |
+| 8 | CI and exact-SHA deployment | PASS | Markdown paths are ignored while executable/workflow/Compose changes run backend, eval, frontend, audit, Compose, and image-build gates. All five third-party references in CI are full 40-character SHAs and were confirmed through the official GitHub API. Automatic deploy accepts only a successful same-repository main `push` CI run and sends its exact `head_sha`. Manual deploy queries Actions for a successful completed main-push CI run for the selected SHA; the query was exercised against this repository (`successful_runs=1`). The restricted server independently rejects non-main SHAs. |
+| 9 | Durable release documentation | PASS | Deployment docs now cover the trusted proxy chain, app-secret rotation/restart, complete local frontend test/lint/audit/build gate, Draft PR/human merge flow, exact successful-CI SHA re-run, post-release checks, and rollback. Markdown-only commits remain non-deploying. |
+
+**Non-blocking environment notes:** the local Docker daemon was unavailable, so
+the image build could not be repeated on this workstation; the new mandatory CI
+Compose job builds both production images before deployment and must be green
+before the human merge gate. Next emitted only the known local multi-lockfile
+workspace-root warning. `npm ci` reports high-severity issues confined to
+development dependencies; the documented production audit is clean.
+
+**Failure detail:** none.
+
+**Round:** 2 — PASS.
+
 ## 2026-07-04 — P0-A: First measured real E2E run + live-rot fixes (HN 400, thread-local usage) — VERDICT: PASS
 
 > Verifier context: fresh sub-agent (independent, did not write the code; re-dispatched after the original P0-A verifier died without returning a verdict) · Diff: `main...task/p0-first-real-run` (PR #19, commit `5d61e9d`) · All Python via `niche-radar-alpha-radar:latest` Docker image (no local venv)

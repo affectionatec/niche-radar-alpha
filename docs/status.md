@@ -49,14 +49,22 @@ Locked in `docs/adr/`. **Do not relitigate** — raise changes with the user.
 
 ## Session Handoff Log
 
-- **2026-07-26 (production auth + CI/CD, in progress)** — Added PRODUCT context,
-  the durable development/release contract (`docs/deployment.md` + AGENTS Release
-  Protocol), auth spec, and ADR-010. The planned release replaces temporary
-  Traefik BasicAuth with a project-native login, fixed Docker secrets, secure
-  Cookie sessions, complete API enforcement, and an explicit Next proxy contract.
-  CI will ignore Markdown-only changes and deploy only a successful trusted
-  `main` CI SHA through the restricted server deployer. **Awaiting implementation,
-  fresh independent verifier PASS, human review, and merge.**
+- **2026-07-26 (production auth + CI/CD, built; independent verifier PASS)** —
+  Added PRODUCT context, release contract, auth spec, and ADR-010; implemented
+  the Radar-native dark login, fixed Docker-secret credentials, signed
+  eight-hour secure-cookie sessions, request-level fail-closed behavior,
+  complete API enforcement, explicit safe Next proxying, production
+  Compose/Traefik wiring, and trusted-main CI/CD. The login limiter uses the
+  verified Cloudflare → Traefik → Docker proxy chain and ignores spoofed
+  leftmost XFF values. **Verified:** Python 3.11 fresh environment **522/522**;
+  golden eval **61/61**; frontend proxy contract **6/6**, lint and production
+  audit clean; Next 15.5.21 build generated **14/14 static pages**; default and
+  PostgreSQL Compose have zero published app/data ports and no BasicAuth;
+  independent verifier Round 2 **PASS** (`docs/verification-log.md`). The local
+  Docker daemon was unavailable, so Draft PR CI remains the production-image
+  build gate. **Awaiting Draft PR CI, human review, and merge; production
+  intentionally keeps temporary Traefik BasicAuth until this branch is merged
+  and deployed.**
 
 Newest first.
 

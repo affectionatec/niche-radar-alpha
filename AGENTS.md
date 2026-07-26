@@ -66,10 +66,13 @@ This project uses a six-document chain. **Read them in order.**
 - **Domain language:** Reuse `CONTEXT.md` terms. Avoid generic names when a domain term exists.
 - **Test framework:** pytest. **Test command:** `pytest` (config in `pyproject.toml` adds `-v --tb=short`).
 - **Eval gate:** `python -m niche_radar.eval.runner` — the golden-set eval must pass (CI enforces it alongside pytest).
-- **Frontend:** `cd frontend && npm run build` (Next.js build doubles as typecheck).
+- **Frontend:** `cd frontend && npm test && npm run lint && npm run build`
+  (proxy contract, ESLint/typecheck, production build).
 - **Build:** `docker compose build`.
 - **Pre-commit checks (run before any push):** `pytest && python -m niche_radar.eval.runner`.
-- **Linter/formatter:** none enforced in CI today. Keep style consistent with surrounding code; do not introduce a formatter or new dependency without an ADR.
+- **Linter/formatter:** no Python formatter/linter is enforced; frontend ESLint is
+  enforced in CI. Keep style consistent; do not introduce a new formatter or
+  dependency without an ADR.
 - **Discipline:** smallest complete change; surgical edits only — no drive-by refactors; keep behavior explicit — no silent fallbacks or broad `except` swallowing; every changed line maps to the requested outcome.
 
 ---
@@ -83,7 +86,10 @@ This project uses a six-document chain. **Read them in order.**
 - **Analysis is 8 separate zero-shot, structured-JSON LLM agents (A1–A8)**, not one monolithic prompt — focused Pydantic I/O, graceful partial failure (ADR-003).
 - **The agentic-engineering documentation chain (this file + `docs/`) is the canonical workflow** (ADR-004), superseding the ad-hoc Superpowers/Ralph setup.
 - **Cost is capped:** clustering (Jaccard + LLM refinement) collapses raw items into clusters before A3–A8; per-run LLM budget is bounded by `2N + 10C + 50`.
-- **Single-user, self-hosted:** no auth, no multi-tenancy, batch (not real-time) cycles.
+- **Single-operator, self-hosted:** production uses the project-native secure
+  Cookie login from ADR-010 and `docs/spec/auth.md`; no multi-tenancy. Local
+  non-production runs retain an explicit auth bypass. Pipelines are batch, not
+  real-time.
 - **Frontend reaches the backend at runtime** via the Next.js `/api/[...proxy]` rewrite — no build-time API URL baking.
 
 ---

@@ -12,6 +12,10 @@ Status: Approved for the single-operator production deployment.
 - `GET /api/status` and `POST /api/auth/login` are public. Every other `/api`
   operation, including current-session and logout, requires a valid Cookie.
 - Credential checks run in constant time and use a bounded failed-attempt limiter.
+- Per-client identity comes only through the trusted proxy chain: Traefik trusts
+  forwarded headers solely from Cloudflare's official networks, and Radar
+  resolves `X-Forwarded-For` from right to left after removing Cloudflare/private
+  proxy hops. A spoofed leftmost value cannot select the limiter key.
 - Sessions are HMAC-SHA256 signed, contain subject, issue/expiry time and nonce,
   and expire after eight hours.
 - The Cookie is named `__Host-niche_radar_session` and is Secure, HttpOnly,
@@ -39,3 +43,5 @@ mounts the real server secret files read-only and removes all app/data host port
 4. Proxy contract tests cover headers, Set-Cookie, methods, query strings, and
    invalid paths.
 5. Production Compose contains no BasicAuth middleware or published app ports.
+6. Direct-origin forwarded-header spoofing is discarded while a real
+   client-to-Cloudflare chain resolves to the client limiter key.

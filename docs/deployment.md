@@ -24,6 +24,13 @@ session signing key come from read-only Docker secrets at
 except `/api/status` and login requires a valid session. The Next proxy preserves
 Cookie and Set-Cookie for GET, POST, PUT, and DELETE.
 
+Per-client login limiting depends on a trusted proxy chain. Traefik accepts
+forwarded headers only from Cloudflare's official IPv4/IPv6 ranges. Radar walks
+`X-Forwarded-For` from right to left, removes Cloudflare and private Docker proxy
+hops, and uses the first remaining address. Never enable
+`forwardedHeaders.insecure`; keep the Traefik ranges synchronized with
+Cloudflare's official lists.
+
 ## Before writing code
 
 1. Read `AGENTS.md`, `CONTEXT.md`, `docs/status.md`, and the relevant spec/ADR.
@@ -46,7 +53,8 @@ git switch -c feat/my-change origin/main
 ```bash
 python3 -m pytest
 python3 -m niche_radar.eval.runner
-(cd frontend && npm ci && npm audit --omit=dev --audit-level=high && npm run build)
+(cd frontend && npm ci && npm test && npm run lint && \
+  npm audit --omit=dev --audit-level=high && npm run build)
 docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet
 docker compose --profile postgres \
   -f docker-compose.yml -f docker-compose.prod.yml config --quiet
@@ -109,8 +117,27 @@ and one read-only report. A paid full pipeline is not a routine smoke test.
 ## Re-run or roll back
 
 Prefer a reviewed `git revert` PR. For an operational re-run, use
-**Actions → Deploy production → Run workflow** with a full SHA in `main` history.
-Feature-branch SHAs are rejected.
+**Actions → Deploy production → Run workflow** with a full SHA in `main` history
+that has a successful completed `push` run of `CI` on `main`. The workflow
+rejects an untested SHA, and the server independently rejects feature-branch
+commits.
+
+## Rotate the shared operator credential
+
+Never edit a repository file or pass a password as a command-line argument.
+From a trusted terminal, rotate both the shared credential and signing key using
+the server-side no-echo prompt:
+
+```bash
+ssh -t oracle '/home/ubuntu/traefik/setup-originbase-app-secrets --rotate-session'
+```
+
+Then manually re-run the current successful-main SHA in **Deploy production**
+for Finance, Producer, and Radar so all containers remount the atomically
+replaced files. After recreation, rotation invalidates every Producer/Radar
+session; Finance sessions must also be revoked through its authenticated
+`POST /api/auth/logout?all=true` operation. The server helper contains no
+default credential and never echoes the password.
 
 ## Troubleshooting
 
