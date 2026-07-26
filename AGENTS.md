@@ -44,6 +44,7 @@ This project uses a six-document chain. **Read them in order.**
 | **IMPL PLAN** | `docs/plans/implementation-plan.md` | Milestones and dependency-ordered tasks | Before starting a task |
 | **STATUS** | `docs/status.md` | Where we are right now — live progress | **First thing every session** |
 | **VERIFICATION LOG** | `docs/verification-log.md` | Verdicts with evidence for every completed task — append-only | Before marking anything done |
+| **DEPLOYMENT** | `docs/deployment.md` | Local gates, PR flow, production release, rollback | Before every push intended for release |
 
 **Domain glossary:** `CONTEXT.md` is the canonical glossary. Use its exact terms (Collector, Raw Item, Niche Candidate, Pipeline, Verdict, …) in code, comments, and PRs. If a new domain concept recurs, add it to `CONTEXT.md`.
 
@@ -125,3 +126,22 @@ Before claiming a task is built:
 
 - A human reads the diff and can explain the change in their own words before it merges.
 - The verification log entry is the review digest: what changed, what was proven, what the risks are.
+
+## 7. Release Protocol
+
+1. Work on a task branch based on `origin/main`; never push code directly to
+   `main`.
+2. Run the complete gate in `docs/deployment.md`, update `docs/status.md`, and
+   push the branch.
+3. Open a Draft PR and request fresh independent verification. The agent neither
+   marks its own task PASS nor merges its own PR.
+4. A human merges. Successful CI on the resulting `main` commit deploys that
+   exact SHA.
+5. Watch **CI** and **Deploy production**, then verify public status and the
+   authenticated UI without running a paid pipeline.
+6. Never hand-edit tracked application code on the server as a release method.
+
+Markdown-only changes (`docs/**`, `**/*.md`) intentionally skip CI and do not
+deploy. Python, TypeScript, workflow, Compose, dependency, and authentication
+changes must run the full path. Commands and rollback live in
+`docs/deployment.md`.
