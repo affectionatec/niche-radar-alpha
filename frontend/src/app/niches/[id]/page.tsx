@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useParams } from 'next/navigation';
 import useSWR from 'swr';
 import Link from 'next/link';
 import { endpoints, fetcher, toggleShortlist, validateNiche } from '@/lib/api';
@@ -31,8 +32,8 @@ function complexityColor(cmp: number | null): string {
   return c.error;
 }
 
-export default function NichePage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function NichePage() {
+  const { id } = useParams<{ id: string }>();
   const { data, error, isLoading, mutate } = useSWR<NicheDetail>(endpoints.niche(id), fetcher, { refreshInterval: 60_000 });
 
   const [starring, setStarring] = useState(false);

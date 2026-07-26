@@ -1,0 +1,93 @@
+name: Deploy production
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Full 40-character commit SHA from main
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: radar-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: production
+      url: https://radar.originbase.org
+    steps:
+      - name: Verify manually selected SHA passed main CI
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          successful_runs="$(
+            gh api --method GET \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs" \
+              -f head_sha="$RELEASE_SHA" \
+              -f branch=main \
+              -f event=push \
+              -f status=completed \
+              -F per_page=100 \
+              --jq '.workflow_runs | map(select(.conclusion == "success")) | length'
+          )"
+          test "$successful_runs" -gt 0
+
+      - name: Configure restricted SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d "$RUNNER_TEMP/ssh"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$RUNNER_TEMP/ssh/deploy_key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$RUNNER_TEMP/ssh/known_hosts"
+          chmod 600 "$RUNNER_TEMP/ssh/deploy_key" "$RUNNER_TEMP/ssh/known_hosts"
+
+      - name: Deploy exact main commit
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          RELEASE_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.release_sha || github.event.workflow_run.head_sha }}
+        run: |
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          ssh -F /dev/null \
+            -i "$RUNNER_TEMP/ssh/deploy_key" \
+            -o IdentitiesOnly=yes \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known_hosts" \
+            -o ConnectTimeout=15 \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=10 \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "deploy $RELEASE_SHA"
+
+      - name: Verify public URLs
+        run: |
+          for path in /api/status /login; do
+            status="$(curl --silent --show-error --retry 10 --retry-all-errors --retry-delay 3 --max-time 15 \
+              --output /dev/null --write-out '%{http_code}' "https://radar.originbase.org$path")"
+            test "$status" = "200"
+          done
+          protected_status="$(curl --silent --show-error --retry 10 --retry-all-errors --retry-delay 3 --max-time 15 \
+            --output /dev/null --write-out '%{http_code}' https://radar.originbase.org/api/settings)"
+          test "$protected_status" = "401"

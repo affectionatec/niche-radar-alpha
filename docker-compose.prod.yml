@@ -1,0 +1,40 @@
+services:
+  radar:
+    ports: !reset []
+    expose:
+      - "8000"
+    environment:
+      APP_ENVIRONMENT: production
+      CORS_ORIGINS: https://radar.originbase.org
+    secrets:
+      - apps_login_credentials
+      - apps_session_secret
+
+  frontend:
+    ports: !reset []
+    expose:
+      - "3000"
+    networks:
+      - default
+      - proxy
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: proxy
+      traefik.http.routers.radar.rule: Host(`radar.originbase.org`)
+      traefik.http.routers.radar.entrypoints: websecure
+      traefik.http.routers.radar.tls: "true"
+      traefik.http.routers.radar.tls.certresolver: cloudflare
+      traefik.http.services.radar.loadbalancer.server.port: "3000"
+
+  db:
+    ports: !reset []
+
+networks:
+  proxy:
+    external: true
+
+secrets:
+  apps_login_credentials:
+    file: /home/ubuntu/traefik/secrets/apps_login_credentials
+  apps_session_secret:
+    file: /home/ubuntu/traefik/secrets/apps_session_secret

@@ -1,39 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  buildUpstreamUrl,
+  buildResponseHeaders,
+  buildUpstreamHeaders,
+  resolveProxyPath,
+} from '@/lib/proxy-contract.mjs';
 
 const BACKEND = process.env.BACKEND_URL ?? 'http://localhost:8000';
 
+type RouteContext = {
+  params: Promise<{ proxy?: string[] }>;
+};
+
 async function handle(
   request: NextRequest,
-  { params }: { params: { proxy: string[] } },
+  context: RouteContext,
 ): Promise<NextResponse> {
-  const path = (params.proxy ?? []).join('/');
-  const search = request.nextUrl.search;
-  const target = `${BACKEND}/api/${path}${search}`;
-
-  const headers: Record<string, string> = {};
-  const ct = request.headers.get('content-type');
-  if (ct) headers['content-type'] = ct;
-
-  let body: ArrayBuffer | undefined;
-  if (request.method !== 'GET' && request.method !== 'HEAD') {
-    body = await request.arrayBuffer();
+  let path: string;
+  try {
+    path = await resolveProxyPath(context.params);
+  } catch {
+    return NextResponse.json({ error: 'Invalid proxy path' }, { status: 400 });
   }
+  const target = buildUpstreamUrl(BACKEND, path, request.nextUrl.search);
+  const body =
+    request.method === 'GET' || request.method === 'HEAD'
+      ? undefined
+      : await request.arrayBuffer();
 
   let upstream: Response;
   try {
-    upstream = await fetch(target, { method: request.method, headers, body });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: `Backend unreachable: ${msg}` }, { status: 502 });
+    upstream = await fetch(target, {
+      method: request.method,
+      headers: buildUpstreamHeaders(request.headers),
+      body,
+      cache: 'no-store',
+      redirect: 'manual',
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json(
+      { error: `Backend unreachable: ${message}` },
+      { status: 502 },
+    );
   }
 
-  const responseBody = await upstream.arrayBuffer();
-  const responseHeaders = new Headers();
-  const upstreamCt = upstream.headers.get('content-type');
-  if (upstreamCt) responseHeaders.set('content-type', upstreamCt);
-
-  return new NextResponse(responseBody, { status: upstream.status, headers: responseHeaders });
+  return new NextResponse(await upstream.arrayBuffer(), {
+    status: upstream.status,
+    headers: buildResponseHeaders(upstream.headers),
+  });
 }
 
 export const GET = handle;
 export const POST = handle;
+export const PUT = handle;
+export const DELETE = handle;

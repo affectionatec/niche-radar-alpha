@@ -49,6 +49,23 @@ Locked in `docs/adr/`. **Do not relitigate** — raise changes with the user.
 
 ## Session Handoff Log
 
+- **2026-07-26 (production auth + CI/CD, built; independent verifier PASS)** —
+  Added PRODUCT context, release contract, auth spec, and ADR-010; implemented
+  the Radar-native dark login, fixed Docker-secret credentials, signed
+  eight-hour secure-cookie sessions, request-level fail-closed behavior,
+  complete API enforcement, explicit safe Next proxying, production
+  Compose/Traefik wiring, and trusted-main CI/CD. The login limiter uses the
+  verified Cloudflare → Traefik → Docker proxy chain and ignores spoofed
+  leftmost XFF values. **Verified:** Python 3.11 fresh environment **522/522**;
+  golden eval **61/61**; frontend proxy contract **6/6**, lint and production
+  audit clean; Next 15.5.21 build generated **14/14 static pages**; default and
+  PostgreSQL Compose have zero published app/data ports and no BasicAuth;
+  independent verifier Round 2 **PASS** (`docs/verification-log.md`). The local
+  Docker daemon was unavailable, so Draft PR CI remains the production-image
+  build gate. **Awaiting Draft PR CI, human review, and merge; production
+  intentionally keeps temporary Traefik BasicAuth until this branch is merged
+  and deployed.**
+
 Newest first.
 
 - **2026-07-04** — **P0 executed: first measured real E2E runs (DeepSeek, Docker) + golden set 5 → 61.** User greenlit the review's P0 roadmap and supplied a DeepSeek key (`LLM Key.md`, now gitignored; runtime config via gitignored `.env` + compose `env_file`). **Run A (cycle 1, job 36ca1b5b):** `POST /api/pipeline/run-all` → 170 items collected (10 sources ok), 91 analyzed → 17 passed A1 → 17 singleton clusters → 1 GO/16 NO-GO → real report `reports/2026-07-03.md`; 9m42s wall clock. It immediately exposed two production bugs: **(F1) HN collector dead** — Algolia's HN index now rejects `points`/`num_comments` in `numericFilters` (HTTP 400 on every query; mocked CI never saw it) — fixed in `niche_radar/collectors/hackernews.py` (server-side `created_at_i` freshness + client-side threshold filtering; live-verified: hn went 0 → 3 items); **(F2) cost attribution never worked** — `llm_usage` accumulator was `threading.local()` but agents record from ThreadPool workers while flush runs on main thread (203 calls → 0 rows) — fixed in `niche_radar/llm/usage.py` (lock-guarded module-global + nested/DeepSeek cache-token capture), regression-tested with a cross-thread test. **Run B (cycle 2, job bbe7f8ee, both fixes live):** 70 new items → 16 passed → 16 clusters → report `reports/2026-07-04.md` (31 cumulative opps); **usage flush 171/171 calls, measured cost $0.0358/cycle** (118,744 in / 93,100 out, 42% cache-hit). Artifacts: `docs/sample-reports/2026-07-03-first-real-run.md`, `2026-07-04-second-real-run.md` (hand-written samples deleted per review P0), `2026-07-04-run-metrics.md` (funnel, cost tables, F1–F11 findings). **Golden set:** 61 items (10 pass/51 reject ≈ real base rate) hand-labeled from the runs' raw_items across v2ex/github/google_trends/linkedin/youtube/hn incl. degenerate inputs (empty linkedin shells) and hard negatives ("I wish" listicle); fixtures replay the real deepseek-v4-flash A1 response wherever it agreed with the label (35 items), hand-written otherwise, disagreements recorded in notes. Eval gate 61/61, exit 0. **Calibration (n=48): A1 recall 85.7%, precision 26.1%** — 17 false-passes (launches/shopping/rants/support/repo-blurbs/commentary), 1 borderline false-reject; cycle 1's sole "Quick Win" was a false-pass. **Verified (producer self-check):** pytest 498/498 in container (496 → 498); `python -m niche_radar.eval.runner` exit 0 (61/61); both cycles ran via `docker compose` with logs captured. **Caveats:** ⚠️ per-source yield reflects THIS network/moment (residential IP, 72h HN window); ⚠️ youtube's 114 items never analyzed (F4 `posted_at` NULL) and linkedin bodies are empty shells (F5) — both deferred, listed in Open Items; ⚠️ cycle-1 token totals are estimates (F2 was fixed only after it ran). **What the next session should do:** dispatch independent verification for both branches (`task/p0-first-real-run`, `task/p0-golden-set-61`), then human-gate merge; after merge, start the measured top priority — A1 prompt hardening against the golden set (target: precision ≥60% without recall dropping below ~80%), then F4/F5.

@@ -16,6 +16,9 @@ env/
 # Environment & secrets
 .env
 LLM Key.md
+*.pem
+*.key
+secrets/
 
 # Data & Reports (generated)
 data/

@@ -9,7 +9,7 @@ services:
       - ./data:/app/data
       - ./reports:/app/reports
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     restart: unless-stopped
 
   frontend:
@@ -20,7 +20,7 @@ services:
     environment:
       - BACKEND_URL=http://radar:8000
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       - radar
     restart: unless-stopped
@@ -35,7 +35,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     profiles: ["postgres"]
 
 volumes:

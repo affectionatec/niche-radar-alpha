@@ -79,6 +79,11 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "json"  # 'json' | 'text'
 
+    # Deployment/auth mode. Production reads credentials only from fixed Docker
+    # secret files; local development and offline tests bypass the login gate.
+    app_environment: str = "development"
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+
     # Notifications
     slack_webhook_url: str = ""
     discord_webhook_url: str = ""
@@ -91,6 +96,14 @@ class Settings(BaseSettings):
     llm_batch_size: int = 50  # raw items per LLM call
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+
+    @property
+    def is_production(self) -> bool:
+        return self.app_environment.strip().lower() == "production"
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
 
 _settings: Settings | None = None

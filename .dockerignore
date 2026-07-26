@@ -1,4 +1,6 @@
 .git
+.github
+.codegraph
 .venv
 __pycache__
 .pytest_cache
@@ -12,3 +14,6 @@ tests
 *.log
 .env
 LLM Key.md
+*.pem
+*.key
+secrets
