@@ -2,10 +2,16 @@
 
 > Status: **Review document. Nothing implemented yet.** This records diagnosis and a
 > change list only, to be split into tasks and executed later.
-> **Update 2026-08-04:** the operator has answered all four open questions (§6). Two
+> **Update 2026-08-04 (a):** the operator has answered all four open questions (§6). Two
 > required architectural decisions, now recorded as **ADR-011** (evidence-first pipeline)
 > and **ADR-012** (dual-track assessment). **The roadmap has been re-derived in §7; §4 is
 > superseded.** Still no code changed — documentation-first by the operator's request.
+> **Update 2026-08-04 (b) — second review pass:** re-queried the live instance and measured
+> the **analyzable** corpus rather than the collected one (§2.6). Two results: **F4 is
+> confirmed still broken** (YouTube has never entered analysis in 1,560 cycles), and a new
+> finding **Q13** — google_trends is 23.8% of the corpus with a measured 0% A1 pass rate.
+> Both added to Stage 1 (S1-4, S1-5). Target contracts for ADR-011/012 are now written into
+> `docs/spec/analysis-pipeline.md` §6–§10.
 > Trigger: the operator reported that pipeline output "isn't reasonable — very few are
 > things you could actually build as an app or a website."
 > Method: read the full chain, then cross-check every conclusion against the **live
@@ -41,8 +47,11 @@ The root cause is not prompt wording. It is four structural decisions:
    (Q3/Q4) — newly discovered here, and it destroys the product's core value proposition.
 3. **Nothing anywhere in the chain asks whether the thing can be a website or an app**
    (Q5) — hardware shopping, account support, and government paperwork all pass through.
-4. **The corpus is dominated by the wrong source** (Q6) — the best-designed collector (HN)
-   yields 2 items live.
+4. **The corpus is dominated by the wrong source** (Q6/Q13) — measured on the *analyzable*
+   corpus (§2.6), **v2ex is 71.0% and HN is 0.3%**, with a further 23.8% coming from
+   google_trends, a source with a measured **0% A1 pass rate**. ~95% of what the pipeline
+   reads is a tech-support forum plus noise. Separately, YouTube has collected 80 items per
+   cycle for 1,560 cycles and **not one has ever entered analysis** (F4, confirmed).
 
 ### What was decided (2026-08-04)
 
@@ -112,6 +121,38 @@ multiple people" — see Q3.**
 | MISSING (unconfigured) | twitter · bluesky · tiktok · instagram · threads · exa · xiaohongshu · xiaoyuzhou |
 
 **23 sources, 6 producing, 2 (v2ex/hn) yielding genuine pain signal — unchanged since July.**
+
+### 2.6 The analyzable corpus ← added on second pass, and it is worse than §2.5 suggests
+
+§2.5 counts what each source *collected*. The number that actually determines output is what
+each source contributes to the corpus that **can enter analysis** — i.e. rows with a non-null
+`posted_at`. From `/api/status` → `freshness.per_source` (second snapshot, 13:21Z, cycle 1560,
+3,761 raw items):
+
+| Source | Analyzable items | Share | Known quality |
+|---|---:|---:|---|
+| **v2ex** | **2,414** | **71.0%** | tech-support Q&A board (`qna` node) |
+| google_trends | 810 | 23.8% | **measured 0 A1 passes in July — pure noise** |
+| github | 132 | 3.9% | repo taglines; July's single pass was a false pass |
+| linkedin | 35 | 1.0% | empty query-echo shells (F5) |
+| **hn** | **10** | **0.3%** | the only well-designed pain-mining source |
+| **Total** | **3,401** | | |
+
+**~95% of the analyzable corpus is a tech-support forum plus measured noise. HN is 0.3%.**
+This is a far sharper statement of Q6 than July's "87 of 110" — at production scale the
+imbalance has widened, not narrowed.
+
+Two consequences fall straight out of this table:
+
+1. **F4 is confirmed still broken.** YouTube does not appear in `freshness.per_source` at all,
+   despite `status: OK` and 80 items collected every cycle across 1,560 cycles. Its
+   `posted_at` is NULL, so **not one YouTube item has ever entered analysis.** The gap
+   between total raw items (3,761) and analyzable items (3,401) is ≈360 rows — consistent
+   with YouTube's deduplicated unique videos being permanently invisible. This closes the
+   "to verify" item left open on the first pass.
+2. **google_trends is 23.8% of the corpus with a measured 0% A1 pass rate** (July funnel,
+   n=30: "News/sports/event queries; pure noise for this product"). Every cycle pays A1
+   tokens on ~810 items that structurally cannot pass. See Q13.
 
 ---
 
@@ -374,11 +415,39 @@ This flips the evidence/speculation ratio, cuts cost sharply, and restores trust
 
 ---
 
-### ℹ️ To verify
+#### Q13 — A quarter of the corpus is a source with a measured 0% pass rate ⚠️ NEW (second pass)
 
-- **F4 status is now ambiguous:** `status.md` records F4 (youtube `posted_at` NULL, 114
-  items invisible to analysis) as unfixed, but the live instance shows youtube collecting
-  80 items. Confirm whether those 80 actually reach A1 or are still silently dropped.
+**Evidence:** google_trends contributes **810 analyzable items, 23.8% of the corpus**
+(§2.6). The July per-source funnel measured it at **0 A1 passes out of 30**, described as
+*"News/sports/event queries; pure noise for this product."*
+
+**Problem:** this is not merely unhelpful, it is actively expensive and actively distorting:
+
+- Every cycle spends A1 tokens on ~810 items that structurally cannot pass. A1 was 72 of
+  171 calls in the measured cycle — the largest single agent by call count.
+- It drags the denominator of every funnel metric, which makes A1's precision problem look
+  like a prompt-tuning issue when a quarter of it is a source-selection issue.
+- Google Trends returns *search-volume topics*, not user-authored text. There is no person,
+  no pain statement, and no quote — so it can never satisfy A1's pass criteria by
+  construction, no matter how the prompt is worded.
+
+**Direction:** stop feeding google_trends to A1. Either drop the source, or keep it purely as
+a momentum/context signal attached to clusters rather than as candidate raw items. This is
+cheaper than any prompt work and removes ~24% of A1 spend outright.
+
+**Interaction with Q10:** A1's measured 26.1% precision was computed on a sample from this
+mixed corpus. Removing a known-0% quarter changes the baseline, so **Q13 should land before
+A1 precision is re-measured**, or the new number will not be comparable.
+
+---
+
+### ℹ️ Verification results (second pass)
+
+- **F4 — CONFIRMED STILL BROKEN.** Resolved on the second pass via
+  `/api/status` → `freshness.per_source`, which lists only the sources holding rows with a
+  non-null `posted_at`: github, google_trends, hn, linkedin, v2ex. **YouTube is absent**
+  despite `status: OK` and 80 items collected per cycle across 1,560 cycles — so not one
+  YouTube item has ever entered analysis. See §2.6.
 - 4 sources FAILED (product_hunt / app_store / play_store / xueqiu), 7 MISSING. Decide
   which are worth repairing and which should be removed — **6 of 23 sources producing** is
   itself evidence that the breadth strategy has passed negative marginal return.
@@ -493,6 +562,13 @@ architecture change and remain the cheapest wins.
 | S1-1 | Add the **form-factor gate** to A1 + encode archetypes in the golden set | Q5 |
 | S1-2 | Drop the `qna` node from V2EX; expand HN queries/tags/window | Q6 |
 | S1-3 | Fix F7: 0 hits *with errors* ⇒ `unknown`, never `validated_gap` | Q7 |
+| S1-4 | **Stop feeding google_trends to A1** (drop, or demote to a context signal) | Q13 |
+| S1-5 | **Fix F4** — YouTube `posted_at` NULL; ~360 items permanently invisible | §2.6 |
+
+> S1-4 and S1-5 were added on the second pass. Together they change the corpus more than any
+> prompt work can: S1-4 removes 23.8% known-noise, S1-5 unlocks a source that has been
+> collecting into a void for 1,560 cycles. **Both must land before A1 precision is
+> re-measured (S4-1)**, or the new number will not be comparable to the 26.1% baseline.
 
 **Stage 2 — Phase 1 / evidence path (ADR-011).**
 
