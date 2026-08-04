@@ -14,5 +14,7 @@ Append-only log of consequential decisions. **Never edit an accepted ADR** — s
 | [ADR-008](ADR-008-linkedin-public-jina-tier.md) | LinkedIn public search → Jina relay (not linkedin-mcp) | Accepted |
 | [ADR-009](ADR-009-xiaoyuzhou-jina-no-whisper.md) | 小宇宙 Jina Reader relay (defer Whisper) | Accepted |
 | [ADR-010](ADR-010-application-session-authentication.md) | Application-owned single-operator session authentication | Accepted |
+| [ADR-011](ADR-011-evidence-first-pipeline.md) | Evidence-first split: A3–A8 run on demand, not on every cluster (amends ADR-003) | Accepted |
+| [ADR-012](ADR-012-dual-track-opportunity-assessment.md) | Two independent assessment tracks (Quick Win / Scalable Product) over shared dimensions | Accepted |
 
 > Adding an ADR: copy the template from the `architecture-decision-record` skill, number sequentially (numbers are never reused), frame the title as a question, and record it at the moment of decision.

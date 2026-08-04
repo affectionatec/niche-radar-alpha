@@ -2,6 +2,10 @@
 
 > Status: **Review document. Nothing implemented yet.** This records diagnosis and a
 > change list only, to be split into tasks and executed later.
+> **Update 2026-08-04:** the operator has answered all four open questions (§6). Two
+> required architectural decisions, now recorded as **ADR-011** (evidence-first pipeline)
+> and **ADR-012** (dual-track assessment). **The roadmap has been re-derived in §7; §4 is
+> superseded.** Still no code changed — documentation-first by the operator's request.
 > Trigger: the operator reported that pipeline output "isn't reasonable — very few are
 > things you could actually build as an app or a website."
 > Method: read the full chain, then cross-check every conclusion against the **live
@@ -39,6 +43,23 @@ The root cause is not prompt wording. It is four structural decisions:
    (Q5) — hardware shopping, account support, and government paperwork all pass through.
 4. **The corpus is dominated by the wrong source** (Q6) — the best-designed collector (HN)
    yields 2 items live.
+
+### What was decided (2026-08-04)
+
+The operator resolved all four open questions the same day (§6). The two structural answers:
+
+- **Evidence-first is adopted (ADR-011).** The pipeline splits at the evidence/judgment
+  boundary: Phase 1 (automatic, every cycle) collects, gates, extracts, and clusters, then
+  presents **measured evidence only** — verbatim quotes with links, distinct-author counts,
+  recurrence. Phase 2 (A3–A8) runs **on demand** on a cluster the operator selects. The
+  machine does the reading; the operator does the judging.
+- **Assessment becomes dual-track (ADR-012).** "Quick Win" and "Scalable Product" are scored
+  independently over shared dimensions, because the two rubrics disagree about the same
+  opportunity and *that disagreement is the signal* the current single score averages away.
+
+Consequently **§4's roadmap is superseded by §7** — evidence-first dissolves several
+findings rather than fixing them (notably Q3, whose aggregation bug is retired rather than
+repaired).
 
 ---
 
@@ -364,7 +385,11 @@ This flips the evidence/speculation ratio, cuts cost sharply, and restores trust
 
 ---
 
-## 4. Roadmap (ordered by leverage)
+## 4. Roadmap (ordered by leverage) — ⚠️ SUPERSEDED BY §7
+
+> **This section is retained for provenance only.** It was written before the operator
+> answered §6. Adopting ADR-011 (evidence-first) dissolves several items below rather than
+> fixing them — building them as scoped here would be wasted effort. **Use §7.**
 
 > One task branch and one draft PR per item, per AGENTS.md §7. ⚠️ marks items needing an
 > ADR first.
@@ -414,12 +439,92 @@ This flips the evidence/speculation ratio, cuts cost sharply, and restores trust
 
 ---
 
-## 6. Open questions for the operator
+## 6. Operator decisions — ANSWERED 2026-08-04
 
-1. **Reddit credentials** (P0-3) — need client_id / client_secret, or the highest-value
-   source stays at 0.
-2. **Target scale** (Q2) — is "success" a $1k/month utility, or a product that can grow to
-   $50k MRR? The A4 reweight depends entirely on this answer.
-3. **Time window** (Q1) — is 2-4 weeks a hard constraint or a reference value?
-4. **Adopt evidence-first mode?** (Q12) — determines whether A3–A8 keep running on
-   everything or become on-demand.
+All four open questions were resolved by the operator on the day of the review. The answers
+are recorded here; two of them were consequential enough to require ADRs, and both are now
+written. **§4's roadmap has been re-derived accordingly — see §7.**
+
+| # | Question | Answer | Consequence |
+|---|---|---|---|
+| 1 | Reddit credentials | **Deferred.** "Not urgent — I'll configure it once things work. What needs fixing now is the project's overall usability, from first principles." | P0-3 leaves P0. The other two parts of Q6 (V2EX `qna`, HN expansion) are independent of Reddit and stay. |
+| 2 | Target scale | **Both.** "I can do either — can we have both? Two analyses?" | → **ADR-012**: two independent assessment tracks over shared dimensions. |
+| 3 | 2-4 week window | **Reference value, not a constraint.** | Build duration is never a rejection reason in either track; `estimated_weeks_to_mvp` is displayed as a fact (Q9). |
+| 4 | Evidence-first mode | **Adopted.** | → **ADR-011**: split the pipeline at the evidence/judgment boundary. |
+
+### Why answer 2 mattered more than it looks
+
+"Both" is not a scope dodge — it is the question the current design structurally cannot
+answer. A single composite score blending both goals is optimal for neither, and the
+production numbers are exactly that failure mode: mean 50.0, max 72.63, nothing ever clears
+the top tier, GO rate 0.0%.
+
+The decisive point is that **the two rubrics disagree about the same opportunity, and the
+disagreement is the signal** — see the worked table in ADR-012 §Context, where the macOS
+Finder utility, the AI-search-with-citations product, and the zero-config share link sort
+into completely different ranks under the two lenses, yet all three collapse to ~42–64 and
+NO-GO today. The distinction the operator most needs is precisely the one being averaged
+away.
+
+---
+
+## 7. Revised roadmap (supersedes §4)
+
+Adopting ADR-011 changes the shape of the work materially: **several §4 items are dissolved
+rather than fixed.** Building them as originally scoped would be wasted effort.
+
+### What ADR-011 dissolves
+
+| §4 item | Original plan | Status under ADR-011 |
+|---|---|---|
+| P1-1 (Q3 cluster aggregation) | Rework the field-wise merge | **Retired, not repaired.** Phase 1 shows members individually; Phase 2 hands A3–A8 the full member list. `aggregate_cluster_a2()`'s longest-string merge is deleted. |
+| P1-2 (Q4 cluster naming) | Derive name from A8 title | **Simplified.** Phase 1 clusters need a name from evidence, not from an agent that no longer runs automatically. |
+| P1-3 (Q1 time gate) | Decouple from verdict | **Absorbed** into ADR-012 item 3. |
+| P1-4 (Q2 A4 weights) | Single reweight | **Replaced** by ADR-012's two-track design. |
+| P0-4 / P2-3 (Q7 A3 grounding) | Fix + ground A3 | **Blast radius shrinks** to deep dives only. F7 still needs fixing; the "wire a real search API" question becomes much less urgent. |
+
+### Revised sequence
+
+**Stage 1 — Input quality (unchanged, still first).** These are independent of the
+architecture change and remain the cheapest wins.
+
+| # | Task | Covers |
+|---|---|---|
+| S1-1 | Add the **form-factor gate** to A1 + encode archetypes in the golden set | Q5 |
+| S1-2 | Drop the `qna` node from V2EX; expand HN queries/tags/window | Q6 |
+| S1-3 | Fix F7: 0 hits *with errors* ⇒ `unknown`, never `validated_gap` | Q7 |
+
+**Stage 2 — Phase 1 / evidence path (ADR-011).**
+
+| # | Task | Covers |
+|---|---|---|
+| S2-1 | Persist Evidence Clusters as first-class records (members, provenance, distinct-author/source counts) | Q3 |
+| S2-2 | Evidence score from counted quantities only (authors, sources, recurrence, recency) | Q3, Q11 |
+| S2-3 | Cut A3–A8 out of the automatic cycle; retire `aggregate_cluster_a2()`'s merge | Q3, Q1 |
+| S2-4 | Frontend: primary object becomes the Evidence Cluster; evidence vs. assessment split | Q4, Q8 |
+
+**Stage 3 — Phase 2 / on-demand deep dive (ADR-011 + ADR-012).**
+
+| # | Task | Covers |
+|---|---|---|
+| S3-1 | Operator-triggered deep dive on one cluster; A3–A8 receive the full member list | Q3 |
+| S3-2 | A4 → neutral measurer; dimension set grows (defensibility, retention) | Q2 |
+| S3-3 | A6 → dual-track judge; per-track recommendations | Q1, Q2 |
+| S3-4 | Retire `build_complexity_from_feasibility()`; display `estimated_weeks_to_mvp` | Q9 |
+| S3-5 | Collapse the two tier vocabularies to one definition, applied per track, recalibrated | Q8 |
+
+**Stage 4 — Deferred / later.**
+
+| # | Task | Covers | Note |
+|---|---|---|---|
+| S4-1 | A1 precision ≥60% (recall ≥~80%) | Q10 | **Only after S1-1/S1-2** — tuning before the corpus is fixed is tuning on the wrong input |
+| S4-2 | Reddit PRAW credentials | Q6/F6 | Operator-deferred; configure when the rest works |
+| S4-3 | Longitudinal pain fingerprints across runs | Q11 | Natural extension of S2-2's evidence score |
+| S4-4 | Source health cleanup (11 FAILED/MISSING) | §3 | Removal likely beats repair |
+| S4-5 | Ground A3 in real search, or keep it labeled "unverified" | Q7 | Much less urgent post-ADR-011 |
+
+### Unchanged from §5
+
+The "explicitly not recommended" list still holds in full — in particular **do not tune the
+A1 prompt before the corpus is fixed** (now S4-1 after S1-1/S1-2), and **do not add new
+collectors**.
