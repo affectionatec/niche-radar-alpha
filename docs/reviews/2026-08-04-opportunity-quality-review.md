@@ -2,16 +2,16 @@
 
 > Status: **Review document. Nothing implemented yet.** This records diagnosis and a
 > change list only, to be split into tasks and executed later.
-> **Update 2026-08-04 (a):** the operator has answered all four open questions (§6). Two
-> required architectural decisions, now recorded as **ADR-011** (evidence-first pipeline)
-> and **ADR-012** (dual-track assessment). **The roadmap has been re-derived in §7; §4 is
+> **Update 2026-08-04 (a):** the operator answered all four open questions (§6),
+> adopting evidence-first discovery and dual-track assessment. **The roadmap
+> has been re-derived in §7; §4 is
 > superseded.** Still no code changed — documentation-first by the operator's request.
 > **Update 2026-08-04 (b) — second review pass:** re-queried the live instance and measured
 > the **analyzable** corpus rather than the collected one (§2.6). Two results: **F4 is
 > confirmed still broken** (YouTube has never entered analysis in 1,560 cycles), and a new
 > finding **Q13** — google_trends is 23.8% of the corpus with a measured 0% A1 pass rate.
-> Both added to Stage 1 (S1-4, S1-5). Target contracts for ADR-011/012 are now written into
-> `docs/spec/analysis-pipeline.md` §6–§10.
+> Both added to Stage 1 (S1-4, S1-5). The intended product behavior is summarized in
+> [architecture.md](../architecture.md#intended-product-behavior-not-implemented).
 > Trigger: the operator reported that pipeline output "isn't reasonable — very few are
 > things you could actually build as an app or a website."
 > Method: read the full chain, then cross-check every conclusion against the **live
@@ -57,12 +57,12 @@ The root cause is not prompt wording. It is four structural decisions:
 
 The operator resolved all four open questions the same day (§6). The two structural answers:
 
-- **Evidence-first is adopted (ADR-011).** The pipeline splits at the evidence/judgment
+- **Evidence-first discovery is adopted.** The pipeline splits at the evidence/judgment
   boundary: Phase 1 (automatic, every cycle) collects, gates, extracts, and clusters, then
   presents **measured evidence only** — verbatim quotes with links, distinct-author counts,
   recurrence. Phase 2 (A3–A8) runs **on demand** on a cluster the operator selects. The
   machine does the reading; the operator does the judging.
-- **Assessment becomes dual-track (ADR-012).** "Quick Win" and "Scalable Product" are scored
+- **Assessment becomes dual-track.** "Quick Win" and "Scalable Product" are scored
   independently over shared dimensions, because the two rubrics disagree about the same
   opportunity and *that disagreement is the signal* the current single score averages away.
 
@@ -196,7 +196,7 @@ success. The system is systematically rejecting exactly the class of opportunity
 operator wants.
 
 **Direction:** downweight or replace `market_size`/TAM with **reachability** ("can 1,000 of
-these users be found in one place?"). Architectural → needs an ADR.
+these users be found in one place?"). This changes the architecture.
 
 ---
 
@@ -339,7 +339,7 @@ appears to cover this, but it is a week-over-week mention count resting on the
 already-corrupted `occurrence_count` from Q3.
 
 **Direction:** persist pain fingerprints across runs and cluster over the longitudinal
-corpus rather than the batch. Architectural → needs an ADR.
+corpus rather than the batch. This changes the architecture.
 
 ---
 
@@ -411,7 +411,7 @@ raw quotes with links → the operator judges → run A3–A8 **on demand** for 
 select.
 
 This flips the evidence/speculation ratio, cuts cost sharply, and restores trust.
-**This is an ADR-level proposal, not a task** — it needs the operator's decision first.
+**This is a product-direction proposal**; the operator decisions are recorded in §6.
 
 ---
 
@@ -457,11 +457,8 @@ A1 precision is re-measured**, or the new number will not be comparable.
 ## 4. Roadmap (ordered by leverage) — ⚠️ SUPERSEDED BY §7
 
 > **This section is retained for provenance only.** It was written before the operator
-> answered §6. Adopting ADR-011 (evidence-first) dissolves several items below rather than
+> answered §6. Adopting evidence-first discovery dissolves several items below rather than
 > fixing them — building them as scoped here would be wasted effort. **Use §7.**
-
-> One task branch and one draft PR per item, per AGENTS.md §7. ⚠️ marks items needing an
-> ADR first.
 
 ### P0 — Change the character of the output (small changes, large effect)
 
@@ -476,10 +473,10 @@ A1 precision is re-measured**, or the new number will not be comparable.
 
 | # | Task | Covers | Note |
 |---|---|---|---|
-| P1-1 | Rework cluster aggregation: abolish field-wise longest-string merge; recompute `occurrence_count` as distinct authors/sources | **Q3** | ⚠️ ADR |
+| P1-1 | Rework cluster aggregation: abolish field-wise longest-string merge; recompute `occurrence_count` as distinct authors/sources | **Q3** | Architecture change |
 | P1-2 | Derive cluster display name from A8 title / A2.what | Q4 | Depends on P1-1 |
-| P1-3 | Separate the time budget from the verdict; make the window configurable | Q1 | ⚠️ ADR |
-| P1-4 | Rework A4 weights: downweight TAM/market_size, introduce reachability | Q2 | ⚠️ ADR |
+| P1-3 | Separate the time budget from the verdict; make the window configurable | Q1 | Architecture change |
+| P1-4 | Rework A4 weights: downweight TAM/market_size, introduce reachability | Q2 | Architecture change |
 | P1-5 | Unify the tier definition; recalibrate thresholds to the observed distribution | Q8 | Small |
 | P1-6 | Display `estimated_weeks_to_mvp` directly; retire `build_complexity_from_feasibility` | Q9 | Small |
 
@@ -488,10 +485,10 @@ A1 precision is re-measured**, or the new number will not be comparable.
 | # | Task | Covers | Note |
 |---|---|---|---|
 | P2-1 | Iterate the A1 prompt to precision ≥60% (recall not below ~80%) | Q10 | Must come **after** P0-1/P0-2, or it tunes against the old corpus |
-| P2-2 | Persist pain fingerprints across runs; cluster longitudinally | Q11 | ⚠️ ADR |
-| P2-3 | Wire A3 to a real search API, or label its output "unverified" in the UI | Q7 | ⚠️ ADR |
+| P2-2 | Persist pain fingerprints across runs; cluster longitudinally | Q11 | Architecture change |
+| P2-3 | Wire A3 to a real search API, or label its output "unverified" in the UI | Q7 | Architecture change |
 | P2-4 | Source health cleanup: repair or remove the 11 FAILED/MISSING sources | §3 To verify | Removal likely beats repair |
-| P2-5 | Evidence-first mode | Q12 | ⚠️ ADR, needs a decision first |
+| P2-5 | Evidence-first mode | Q12 | Product-direction change; see §6 |
 
 ---
 
@@ -511,15 +508,15 @@ A1 precision is re-measured**, or the new number will not be comparable.
 ## 6. Operator decisions — ANSWERED 2026-08-04
 
 All four open questions were resolved by the operator on the day of the review. The answers
-are recorded here; two of them were consequential enough to require ADRs, and both are now
+are recorded here; the evidence-first and dual-track decisions are
 written. **§4's roadmap has been re-derived accordingly — see §7.**
 
 | # | Question | Answer | Consequence |
 |---|---|---|---|
 | 1 | Reddit credentials | **Deferred.** "Not urgent — I'll configure it once things work. What needs fixing now is the project's overall usability, from first principles." | P0-3 leaves P0. The other two parts of Q6 (V2EX `qna`, HN expansion) are independent of Reddit and stay. |
-| 2 | Target scale | **Both.** "I can do either — can we have both? Two analyses?" | → **ADR-012**: two independent assessment tracks over shared dimensions. |
+| 2 | Target scale | **Both.** "I can do either — can we have both? Two analyses?" | → **the dual-track design**: two independent assessment tracks over shared dimensions. |
 | 3 | 2-4 week window | **Reference value, not a constraint.** | Build duration is never a rejection reason in either track; `estimated_weeks_to_mvp` is displayed as a fact (Q9). |
-| 4 | Evidence-first mode | **Adopted.** | → **ADR-011**: split the pipeline at the evidence/judgment boundary. |
+| 4 | Evidence-first mode | **Adopted.** | → **the evidence-first design**: split the pipeline at the evidence/judgment boundary. |
 
 ### Why answer 2 mattered more than it looks
 
@@ -529,8 +526,8 @@ production numbers are exactly that failure mode: mean 50.0, max 72.63, nothing 
 the top tier, GO rate 0.0%.
 
 The decisive point is that **the two rubrics disagree about the same opportunity, and the
-disagreement is the signal** — see the worked table in ADR-012 §Context, where the macOS
-Finder utility, the AI-search-with-citations product, and the zero-config share link sort
+disagreement is the signal** — for example, the macOS Finder utility, the
+AI-search-with-citations product, and the zero-config share link sort
 into completely different ranks under the two lenses, yet all three collapse to ~42–64 and
 NO-GO today. The distinction the operator most needs is precisely the one being averaged
 away.
@@ -539,17 +536,17 @@ away.
 
 ## 7. Revised roadmap (supersedes §4)
 
-Adopting ADR-011 changes the shape of the work materially: **several §4 items are dissolved
+Adopting the evidence-first design changes the shape of the work materially: **several §4 items are dissolved
 rather than fixed.** Building them as originally scoped would be wasted effort.
 
-### What ADR-011 dissolves
+### What the evidence-first design dissolves
 
-| §4 item | Original plan | Status under ADR-011 |
+| §4 item | Original plan | Status under the evidence-first design |
 |---|---|---|
 | P1-1 (Q3 cluster aggregation) | Rework the field-wise merge | **Retired, not repaired.** Phase 1 shows members individually; Phase 2 hands A3–A8 the full member list. `aggregate_cluster_a2()`'s longest-string merge is deleted. |
 | P1-2 (Q4 cluster naming) | Derive name from A8 title | **Simplified.** Phase 1 clusters need a name from evidence, not from an agent that no longer runs automatically. |
-| P1-3 (Q1 time gate) | Decouple from verdict | **Absorbed** into ADR-012 item 3. |
-| P1-4 (Q2 A4 weights) | Single reweight | **Replaced** by ADR-012's two-track design. |
+| P1-3 (Q1 time gate) | Decouple from verdict | **Absorbed** into the duration policy in §6. |
+| P1-4 (Q2 A4 weights) | Single reweight | **Replaced** by independent Quick Win and Scalable Product assessments. |
 | P0-4 / P2-3 (Q7 A3 grounding) | Fix + ground A3 | **Blast radius shrinks** to deep dives only. F7 still needs fixing; the "wire a real search API" question becomes much less urgent. |
 
 ### Revised sequence
@@ -570,7 +567,7 @@ architecture change and remain the cheapest wins.
 > collecting into a void for 1,560 cycles. **Both must land before A1 precision is
 > re-measured (S4-1)**, or the new number will not be comparable to the 26.1% baseline.
 
-**Stage 2 — Phase 1 / evidence path (ADR-011).**
+**Stage 2 — Phase 1 / evidence path (the evidence-first design).**
 
 | # | Task | Covers |
 |---|---|---|
@@ -579,7 +576,7 @@ architecture change and remain the cheapest wins.
 | S2-3 | Cut A3–A8 out of the automatic cycle; retire `aggregate_cluster_a2()`'s merge | Q3, Q1 |
 | S2-4 | Frontend: primary object becomes the Evidence Cluster; evidence vs. assessment split | Q4, Q8 |
 
-**Stage 3 — Phase 2 / on-demand deep dive (ADR-011 + ADR-012).**
+**Stage 3 — Phase 2 / on-demand deep dive (evidence-first discovery + dual-track assessment).**
 
 | # | Task | Covers |
 |---|---|---|
@@ -597,7 +594,7 @@ architecture change and remain the cheapest wins.
 | S4-2 | Reddit PRAW credentials | Q6/F6 | Operator-deferred; configure when the rest works |
 | S4-3 | Longitudinal pain fingerprints across runs | Q11 | Natural extension of S2-2's evidence score |
 | S4-4 | Source health cleanup (11 FAILED/MISSING) | §3 | Removal likely beats repair |
-| S4-5 | Ground A3 in real search, or keep it labeled "unverified" | Q7 | Much less urgent post-ADR-011 |
+| S4-5 | Ground A3 in real search, or keep it labeled "unverified" | Q7 | Much less urgent after the evidence-first change |
 
 ### Unchanged from §5
 

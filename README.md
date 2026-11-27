@@ -5,7 +5,7 @@
 *Automated trend-intelligence pipeline for discovering product opportunities*
 
 ![Python](https://img.shields.io/badge/Python-3.11+-3776ab?style=flat-square&logo=python&logoColor=white)
-![Next.js](https://img.shields.io/badge/Next.js-14-000?style=flat-square&logo=next.js)
+![Next.js](https://img.shields.io/badge/Next.js-15-000?style=flat-square&logo=next.js)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white)
 ![Status](https://img.shields.io/badge/Status-Alpha-orange?style=flat-square)
@@ -54,7 +54,7 @@ flowchart TD
     end
 
     CLU --> A3
-    A8 -->|scored niches| DB[(SQLite / PostgreSQL)]
+    A8 -->|scored niches| DB[(SQLite)]
 ```
 
 <details>
@@ -132,11 +132,8 @@ docker compose up -d --build
 Visit **http://localhost:3000**. If no LLM key is configured yet, you'll be redirected to the Settings page.
 
 > [!NOTE]
-> **Want PostgreSQL instead of SQLite?** Run with the postgres profile:
-> ```bash
-> docker compose --profile postgres up -d --build
-> ```
-> Then set `DATABASE_URL=postgresql://radar:changeme@db:5432/niche_radar` in `.env`.
+> The optional `postgres` Compose profile provisions a PostgreSQL service, but the
+> application currently uses SQLite only. It has no PostgreSQL storage adapter.
 
 ## Dashboard
 
@@ -155,7 +152,7 @@ Visit **http://localhost:3000**. If no LLM key is configured yet, you'll be redi
 | **Settings** | LLM provider config (8 providers, live model refresh), scoring weights, prompt packs, data source credentials |
 
 > [!TIP]
-> See [sample reports](docs/sample-reports/) for hand-written illustrations of the report format — including a 🟢 GO verdict with full PRD and a 🔴 NO-GO verdict with detailed rationale.
+> See [sample reports](docs/sample-reports/) for captured pipeline output and measured run metrics.
 
 ## Data Sources
 
@@ -189,7 +186,7 @@ Visit **http://localhost:3000**. If no LLM key is configured yet, you'll be redi
 > Most sources work out of the box with zero credentials. All source credentials can be managed from **Settings → Data Sources** in the dashboard. One ScrapeCreators key unlocks TikTok, Instagram, and Threads together.
 
 > [!NOTE]
-> **X/Twitter is now resilient.** Capture runs through an ordered fallback chain — set an **xAI** or **Xquik** API key for a stable, cookie-free path; the legacy cookie-scraping backend is only used as a last resort (ADR-002).
+> **X/Twitter is now resilient.** Capture runs through an ordered fallback chain — set an **xAI** or **Xquik** API key for a stable, cookie-free path; the legacy cookie-scraping backend is only used as a last resort. See [collector boundaries](docs/architecture.md#collector-boundaries).
 
 ## LLM Providers
 
@@ -214,7 +211,7 @@ Visit **http://localhost:3000**. If no LLM key is configured yet, you'll be redi
 │                                                       │
 │  ┌──────────────────┐     ┌────────────────────────┐  │
 │  │  frontend :3000   │────▶│    radar :8000          │  │
-│  │  Next.js 14       │     │    FastAPI + Uvicorn    │  │
+│  │  Next.js 15       │     │    FastAPI + Uvicorn    │  │
 │  │  React 18, SWR    │     │    APScheduler          │  │
 │  └──────────────────┘     │    8-Agent Pipeline      │  │
 │                            │    23 Collectors         │  │
@@ -244,7 +241,7 @@ niche-radar-alpha/
 │   │   └── clustering.py           #   Jaccard + LLM clustering
 │   ├── llm/                        # LLM client abstraction + usage tracking
 │   ├── eval/                       # Golden set evaluation framework
-│   ├── storage/                    # SQLite/PostgreSQL repository
+│   ├── storage/                    # SQLite repository
 │   ├── api/                        # FastAPI server + job manager
 │   └── reports/                    # Markdown report generator
 ├── frontend/                       # Next.js dashboard
@@ -256,11 +253,9 @@ niche-radar-alpha/
 ├── prompt_packs/                   # YAML-based prompt override packs
 ├── eval/                           # Golden set data for pipeline evaluation
 ├── docs/                           # Extended documentation
-│   ├── prd.md · spec/ · adr/ · plans/ · status.md  # agentic-engineering doc chain
-│   ├── ARCHITECTURE.md             # System design, module map, clustering strategy
+│   ├── architecture.md             # Current architecture and intended product direction
 │   ├── agent-pipeline.md           # Agent design philosophy + prompt documentation
 │   ├── DESIGN.md                   # UI/UX design system
-│   ├── spec.md                     # Original MVP spec (being decomposed into spec/)
 │   └── images/                     # Diagrams and assets
 └── tests/                          # pytest suite
 ```
@@ -275,7 +270,7 @@ Key environment variables (see [`.env.example`](.env.example) for the full list)
 | `LLM_API_KEY` | — | Your LLM provider API key |
 | `LLM_BASE_URL` | — | API endpoint (empty = OpenAI default) |
 | `LLM_MODEL` | `deepseek-v4-flash` | Model name |
-| `DATABASE_URL` | `sqlite:///data/niche_radar.db` | SQLite or PostgreSQL URL |
+| `DATABASE_URL` | `sqlite:///data/niche_radar.db` | SQLite URL |
 | `COLLECTION_INTERVAL_HOURS` | `4` | Hours between collection cycles |
 | `ANALYSIS_INTERVAL_HOURS` | `6` | Hours between analysis runs |
 
@@ -372,11 +367,9 @@ pytest -v
 
 | Document | Description |
 |----------|-------------|
-| [AGENTS.md](AGENTS.md) | **Single source of truth** — how we work; entry to the doc chain |
-| [docs/prd.md](docs/prd.md) · [spec/](docs/spec/) · [adr/](docs/adr/) · [plans/](docs/plans/) · [status.md](docs/status.md) | Documentation chain (PRD → SPEC → ADR → IMPL PLAN → STATUS → VERIFICATION) |
+| [AGENTS.md](AGENTS.md) | Project context, architecture constraints, conventions, and commands |
 | [CONTEXT.md](CONTEXT.md) | Domain glossary — canonical terms used in the codebase |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, module map, clustering strategy |
+| [architecture.md](docs/architecture.md) | Current architecture, data/API boundaries, security, and intended product direction |
 | [agent-pipeline.md](docs/agent-pipeline.md) | Agent design philosophy, prompts, failure cases |
 | [DESIGN.md](docs/DESIGN.md) | UI/UX design system (xAI-inspired dark theme) |
-| [spec.md](docs/spec.md) | Full MVP specification |
 | [Sample Reports](docs/sample-reports/) | Example pipeline output (GO + NO-GO verdicts) |

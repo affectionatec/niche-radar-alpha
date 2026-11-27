@@ -33,14 +33,12 @@ Cloudflare's official lists.
 
 ## Before writing code
 
-1. Read `AGENTS.md`, `CONTEXT.md`, `docs/status.md`, and the relevant spec/ADR.
+1. Use `AGENTS.md` for project conventions and `docs/architecture.md` for technical context.
 2. Use exact domain terms: Collector, Raw Item, Niche Candidate, Pipeline, Verdict.
 3. Branch from `origin/main`; never commit directly to `main`.
-4. Auth, production wiring, storage, and pipeline changes need independent
-   verification.
-5. Never read, commit, log, or copy `.env`, source/LLM credentials, Docker
+4. Never commit, log, or disclose `.env`, source/LLM credentials, Docker
    secrets, databases, sensitive reports, or sessions.
-6. Every test is offline. Live collector behavior belongs in the non-gating
+5. Regression tests use mocked external services. Live collector behavior belongs in the non-gating
    canary.
 
 ```bash
@@ -61,8 +59,8 @@ docker compose --profile postgres \
 git diff --check
 ```
 
-Report exact pytest and golden-set counts. Do not mark your own work PASS. A fresh
-verifier must append a verdict to `docs/verification-log.md`.
+Report the checks actually run, including pytest and golden-set counts and any
+environment limitations.
 
 ## Push, PR, and automatic release
 
@@ -70,15 +68,14 @@ verifier must append a verdict to `docs/verification-log.md`.
 git add <explicit-files>
 git commit -m "feat: describe the change"
 git push -u origin HEAD
-gh pr create --draft --base main --fill
+gh pr create --base main --fill
 ```
 
 ```text
-feature branch → Draft PR → CI → independent verifier → human review
-→ merge main → main CI → Deploy production
+feature branch → PR → CI → review → merge main → main CI → Deploy production
 ```
 
-The agent never merges its own PR. Deployment follows only a successful trusted
+Merge requires owner authorization. Deployment follows only a successful trusted
 `push` CI on `main`.
 
 Markdown-only changes under `docs/` or other `*.md` files are excluded from CI

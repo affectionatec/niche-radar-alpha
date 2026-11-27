@@ -30,10 +30,9 @@
 | "481 tests pass" | 全新容器装依赖后跑 `pytest` | ✅ 属实：481/481, 112s |
 | "eval runner exits 0" | `python -m niche_radar.eval.runner` | ⚠️ 退出码 0 属实，但门是恒真式（F1） |
 | 前端可构建 | `npm ci && npm run build` | ✅ 通过，无类型错误 |
-| "一个后端挂掉不拖垮整个源" (ADR-002) | 在断网沙箱里真实运行 7 个无钥匙采集器 | ✅ 属实：全部优雅降级为 `failed/partial`，无一崩溃 |
+| "一个后端挂掉不拖垮整个源" (ordered collector fallback) | 在断网沙箱里真实运行 7 个无钥匙采集器 | ✅ 属实：全部优雅降级为 `failed/partial`，无一崩溃 |
 | 采集器在真实网络上能采到数据 | 沙箱代理阻断外部站点 | ❓ 本环境无法验证 → 已加每周金丝雀（F3） |
 | "监控 16 个平台" (README/AGENTS) | 数 `ALL_SOURCES` 注册表 | ❌ 实际 23 个，文档漂移（F4） |
-| status.md "PR #17 待人工合并" | `git log` | ❌ 已合并（e52379e），状态过时（F4） |
 
 ---
 
@@ -74,12 +73,11 @@ M1–M4 共 9 个任务、7 个 PR、110 个新测试，全部投在**输入侧*
 
 本 PR 落地：`niche_radar/eval/canary.py` + 每周一次的 `canary.yml` workflow，用无钥匙采集器直接打真实网络，按源报告产出量，多数源归零则告警。刻意不做 PR 门禁（真实端点允许抖动）。
 
-### F4 — 文档链自重超载 + 已经漂移【本 PR 已清理】
+### F4 — Documentation drift
 
-六文档链 + 独立验证人 + 交接日志，对单人 alpha 项目是重资产流程。它产出了漂亮的文档，但也产出了漂移：README/AGENTS 说 16 个平台（实际 23）、status.md 落后于 git 事实、约 200KB 的四棵遗留文档树（`.ralph/`、`docs/superpowers/`、`PRODUCT.md`、旧增强/集成计划）与"单一事实来源"的宣称直接矛盾。用户的直觉（"过去的记忆已经老旧"）是对的。
-
-本 PR 落地：删除全部遗留树（git 历史可恢复）；修正所有计数漂移；刷新 status.md。
-**进一步建议（未动，需用户拍板）**：把六文档链收缩为三件——`AGENTS.md`（怎么干活）+ `status.md`（干到哪了）+ `adr/`（为什么这么定）。PRD/SPEC/PLAN 合并进 ADR 与代码注释。单人项目的文档应该为"下一次会话的上下文恢复"服务，而不是为流程本身服务。
+The review found outdated platform counts and overlapping documentation.
+Current engineering guidance is in [AGENTS.md](../../AGENTS.md), with durable
+technical context in [architecture.md](../architecture.md).
 
 ### F5 — 样例报告冒充管线输出【本 PR 已修正措辞】
 
@@ -114,9 +112,6 @@ Shortlist 页加"准确/不准确"两键反馈，落库。每周把反馈导出�
 ### P1 — 源贡献度看板（1 天）
 现有 cost attribution 已按 agent 统计；补一个按 source 的统计：raw_items → 通过 A1 → 进入高分 niche 的转化漏斗。跑一个月，用数据砍掉零贡献源。
 
-### P2 — 流程减负（半天，需用户拍板）
-六文档链 → AGENTS.md + status.md + adr/ 三件套（见 F4）。
-
 ### 冻结项
 在 P0 两项完成前：**不加新采集器、不加新 LLM provider、不做 UI 扩展。**
 
@@ -129,6 +124,6 @@ Shortlist 页加"准确/不准确"两键反馈，落库。每周把反馈导出�
 | 评估门（F1） | `mock_client.py` 重写为真实 `LLMClient` 协议；`runner.py` 经 `orchestrator.run_single` 真实执行 A1→A2；agent 硬失败显式判 FAIL；未接线检查显式标注；`golden_set.py` 加向后兼容的 `checks` 参数；修复 `golden_004` fixture 非法枚举值 |
 | 金丝雀（F3） | 新增 `niche_radar/eval/canary.py`（可单测的判定逻辑 + 真实网络冒烟）+ `.github/workflows/canary.yml`（每周一 06:00 UTC，非 PR 门禁） |
 | 遗留清理（F4） | 删除 `.ralph/`、`docs/superpowers/`、`docs/PRODUCT.md`、`docs/enhancement/`、`docs/integrations/`（git 历史可恢复） |
-| 漂移修正（F4） | README/AGENTS.md 16→23 平台；README 数据源表补齐 7 个缺失源、YouTube 行更新为 yt-dlp 链；status.md 刷新至 git 事实 |
+| 漂移修正（F4） | README/AGENTS.md 16→23 平台；README 数据源表补齐 7 个缺失源、YouTube 行更新为 yt-dlp 链 |
 | 诚实性（F5） | 样例报告与 README 如实标注"手写示例" |
 | 测试 | 481 → 490（评估门 +8、金丝雀 +8、重写 mock client 测试 9 个替换原 7 个），测试棘轮保持只增 |
